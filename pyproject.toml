@@ -1,0 +1,139 @@
+[build-system]
+requires = ["setuptools>=66.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "specpipe"
+version = {attr = "specpipe.__version__"}
+description = "A file-based pipeline for efficient batch processing and modeling of hyperspectral images."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+	{name = "Siwei Luo", email = "siwei1102@outlook.de"}
+]
+license = {file = "LICENSE"}
+keywords = [
+	"hyperspectral-imaging",
+	"spectral-image-processing",
+	"hyperspectral-modeling",
+	"model-evaluation-automation",
+	"spectral-modeling-pipeline"
+]
+classifiers = [
+	"Development Status :: 3 - Alpha",
+	"Intended Audience :: Science/Research",
+	"License :: OSI Approved :: MIT License",
+	"Programming Language :: Python :: 3",
+	"Programming Language :: Python :: 3.9",
+	"Topic :: Scientific/Engineering :: Bio-Informatics",
+	"Topic :: Scientific/Engineering :: GIS",
+	"Topic :: Scientific/Engineering :: Image Processing",
+	"Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+dependencies = [
+	"pydantic>=2.11.7", 
+	"pandas>=1.5.2", 
+	"numpy>=1.24.3", 
+	"tqdm>=4.65.0", 
+	"rasterio>=1.4.2", 
+	"pathos>=0.3.4", 
+	"torch>=2.0.0", 
+	"scikit-learn>=1.6.1", 
+	"scipy>=1.13.1", 
+	"dill>=0.4.0", 
+	"matplotlib>=3.9.4", 
+	"beautifulsoup4>=4.12.2", 
+	"geopandas>=1.0.1", 
+	"pyproj>=3.5.0", 
+	"shapely>=2.0.1"
+]
+
+[project.urls]
+Homepage = "https://github.com/siwei66/specpipe"
+Repository = "https://github.com/siwei66/specpipe"
+Documentation = "https://github.com/siwei66/specpipe#readme"
+Issues = "https://github.com/siwei66/specpipe/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-cov>=7.0.0",
+    "black>=25.9.0",
+    "ruff>=0.13.1",
+    "mypy>=1.18.2"
+]
+test = [
+    "pytest>=8.4.1",
+    "pytest-cov>=7.0.0"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = {find = {where = ["src"]}}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["-v", "--tb=short"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+ignore_missing_imports = true
+
+[tool.black]
+line-length = 120
+target-version = ["py39"]
+skip-string-normalization = true
+include = "\\.pyi?$"
+exclude = '''
+/(
+    \\.eggs
+  | \\.git
+  | \\.hg
+  | \\.__pycache__
+  | \\.mypy_cache
+  | \\.tox
+  | \\.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.ruff]
+line-length = 120
+extend-exclude = [
+    "*.pyc", 
+    "*.egg-info", 
+    "__pycache__", 
+    ".git", 
+    ".mypy_cache", 
+    ".pytest_cache", 
+    ".ruff_cache", 
+    ".venv", 
+    "build", 
+    "dist", 
+    "local_tests", 
+    "example_code.py"
+]
+[tool.ruff.lint]
+select = [
+    "E",    # Pycodestyle errors
+    "F",    # Pyflakes
+    "W",    # Pycodestyle warnings
+    "B",    # Bugbear (good practice recommendations)
+    "I",    # Isort (import sorting)
+    "N",    # PEP8 Naming conventions
+    "C"    # McCabe complexity
+]
+ignore = [
+    "E203", 
+    "E266"
+]
