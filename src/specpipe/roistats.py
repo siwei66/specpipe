@@ -1013,6 +1013,8 @@ def np_sig_digit(arr_like: Annotated[Any, arraylike_validator()], sig_digit: int
 # For any scalar real number regardless of types - behavioral validation
 @overload
 def round_digit(value: RealNumber, sig_digit: int, mode: str) -> float: ...  # type: ignore[overload-cannot-match]
+
+
 # Mypy failure on GitHub, the code works and passes local mypy validation, following the same
 
 
