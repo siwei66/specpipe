@@ -703,9 +703,7 @@ class TestSpecPipe(unittest.TestCase):
         assert pipe.tested is False
         assert os.path.exists(f"{test_dir}/test_run")
         preproc_img_names = [
-            name
-            for name in os.listdir(test_dir)
-            if "test_img" in name and ".tif" in name and name != "test_img.tif"
+            name for name in os.listdir(test_dir) if "test_img" in name and ".tif" in name and name != "test_img.tif"
         ]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
         assert len(preproc_img_names) == len(preprocs)
@@ -787,9 +785,7 @@ class TestSpecPipe(unittest.TestCase):
         assert pipe.tested is False
         assert os.path.exists(f"{test_dir}/test_run")
         preproc_img_names = [
-            name
-            for name in os.listdir(test_dir)
-            if "test_img" in name and ".tif" in name and name != "test_img.tif"
+            name for name in os.listdir(test_dir) if "test_img" in name and ".tif" in name and name != "test_img.tif"
         ]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
         assert len(preproc_img_names) == len(preprocs)
