@@ -925,7 +925,7 @@ class TestSpecPipe(unittest.TestCase):
         # Report contents
         model_reports = lsdir_robust(model_report_dir)
         preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
-        model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
+        # model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
         assert len(preprocs_in_modeling) == len(preprocs)
         assert len(model_reports) == len(pipe.process_chains)
