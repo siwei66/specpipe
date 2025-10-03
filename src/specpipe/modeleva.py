@@ -622,7 +622,8 @@ class ModelEva:
                 elif k > self._X.shape[0]:
                     warnings.warn(
                         f"Specified k = {k} is larger than sample size {self._X.shape[0]}, 'loo' is applied instead.",
-                        UserWarning, stacklevel=3
+                        UserWarning,
+                        stacklevel=3,
                     )
                     return "loo"
             return k
@@ -669,7 +670,7 @@ class ModelEva:
         random_state: Optional[int] = None,
         validation_method: Optional[str] = None,
         update_ids: bool = True,
-        return_ids: Literal[False] = False
+        return_ids: Literal[False] = False,
     ) -> None: ...
 
     @overload
@@ -678,7 +679,7 @@ class ModelEva:
         random_state: Optional[int] = None,
         validation_method: Optional[str] = None,
         update_ids: bool = True,
-        return_ids: Literal[True] = True
+        return_ids: Literal[True] = True,
     ) -> list[tuple[Any, Any]]: ...
 
     # Get indices for data train-test split
@@ -688,7 +689,7 @@ class ModelEva:
         random_state: Optional[int] = None,
         validation_method: Optional[str] = None,
         update_ids: bool = True,
-        return_ids: bool = False
+        return_ids: bool = False,
     ) -> Union[None, list[tuple[Any, Any]]]:
         """
         Split of train and test data for model validation.
@@ -711,10 +712,7 @@ class ModelEva:
         dsp_inds: list = []
         if type(val_method) is tuple:
             train_idx, test_idx = train_test_split(
-                indices,
-                test_size=val_method[1],
-                random_state=random_state,
-                shuffle=True
+                indices, test_size=val_method[1], random_state=random_state, shuffle=True
             )
             dsp_inds = [(train_idx, test_idx)]
 
@@ -952,7 +950,8 @@ class ModelEva:
             warnings.warn(
                 "y_true, y_pred and y_pred_proba is partially specified, \
                     the specified values must match the unspecified default values",
-                UserWarning, stacklevel=3
+                UserWarning,
+                stacklevel=3,
             )
 
         # Validate type of target variables for classifier
@@ -1325,9 +1324,7 @@ class ModelEva:
     # Data split indices for influence analysis
     @simple_type_validator
     def _influence_data_split_ids(
-        self,
-        validation_method: str = 'default',
-        random_state: Optional[int] = None
+        self, validation_method: str = 'default', random_state: Optional[int] = None
     ) -> list[tuple[Any, Any]]:
         """
         Validation_method "default" uses "2-fold" or train-test-split if model validation method is train-test-split.
@@ -1345,10 +1342,7 @@ class ModelEva:
         # Model LOOCV
         elif validation_method.lower() == 'loo':
             dsps = self._data_split(
-                random_state=random_state,
-                validation_method='loo',
-                update_ids=False,
-                return_ids=True
+                random_state=random_state, validation_method='loo', update_ids=False, return_ids=True
             )
         # Fast
         elif validation_method.lower() == 'default':
@@ -1356,18 +1350,12 @@ class ModelEva:
                 dsps = self._dsp_inds
             else:
                 dsps = self._data_split(
-                    random_state=random_state,
-                    validation_method='2-fold',
-                    update_ids=False,
-                    return_ids=True
+                    random_state=random_state, validation_method='2-fold', update_ids=False, return_ids=True
                 )
         # Custom
         else:
             dsps = self._data_split(
-                random_state=random_state,
-                validation_method=validation_method,
-                update_ids=False,
-                return_ids=True
+                random_state=random_state, validation_method=validation_method, update_ids=False, return_ids=True
             )
 
         # Return result
@@ -1376,9 +1364,7 @@ class ModelEva:
     # LOO training for Cook's dist-like influence analysis
     @simple_type_validator
     def _classifier_influential_analysis(  # noqa: C901
-        self,
-        validation_method: str = 'default',
-        random_state: Optional[int] = None
+        self, validation_method: str = 'default', random_state: Optional[int] = None
     ) -> None:
         """
         Calculate the cooks-distance-like average influence on predictions of each sample using LOO approach.
@@ -1407,10 +1393,7 @@ class ModelEva:
         # Custom model, independent runtime validated, following the same
 
         # Fold indices
-        dsps = self._influence_data_split_ids(
-            validation_method=validation_method,
-            random_state=random_state
-        )
+        dsps = self._influence_data_split_ids(validation_method=validation_method, random_state=random_state)
 
         # Validation Training
         influence_list = []
@@ -1831,7 +1814,8 @@ class ModelEva:
             warnings.warn(
                 "y_true, y_pred and y_pred_proba is partially specified, \
                     the specified values must match the unspecified default values",
-                UserWarning, stacklevel=3
+                UserWarning,
+                stacklevel=3,
             )
 
         # Validate data
@@ -2261,9 +2245,7 @@ class ModelEva:
     # LOO training for data point influential analysis
     @simple_type_validator
     def _regressor_influential_analysis(
-        self,
-        validation_method: str = 'default',
-        random_state: Optional[int] = None
+        self, validation_method: str = 'default', random_state: Optional[int] = None
     ) -> None:
         """
         Calculate the cooks-distance-like average influence on predictions of each sample using LOO approach.
@@ -2280,10 +2262,7 @@ class ModelEva:
         y = self._y
 
         # Fold indices
-        dsps = self._influence_data_split_ids(
-            validation_method=validation_method,
-            random_state=random_state
-        )
+        dsps = self._influence_data_split_ids(validation_method=validation_method, random_state=random_state)
 
         # Validation Training
         influence_list = []
@@ -2353,8 +2332,9 @@ class ModelEva:
                 if X_train.shape[1] < 1:
                     raise ValueError(f"Invalid X_train, got: {X_train}, type: {type(X_train)}, shape: {X_train.shape}")
                 mse1 = mse + 1e-30
-                influence[train_ind[i]] = np.sum((np.array(p_full) - np.array(p_loo)) ** 2, axis=0
-                                                 ) / (X_train.shape[1] * mse1)
+                influence[train_ind[i]] = np.sum((np.array(p_full) - np.array(p_loo)) ** 2, axis=0) / (
+                    X_train.shape[1] * mse1
+                )
                 # Old: influence[train_ind[i]] = np.sum((p_full - p_loo) ** 2, axis=0) / (X_train.shape[1] * mse1)
 
             # Store results
@@ -2503,8 +2483,10 @@ class ModelEva:
         elif type(data_split_config) is dict:
             self._data_split(**data_split_config)
         else:
-            raise ValueError(f"If provided, data_split_config must be a dictionary of arguments, \
-                             but got: {data_split_config}")
+            raise ValueError(
+                f"If provided, data_split_config must be a dictionary of arguments, \
+                             but got: {data_split_config}"
+            )
 
         # Training
         if validation_config == "default":
@@ -2512,8 +2494,10 @@ class ModelEva:
         elif type(validation_config) is dict:
             self._regressor_validation(**validation_config)
         else:
-            raise ValueError(f"If provided, validation must be a dictionary of arguments, \
-                             but got: {validation_config}")
+            raise ValueError(
+                f"If provided, validation must be a dictionary of arguments, \
+                             but got: {validation_config}"
+            )
 
         # Performance metrics
         if metrics_config is not None:
@@ -2522,8 +2506,10 @@ class ModelEva:
             elif type(metrics_config) is dict:
                 self._regressor_metrics(**metrics_config)
             else:
-                raise ValueError(f"If provided, metrics_config must be None or a dictionary of arguments, \
-                                 but got: {metrics_config}")
+                raise ValueError(
+                    f"If provided, metrics_config must be None or a dictionary of arguments, \
+                                 but got: {metrics_config}"
+                )
 
         # Scatter plot
         if scatter_plot_config is not None:

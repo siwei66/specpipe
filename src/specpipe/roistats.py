@@ -79,9 +79,7 @@ class ROISpec:
                 if len(roi_coords) >= 3:
                     npoly = npoly + 1
         if npoly == 0:
-            raise ValueError(
-                f"No valid polygon found in the given roi_coordinates: {roi_coordinates}"
-            )
+            raise ValueError(f"No valid polygon found in the given roi_coordinates: {roi_coordinates}")
 
         # For each polygon
         for i, polygon_coords in enumerate(roi_coordinates):
@@ -194,18 +192,14 @@ def pixcount(
             # Validate Polygon
             if raster_bbox.intersects(polygon):
                 # Count
-                masked, _ = mask(
-                    src, [polygon], crop=True, nodata=src.nodata, indexes=[band], all_touched=True
-                )
+                masked, _ = mask(src, [polygon], crop=True, nodata=src.nodata, indexes=[band], all_touched=True)
                 if threshold is None:
                     count = np.sum(masked[0] != src.nodata)
                 else:
                     if threshold[0] >= threshold[1]:
                         raise ValueError(f"Invalid threshold range: {threshold}")
                     count = np.sum(
-                        (masked[0] != src.nodata)
-                        & (masked[0] >= threshold[0])
-                        & (masked[0] <= threshold[1])
+                        (masked[0] != src.nodata) & (masked[0] >= threshold[0]) & (masked[0] <= threshold[1])
                     )
             else:
                 count = 0
@@ -407,9 +401,7 @@ def moment2d(  # noqa: C901
     # Validate sample size
     nsample = arr.shape[0]
     if nsample < n:
-        raise ValueError(
-            f"Sample size must be at least {n} to compute {n}th moment, got: {nsample}"
-        )
+        raise ValueError(f"Sample size must be at least {n} to compute {n}th moment, got: {nsample}")
 
     # Number of variables
     nvar = arr.shape[1]
@@ -496,9 +488,7 @@ def bandhist(
 
     # Validate band
     if (band >= nvar) or (band < -nvar):
-        raise ValueError(
-            f"band index exceeds the number of bands, got: {band}, number of bands: {nvar}"
-        )
+        raise ValueError(f"band index exceeds the number of bands, got: {band}, number of bands: {nvar}")
 
     # Bins to quantiles
     if type(bins) is int:
@@ -509,13 +499,9 @@ def bandhist(
         if (max(bins) <= 1) & (min(bins) >= 0):
             bs = bins
         else:
-            raise ValueError(
-                f"Bin value must be in range of [0, 1], got range: [{min(bins)}, {max(bins)}]"
-            )
+            raise ValueError(f"Bin value must be in range of [0, 1], got range: [{min(bins)}, {max(bins)}]")
         if len(bins) < 2:
-            raise ValueError(
-                f"number of bins must be greater than 1, got number of bins: {len(bins)}"
-            )
+            raise ValueError(f"number of bins must be greater than 1, got number of bins: {len(bins)}")
 
     # Calculate quantile values
     values: tuple[float, ...] = ()
@@ -538,16 +524,12 @@ def smopt(measure: str) -> Callable:  # noqa: C901
 
     # Skewness and kurtosis modified for zero std
     @simple_type_validator
-    def stskew(
-        v: Annotated[Any, arraylike_validator(ndim=2, as_type=float)], axis: int
-    ) -> tuple[float]:
+    def stskew(v: Annotated[Any, arraylike_validator(ndim=2, as_type=float)], axis: int) -> tuple[float]:
         skewness: tuple[float] = moment2d(v, 3, standardized=True, axis=axis)
         return skewness
 
     @simple_type_validator
-    def stkurt(
-        v: Annotated[Any, arraylike_validator(ndim=2, as_type=float)], axis: int
-    ) -> tuple[float]:
+    def stkurt(v: Annotated[Any, arraylike_validator(ndim=2, as_type=float)], axis: int) -> tuple[float]:
         kurtosis: tuple[float] = moment2d(v, 4, standardized=True, axis=axis)
         return kurtosis
 
@@ -564,11 +546,7 @@ def smopt(measure: str) -> Callable:  # noqa: C901
             mfunc = np.nanmax  # type: ignore[assignment]
         elif str(measure).lower() == "var":
             mfunc = np.nanvar  # type: ignore[assignment]
-        elif (
-            (str(measure).lower() == "std")
-            | (str(measure).lower() == "stdev")
-            | (str(measure).lower() == "sd")
-        ):
+        elif (str(measure).lower() == "std") | (str(measure).lower() == "stdev") | (str(measure).lower() == "sd"):
             mfunc = np.nanstd  # type: ignore[assignment]
         elif (str(measure).lower() == "skewness") | (str(measure).lower() == "skew"):
             mfunc = stskew
@@ -634,18 +612,14 @@ class Stats2d:
     """  # noqa: E501
 
     @simple_type_validator
-    def __init__(
-        self, measure: Union[str, Callable, list[Union[str, Callable]], None] = None, axis: int = 0
-    ) -> None:
+    def __init__(self, measure: Union[str, Callable, list[Union[str, Callable]], None] = None, axis: int = 0) -> None:
         self.measure = measure
         self.axis = axis
 
     # Simplified measures
     @staticmethod
     @simple_type_validator
-    def mean(
-        data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0
-    ) -> np.ndarray:
+    def mean(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
         """
         Mean values of a 2D data array with each row or column as a sample. See stats2d.
         """
@@ -653,9 +627,7 @@ class Stats2d:
 
     @staticmethod
     @simple_type_validator
-    def std(
-        data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0
-    ) -> np.ndarray:
+    def std(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
         """
         Standard deviation values of a 2D data array with each row or column as a sample. See stats2d.
         """
@@ -663,9 +635,7 @@ class Stats2d:
 
     @staticmethod
     @simple_type_validator
-    def var(
-        data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0
-    ) -> np.ndarray:
+    def var(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
         """
         Variance values of a 2D data array with each row or column as a sample. See stats2d.
         """
@@ -673,9 +643,7 @@ class Stats2d:
 
     @staticmethod
     @simple_type_validator
-    def skew(
-        data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0
-    ) -> np.ndarray:
+    def skew(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
         """
         Skewness values of a 2D data array with each row or column as a sample. See stats2d.
         """
@@ -683,9 +651,7 @@ class Stats2d:
 
     @staticmethod
     @simple_type_validator
-    def kurt(
-        data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0
-    ) -> np.ndarray:
+    def kurt(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
         """
         Kurtosis values of a 2D data array with each row or column as a sample. See stats2d.
         """
@@ -693,9 +659,7 @@ class Stats2d:
 
     @staticmethod
     @simple_type_validator
-    def minimal(
-        data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0
-    ) -> np.ndarray:
+    def minimal(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
         """
         Min values of a 2D data array with each row or column as a sample. See stats2d.
         """
@@ -703,9 +667,7 @@ class Stats2d:
 
     @staticmethod
     @simple_type_validator
-    def median(
-        data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0
-    ) -> np.ndarray:
+    def median(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
         """
         Median values of a 2D data array with each row or column as a sample. See stats2d.
         """
@@ -713,9 +675,7 @@ class Stats2d:
 
     @staticmethod
     @simple_type_validator
-    def maximal(
-        data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0
-    ) -> np.ndarray:
+    def maximal(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
         """
         Max values of a 2D data array with each row or column as a sample. See stats2d.
         """
@@ -734,13 +694,9 @@ class Stats2d:
         elif callable(measure):
             return np.array(Stats2d(measure).stats2d(data_array_2d)[measure.__name__])
         elif measure is None:
-            raise ValueError(
-                "'measure' must be specified for 'Stats2d' when calling this method, got None."
-            )
+            raise ValueError("'measure' must be specified for 'Stats2d' when calling this method, got None.")
         else:
-            raise ValueError(
-                f"'Stats2d.values' accepts single measure only, but got multiple measures: {measure}"
-            )
+            raise ValueError(f"'Stats2d.values' accepts single measure only, but got multiple measures: {measure}")
 
     # Return stats values with dynamic function name of the measure
     @property
@@ -759,9 +715,7 @@ class Stats2d:
 
     # Stats function, able to return multiple measures at one time
     @simple_type_validator
-    def stats2d(
-        self, data_array_2d: Annotated[Any, arraylike_validator(ndim=2)]
-    ) -> dict[str, np.ndarray]:
+    def stats2d(self, data_array_2d: Annotated[Any, arraylike_validator(ndim=2)]) -> dict[str, np.ndarray]:
         """
         Statistical measure calculator for a 2D data array with each row or column as a sample.
 
@@ -824,9 +778,7 @@ class Stats2d:
         return mvalues
 
 
-def roi_mean(
-    image_path: str, roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]]
-) -> np.ndarray:
+def roi_mean(image_path: str, roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]]) -> np.ndarray:
     """
     Spectral mean of the given image within the given ROI.
 
@@ -841,9 +793,7 @@ def roi_mean(
     return np.array(Stats2d().mean(ROISpec("float64").roispec(image_path, roi_coordinates)))
 
 
-def roi_std(
-    image_path: str, roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]]
-) -> np.ndarray:
+def roi_std(image_path: str, roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]]) -> np.ndarray:
     """
     Standard deviation of the given image within the given ROI.
 
@@ -858,9 +808,7 @@ def roi_std(
     return np.array(Stats2d().std(ROISpec("float64").roispec(image_path, roi_coordinates)))
 
 
-def roi_median(
-    image_path: str, roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]]
-) -> np.ndarray:
+def roi_median(image_path: str, roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]]) -> np.ndarray:
     """
     Spectral median of the given image within the given ROI.
 
@@ -916,9 +864,7 @@ def spectral_angle(
         if not invalid_raise:
             return np.nan
         else:
-            raise ValueError(
-                f"Undefined spectral angle for given spectral vector: \n{spec_1} \nand \n{spec_2}"
-            )
+            raise ValueError(f"Undefined spectral angle for given spectral vector: \n{spec_1} \nand \n{spec_2}")
 
     # Calculate the dot product
     dot_product = np.dot(spec_1, spec_2)
@@ -998,9 +944,7 @@ def arr_spectral_angles(
     npix = spectra_array.shape[0]
     spec_angle = np.zeros(npix)
     for i in range(npix):
-        spec_angle[i] = spectral_angle(
-            reference_spectrum, spectra_array[i, :], invalid_raise=invalid_raise
-        )
+        spec_angle[i] = spectral_angle(reference_spectrum, spectra_array[i, :], invalid_raise=invalid_raise)
     return spec_angle
 
 
@@ -1034,9 +978,7 @@ def num_sig_digit(v: RealNumberProtocol, sig_digit: int, mode: str = "round") ->
     return float(rdfunc(v * factor) / factor)
 
 
-def np_sig_digit(
-    arr_like: Annotated[Any, arraylike_validator()], sig_digit: int, mode: str = "round"
-) -> np.ndarray:
+def np_sig_digit(arr_like: Annotated[Any, arraylike_validator()], sig_digit: int, mode: str = "round") -> np.ndarray:
     """
     Round values to given significant digits for numeric NumPy arrays. Choose mode between 'round' / 'ceil' / 'floor'.
     """

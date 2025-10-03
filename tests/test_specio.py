@@ -280,9 +280,7 @@ class TestSimpleTypeValidator:
                 raise ValueError("Too short")
 
         @simple_type_validator
-        def test_func(
-            a: Annotated[int, positive_validator], b: Annotated[str, length_validator]
-        ) -> str:
+        def test_func(a: Annotated[int, positive_validator], b: Annotated[str, length_validator]) -> str:
             return f"{a} {b}"
 
         # Valid calls
@@ -356,10 +354,7 @@ class TestSimpleTypeValidator:
         dum_inst = DumCl()
 
         # Valid calls
-        assert (
-            test_func([(1.0, None), (np.array([1]), 1)], ("a", [1], dum_inst, DumCl))
-            == "2 a 1 DumCl DumCl"
-        )
+        assert test_func([(1.0, None), (np.array([1]), 1)], ("a", [1], dum_inst, DumCl)) == "2 a 1 DumCl DumCl"
 
         # Invalid calls
         with pytest.raises(TypeError):
@@ -964,9 +959,7 @@ class TestDataframeValidator:
         df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
 
         with pytest.raises(ValueError, match="Redundant dtype specification"):
-            validator = dataframe_validator(
-                colname_dtypes_dict={"a": int, "b": int}, dtype="numeric"
-            )
+            validator = dataframe_validator(colname_dtypes_dict={"a": int, "b": int}, dtype="numeric")
             validator(df)
 
     @staticmethod
@@ -1115,18 +1108,14 @@ class TestDictValueValidator:
     def test_basic_key_type_validation() -> None:
         """Test basic key type validation with key_type_list"""
         # With value_type_list
-        validator = dict_value_validator(
-            value_type_list=[int, str, float], key_type_list=[int, int, str]
-        )
+        validator = dict_value_validator(value_type_list=[int, str, float], key_type_list=[int, int, str])
         test_dict = {1: 100, 2: "hello", "3": 3.14}
 
         result = validator(test_dict)
         assert result == test_dict
 
         # Compatible with value_type_dict
-        validator = dict_value_validator(
-            value_type_dict={1: int, "2": str, 3: float}, key_type_list=[int, str, int]
-        )
+        validator = dict_value_validator(value_type_dict={1: int, "2": str, 3: float}, key_type_list=[int, str, int])
         test_dict = {1: 100, "2": "hello", 3: 3.14}
 
         result = validator(test_dict)
@@ -1218,9 +1207,7 @@ class TestDictValueValidator:
     @staticmethod
     def test_key_type_with_value_type_dict() -> None:
         """Test key type validation combined with value_type_dict"""
-        validator = dict_value_validator(
-            key_type_list=[str, int], value_type_dict={"a": int, 2: str}
-        )
+        validator = dict_value_validator(key_type_list=[str, int], value_type_dict={"a": int, 2: str})
         test_dict = {"a": 100, 2: "hello"}
 
         # Should not raise any exception
@@ -1673,7 +1660,7 @@ class TestEnviROICoords:
     @staticmethod
     def test_single_polygon_roi() -> None:
         """Test reading single polygon ROI"""
-# fmt: off
+        # fmt: off
         roi_content = """<?xml version="1.0" encoding="UTF-8"?>
 <RegionsOfInterest version="1.1">
   <Region name="TestROI" color="255,0,0">
@@ -1689,7 +1676,7 @@ class TestEnviROICoords:
     </GeometryDef>
   </Region>
 </RegionsOfInterest>"""  # noqa
-# fmt: on
+        # fmt: on
 
         roi_path = TestEnviROICoords.create_test_roi_file(roi_content)
 
@@ -1711,7 +1698,7 @@ class TestEnviROICoords:
     @staticmethod
     def test_multi_polygon_roi() -> None:
         """Test reading multi-polygon ROI"""
-# fmt: off
+        # fmt: off
         roi_content = """<?xml version="1.0" encoding="UTF-8"?>
 <RegionsOfInterest version="1.1">
   <Region name="MultiROI" color="255,0,0">
@@ -1734,7 +1721,7 @@ class TestEnviROICoords:
     </GeometryDef>
   </Region>
 </RegionsOfInterest>"""  # noqa
-# fmt: on
+        # fmt: on
 
         roi_path = TestEnviROICoords.create_test_roi_file(roi_content)
 
@@ -1762,7 +1749,7 @@ class TestEnviROICoords:
     @staticmethod
     def test_multiple_regions() -> None:
         """Test reading multiple ROI regions"""
-# fmt: off
+        # fmt: off
         roi_content = """<?xml version="1.0" encoding="UTF-8"?>
 <RegionsOfInterest version="1.1">
   <Region name="ROI #1" color="255,0,0">
@@ -1790,7 +1777,7 @@ class TestEnviROICoords:
     </GeometryDef>
   </Region>
 </RegionsOfInterest>"""  # noqa
-# fmt: on
+        # fmt: on
 
         roi_path = TestEnviROICoords.create_test_roi_file(roi_content)
 
@@ -1817,7 +1804,7 @@ class TestEnviROICoords:
     @staticmethod
     def test_scientific_notation_coordinates() -> None:
         """Test reading coordinates in scientific notation"""
-# fmt: off
+        # fmt: off
         roi_content = """<?xml version="1.0" encoding="UTF-8"?>
 <RegionsOfInterest version="1.1">
   <Region name="SciNotROI" color="255,0,0">
@@ -1833,7 +1820,7 @@ class TestEnviROICoords:
     </GeometryDef>
   </Region>
 </RegionsOfInterest>"""  # noqa
-# fmt: on
+        # fmt: on
 
         roi_path = TestEnviROICoords.create_test_roi_file(roi_content)
 
@@ -1851,7 +1838,7 @@ class TestEnviROICoords:
     @staticmethod
     def test_decimal_coordinates() -> None:
         """Test reading decimal coordinates"""
-# fmt: off
+        # fmt: off
         roi_content = """<?xml version="1.0" encoding="UTF-8"?>
 <RegionsOfInterest version="1.1">
   <Region name="DeciNotROI" color="255,0,0">
@@ -1867,7 +1854,7 @@ class TestEnviROICoords:
     </GeometryDef>
   </Region>
 </RegionsOfInterest>"""  # noqa
-# fmt: on
+        # fmt: on
 
         roi_path = TestEnviROICoords.create_test_roi_file(roi_content)
 
@@ -2092,9 +2079,7 @@ class TestShpROICoords:
             poly2_2 = Polygon([(5, 5), (6, 5), (6, 6), (5, 6), (5, 5)])
             multipolygon = MultiPolygon([poly2_1, poly2_2])
 
-            gdf = gpd.GeoDataFrame(
-                {"name": ["poly", "multipoly"], "geometry": [poly1, multipolygon]}
-            )
+            gdf = gpd.GeoDataFrame({"name": ["poly", "multipoly"], "geometry": [poly1, multipolygon]})
             gdf.to_file(shp_path)
 
             # Test the function
@@ -2576,9 +2561,7 @@ class TestDfToCsv(unittest.TestCase):
             test_df = TestDfToCsv.create_test_dataframe(10000, 50)
             output_path = os.path.join(temp_dir, "test.csv")
 
-            result = df_to_csv(
-                test_df, output_path, compress_nvalue_threshold=1000, compression_format="zstd"
-            )
+            result = df_to_csv(test_df, output_path, compress_nvalue_threshold=1000, compression_format="zstd")
 
             expected_path = output_path + ".zst"
             assert result == expected_path
@@ -2596,9 +2579,7 @@ class TestDfToCsv(unittest.TestCase):
                 test_df = TestDfToCsv.create_test_dataframe(10000, 20)
                 output_path = os.path.join(temp_dir, "test.csv")
 
-                result = df_to_csv(
-                    test_df, output_path, compress_nvalue_threshold=1000, compression_format=fmt
-                )
+                result = df_to_csv(test_df, output_path, compress_nvalue_threshold=1000, compression_format=fmt)
 
                 expected_path = output_path + ext
                 assert result == expected_path
@@ -2687,9 +2668,7 @@ class TestDfToCsv(unittest.TestCase):
 
             # Test with .csv.gz path and matching compression format
             output_path = os.path.join(temp_dir, "test.csv.gz")
-            result = df_to_csv(
-                test_df, output_path, compress_nvalue_threshold=1000, compression_format="gzip"
-            )
+            result = df_to_csv(test_df, output_path, compress_nvalue_threshold=1000, compression_format="gzip")
 
             assert result == output_path
             assert os.path.exists(output_path)
@@ -2702,17 +2681,13 @@ class TestDfToCsv(unittest.TestCase):
 
             # With low threshold, should compress
             output_path1 = os.path.join(temp_dir, "test1.csv")
-            result1 = df_to_csv(
-                test_df, output_path1, compress_nvalue_threshold=1000, compression_format="zstd"
-            )
+            result1 = df_to_csv(test_df, output_path1, compress_nvalue_threshold=1000, compression_format="zstd")
             assert result1.endswith(".zst")
             assert os.path.exists(result1)
 
             # With high threshold, should not compress
             output_path2 = os.path.join(temp_dir, "test2.csv")
-            result2 = df_to_csv(
-                test_df, output_path2, compress_nvalue_threshold=1000000, compression_format="zstd"
-            )
+            result2 = df_to_csv(test_df, output_path2, compress_nvalue_threshold=1000000, compression_format="zstd")
             assert result2 == output_path2
             assert not result2.endswith(".zst")
             assert os.path.exists(result2)
@@ -3076,9 +3051,7 @@ class TestRoiToEnviXml:
             file_path = os.path.join(temp_dir, "test_random_color")
             coordinates = TestRoiToEnviXml.create_test_coordinates()
 
-            result = roi_to_envi_xml(
-                file_path=file_path, name="test_roi", coordinates=coordinates, color=None
-            )
+            result = roi_to_envi_xml(file_path=file_path, name="test_roi", coordinates=coordinates, color=None)
 
             content = TestRoiToEnviXml.read_file_content(result)
             # Should contain color values in the format "r,g,b"
@@ -3117,9 +3090,7 @@ class TestRoiToEnviXml:
                 UserWarning,
                 match="The specified path directory does not exist, the directory is created",
             ):
-                result = roi_to_envi_xml(
-                    file_path=file_path, name="test_roi", coordinates=coordinates
-                )
+                result = roi_to_envi_xml(file_path=file_path, name="test_roi", coordinates=coordinates)
 
             assert os.path.exists(os.path.dirname(result))
             assert os.path.exists(result)
@@ -3134,9 +3105,7 @@ class TestRoiToEnviXml:
             file_path = os.path.join(temp_dir, "test_no_return")
             coordinates = TestRoiToEnviXml.create_test_coordinates()
 
-            result = roi_to_envi_xml(
-                file_path=file_path, name="test_roi", coordinates=coordinates, return_path=False
-            )
+            result = roi_to_envi_xml(file_path=file_path, name="test_roi", coordinates=coordinates, return_path=False)
 
             assert result is None
             assert os.path.exists(file_path + ".xml")
@@ -3239,9 +3208,7 @@ class TestRoiToEnviXml:
 
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, "test_insufficient_vertices")
-            coordinates = [
-                [(0.0, 0.0), (1.0, 0.0), (0.0, 0.0)]
-            ]  # Only 3 vertices including closing one
+            coordinates = [[(0.0, 0.0), (1.0, 0.0), (0.0, 0.0)]]  # Only 3 vertices including closing one
 
             with pytest.raises(ValueError, match="At least 3 vertices must be defined"):
                 roi_to_envi_xml(file_path=file_path, name="test_roi", coordinates=coordinates)
@@ -3365,9 +3332,7 @@ class TestRoiToShp:
             name = "test_polygon"
             coordinates = TestRoiToShp.create_test_polygon()
 
-            result = roi_to_shp(
-                file_path=file_path, crs=crs, name=name, coordinates=coordinates, return_path=True
-            )
+            result = roi_to_shp(file_path=file_path, crs=crs, name=name, coordinates=coordinates, return_path=True)
 
             assert isinstance(result, str)
             assert result.endswith(".shp")
@@ -3408,9 +3373,7 @@ class TestRoiToShp:
             name = "test_polygon"
             coordinates = TestRoiToShp.create_test_polygon()
 
-            result = roi_to_shp(
-                file_path=file_path, crs=crs, name=name, coordinates=coordinates, return_path=False
-            )
+            result = roi_to_shp(file_path=file_path, crs=crs, name=name, coordinates=coordinates, return_path=False)
 
             assert result is None
             assert os.path.exists(file_path)
@@ -3425,9 +3388,7 @@ class TestRoiToShp:
             # Unclosed polygon
             coordinates = [[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]]
 
-            result = roi_to_shp(
-                file_path=file_path, crs=crs, name=name, coordinates=coordinates, return_path=True
-            )
+            result = roi_to_shp(file_path=file_path, crs=crs, name=name, coordinates=coordinates, return_path=True)
 
             assert os.path.exists(result)
 
@@ -3570,9 +3531,7 @@ class TestRoiToShp:
             name = "test_multipolygon"
             coordinates = TestRoiToShp.create_test_multipolygon()
 
-            result = roi_to_shp(
-                file_path=file_path, crs=crs, name=name, coordinates=coordinates, return_path=True
-            )
+            result = roi_to_shp(file_path=file_path, crs=crs, name=name, coordinates=coordinates, return_path=True)
 
             assert os.path.exists(result)
 

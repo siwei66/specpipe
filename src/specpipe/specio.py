@@ -58,24 +58,18 @@ from shapely.geometry import MultiPolygon, Polygon
 # %% simple_type_validator - Basic validator with serilization compatibility
 
 
-def simple_type_validator(  # type: ignore[no-untyped-def]  # noqa: C901
-        func: Callable
-    ) -> Callable:
+def simple_type_validator(func: Callable) -> Callable:  # type: ignore[no-untyped-def]  # noqa: C901
     """
     Python function runtime native type validator for serilization of multiprocessing
     """
 
     @wraps(func)
-    def wrapper(  # type: ignore[no-untyped-def]  # noqa: C901
-        *args,
-        **kwargs
-    ):
+    def wrapper(*args, **kwargs):  # type: ignore[no-untyped-def]  # noqa: C901
         hints = get_type_hints(func, include_extras=True)
         sig = inspect.signature(func)
 
         def check_type(  # type: ignore[no-untyped-def]  # noqa: C901
-            value: Any,
-            expected_type: Any
+            value: Any, expected_type: Any
         ) -> tuple[bool, str]:
             # Error msg in check_type
             err_msg = ""
@@ -128,10 +122,7 @@ def simple_type_validator(  # type: ignore[no-untyped-def]  # noqa: C901
                         if Ellipsis in type_args:
                             if (len(type_args) == 2) & (type_args[0] is not Ellipsis):
                                 return (
-                                    all(
-                                        check_type(x, t)[0]
-                                        for x, t in zip(value, [type_args[0]] * len(value))
-                                    ),
+                                    all(check_type(x, t)[0] for x, t in zip(value, [type_args[0]] * len(value))),
                                     err_msg,
                                 )
                             else:
@@ -144,10 +135,7 @@ def simple_type_validator(  # type: ignore[no-untyped-def]  # noqa: C901
                         return all(check_type(x, t)[0] for x, t in zip(value, type_args)), err_msg
                     elif len(type_args) == 1:
                         return (
-                            all(
-                                check_type(x, t)[0]
-                                for x, t in zip(value, [type_args[0]] * len(value))
-                            ),
+                            all(check_type(x, t)[0] for x, t in zip(value, [type_args[0]] * len(value))),
                             err_msg,
                         )
                     else:
@@ -239,18 +227,11 @@ def arraylike_validator(  # noqa: C901
         # Validate conversion
         if isinstance(v, np.ndarray):
             arr = v
-        elif (
-            isinstance(v, list)
-            or isinstance(v, tuple)
-            or isinstance(v, pd.DataFrame)
-            or isinstance(v, pd.Series)
-        ):
+        elif isinstance(v, list) or isinstance(v, tuple) or isinstance(v, pd.DataFrame) or isinstance(v, pd.Series):
             try:
                 arr = np.array(v)
             except Exception as e:
-                raise ValueError(
-                    f"Given data '{v}' cannot be converted to numpy.ndarray\nGot error: {e}\n"
-                ) from e
+                raise ValueError(f"Given data '{v}' cannot be converted to numpy.ndarray\nGot error: {e}\n") from e
         elif isinstance(v, torch.Tensor):
             arr = v.detach().cpu().numpy()
         else:
@@ -262,21 +243,15 @@ def arraylike_validator(  # noqa: C901
         # Validate ndim
         if ndim is not None:
             if arr.ndim != ndim:
-                raise ValueError(
-                    f"Given data has an incompatible ndim. Expected: {ndim}, Got: {arr.ndim}\n"
-                )
+                raise ValueError(f"Given data has an incompatible ndim. Expected: {ndim}, Got: {arr.ndim}\n")
 
         # Validate shape
         if shape is not None:
             if len(arr.shape) != len(shape):
-                raise ValueError(
-                    f"Given data has an incompatible ndim. Expected: {len(shape)}, Got: {arr.ndim}\n"
-                )
+                raise ValueError(f"Given data has an incompatible ndim. Expected: {len(shape)}, Got: {arr.ndim}\n")
             for dimkt in enumerate(shape):
                 if (dimkt[1] != 0) & (dimkt[1] != arr.shape[dimkt[0]]):
-                    raise ValueError(
-                        f"Given data has an incompatible shape. Expected: {shape}, Got: {arr.shape}\n"
-                    )
+                    raise ValueError(f"Given data has an incompatible shape. Expected: {shape}, Got: {arr.shape}\n")
 
         # Convert dtype
         if as_type is not None:
@@ -376,16 +351,10 @@ def _pd_dtype_cond(pd_dtype: Any, target_type: Union[type, str]) -> bool:  # typ
             cond = pd.api.types.is_integer_dtype(pd_dtype)
         elif (target_type is float) | (str(target_type).lower() == "float"):
             cond = pd.api.types.is_float_dtype(pd_dtype)
-        elif (
-            (target_type is str)
-            | (str(target_type).lower() == "str")
-            | (str(target_type).lower() == "string")
-        ):
+        elif (target_type is str) | (str(target_type).lower() == "str") | (str(target_type).lower() == "string"):
             cond = pd.api.types.is_string_dtype(pd_dtype)
         else:
-            raise ValueError(
-                "If target_type is specified in type, target_type must be bool, int, float or str"
-            )
+            raise ValueError("If target_type is specified in type, target_type must be bool, int, float or str")
 
     elif type(target_type) is str:
         # Numeric dtypes
@@ -398,9 +367,7 @@ def _pd_dtype_cond(pd_dtype: Any, target_type: Union[type, str]) -> bool:  # typ
             cond = str(pd_dtype) == target_type
 
     else:
-        raise TypeError(
-            f"Invalid type of target_type, got: {type(target_type)}, expected: type or str"
-        )
+        raise TypeError(f"Invalid type of target_type, got: {type(target_type)}, expected: type or str")
 
     return bool(cond)
 
@@ -514,9 +481,7 @@ def dataframe_validator(  # noqa: C901
         # Validate shape
         if shape is not None:
             if v.shape != shape:
-                raise ValueError(
-                    f"Given dataframe has an incompatible shape. Expected: {shape}, Got: {v.shape}\n"
-                )
+                raise ValueError(f"Given dataframe has an incompatible shape. Expected: {shape}, Got: {v.shape}\n")
 
         if nrow is not None:
             if v.shape[0] != nrow:
@@ -802,9 +767,7 @@ def names_filter(
     pattern: str,
     dict_value_as_filename: bool = False,
     return_ids: bool = False,
-) -> Union[
-    tuple[list[str], list[str]], tuple[list[int], list[int]], tuple[dict[str, str], dict[str, str]]
-]:
+) -> Union[tuple[list[str], list[str]], tuple[list[int], list[int]], tuple[dict[str, str], dict[str, str]]]:
     """
     In a list or dictionary of names, filter names by a pattern.
     Returns matched names and unmatched names.
@@ -852,9 +815,7 @@ def names_filter(
 
     elif type(names) is dict:
         if dict_value_as_filename:
-            fns_to_remove_ids: list = [
-                fnid for fnid in names.keys() if fnmatch.fnmatch(names[fnid], pattern)
-            ]
+            fns_to_remove_ids: list = [fnid for fnid in names.keys() if fnmatch.fnmatch(names[fnid], pattern)]
         else:
             fns_to_remove_ids = [fn for fn in names.keys() if fnmatch.fnmatch(fn, pattern)]
         selected_dict: dict = {}
@@ -901,9 +862,7 @@ def envi_roi_coords(roi_xml_path: str) -> list[dict[str, Any]]:
     sroi = soup.findAll("Region")
     rn = len(sroi)
     if rn < 1:
-        raise ValueError(
-            f"No ROI is found in the provided xml file, got file content: \n\n{soup.prettify()}"
-        )
+        raise ValueError(f"No ROI is found in the provided xml file, got file content: \n\n{soup.prettify()}")
     # Parsing
     roi_list = []
     for n in range(rn):
@@ -1049,9 +1008,7 @@ def load_vars(source_file_path: str) -> dict[str, Any]:
     """
     # Validate extension
     if os.path.splitext(source_file_path)[1] != ".dill":
-        raise ValueError(
-            f"The specified source file must be a 'dill' file, got source_file_path: \n{source_file_path}"
-        )
+        raise ValueError(f"The specified source file must be a 'dill' file, got source_file_path: \n{source_file_path}")
 
     # Validate existence
     if not os.path.exists(source_file_path):
@@ -1107,17 +1064,14 @@ def df_to_csv(  # type: ignore[no-untyped-def]
     # Validate path
     if (path.split(".")[-1]).lower() != "csv":
         if not (
-            ((path.split(".")[-1]).lower() == ext[compression_format][1:])
-            and ((path.split(".")[-2]).lower() == "csv")
+            ((path.split(".")[-1]).lower() == ext[compression_format][1:]) and ((path.split(".")[-2]).lower() == "csv")
         ):
             raise ValueError(f"Invalid csv file path, got {path}, file extension must be '.csv'")
     if ((path.split(".")[-1]).lower() == "csv") and (compression_format != "infer"):
         path = path + ext[compression_format]
     if not overwrite:
         if os.path.exists(path):
-            raise ValueError(
-                f"File path '{path}' already exists while overwrite is set {overwrite}"
-            )
+            raise ValueError(f"File path '{path}' already exists while overwrite is set {overwrite}")
 
     # Validate other parameters
     # Get accepted parameters
@@ -1150,10 +1104,7 @@ def df_from_csv(path: str, **kwargs) -> pd.DataFrame:  # type: ignore[no-untyped
     if not os.path.exists(path):
         raise ValueError(f"File path '{path}' is invalid.")
     if ((path.split(".")[-1]).lower() != "csv") and (
-        not (
-            ((path.split(".")[-2]).lower() == "csv")
-            and ((path.split(".")[-1]).lower() in list(extr.keys()))
-        )
+        not (((path.split(".")[-2]).lower() == "csv") and ((path.split(".")[-1]).lower() in list(extr.keys())))
     ):
         raise ValueError(
             f"Invalid CSV file '{path}', \
@@ -1263,7 +1214,8 @@ def roi_to_envi_xml(  # noqa: C901
     if not os.path.exists(path_dir):
         warnings.warn(
             f"The specified path directory does not exist, the directory is created: {path_dir}",
-            UserWarning, stacklevel=2
+            UserWarning,
+            stacklevel=2,
         )
         os.makedirs(path_dir)
     file_path = os.path.splitext(file_path)[0] + ".xml"
@@ -1277,9 +1229,7 @@ def roi_to_envi_xml(  # noqa: C901
             raise ValueError("ROI name is not specified.")
         if len(coord_list) == 0:
             raise ValueError("ROI polygon vertex coordinates is not provided.")
-        roi_list = [
-            {"name": name, "crs": crs, "color": color, "type": roi_type, "coordinates": coord_list}
-        ]
+        roi_list = [{"name": name, "crs": crs, "color": color, "type": roi_type, "coordinates": coord_list}]
 
     # Validate ROI name, color and coordinates
     roi_names = []
@@ -1301,9 +1251,7 @@ def roi_to_envi_xml(  # noqa: C901
             roi["color"] = val_color(roi["color"])
             for cv in roi["color"]:
                 if cv < 0 or cv > 255:
-                    raise ValueError(
-                        f"RGB values must be in the range of 0 to 255, got: {roi['color']}"
-                    )
+                    raise ValueError(f"RGB values must be in the range of 0 to 255, got: {roi['color']}")
         else:
             roi["color"] = tuple(np.random.randint(0, 256, 3))
         # Validate coordiantes
@@ -1311,9 +1259,7 @@ def roi_to_envi_xml(  # noqa: C901
             if poly[0] != poly[-1]:
                 poly.append(poly[0])
             if len(poly) < 4:
-                raise ValueError(
-                    f"At least 3 vertices must be defined for a polygon geometry, but got: {poly}"
-                )
+                raise ValueError(f"At least 3 vertices must be defined for a polygon geometry, but got: {poly}")
 
     # Write ROI xml file
     with open(file_path, "w") as f:
@@ -1408,9 +1354,7 @@ def roi_to_shp(  # noqa: C901
 
     # Validate ROI item dict in roi_list for shapefile
     if roi_list is not None:
-        roi_it_validator = dict_value_validator(
-            [str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]
-        )
+        roi_it_validator = dict_value_validator([str, str, list[list[tuple[Union[int, float], Union[int, float]]]]])
         for roi_item in roi_list:
             _ = roi_it_validator(roi_item)
 
@@ -1423,7 +1367,8 @@ def roi_to_shp(  # noqa: C901
     if not os.path.exists(path_dir):
         warnings.warn(
             f"The specified path directory does not exist, the directory is created: {path_dir}",
-            UserWarning, stacklevel=2
+            UserWarning,
+            stacklevel=2,
         )
         os.makedirs(path_dir)
     file_path = os.path.splitext(file_path)[0] + ".shp"
@@ -1451,9 +1396,7 @@ def roi_to_shp(  # noqa: C901
             if poly[0] != poly[-1]:
                 poly.append(poly[0])
             if len(poly) < 4:
-                raise ValueError(
-                    f"At least 3 vertices must be defined for a polygon geometry, but got: {poly}"
-                )
+                raise ValueError(f"At least 3 vertices must be defined for a polygon geometry, but got: {poly}")
 
     # Write shp
     geometries = []

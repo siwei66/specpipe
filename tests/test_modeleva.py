@@ -49,9 +49,7 @@ def create_sample_data_classification(
     return [(f"sample_{i}", (5,), str(y[i]), X[i]) for i in range(n_samples)]
 
 
-def modeleva_initialization_regression(
-    temp_dir: str, data_split: str = "5-fold", n_samples: int = 10
-) -> ModelEva:
+def modeleva_initialization_regression(temp_dir: str, data_split: str = "5-fold", n_samples: int = 10) -> ModelEva:
     """Test regression model initialization."""
     sample_list = create_sample_data_regression(n_samples)
 
@@ -74,9 +72,7 @@ def modeleva_initialization_regression(
     return model_eva
 
 
-def modeleva_initialization_classification(
-    temp_dir: str, data_split: str = "5-fold", n_samples: int = 10
-) -> ModelEva:
+def modeleva_initialization_classification(temp_dir: str, data_split: str = "5-fold", n_samples: int = 10) -> ModelEva:
     """Test classification model initialization."""
     sample_list = create_sample_data_classification(n_samples)
 
@@ -332,13 +328,9 @@ class TestModelEva:
             assert len(model_eva._y_true_eva) == len(model_eva.y)
             assert len(model_eva._y_pred_eva) == len(model_eva.y)
             assert model_eva.y_true_proba_eva is not None
-            assert np.all(
-                model_eva.y_true_proba_eva.shape == (len(model_eva.y), len(model_eva.ynames))
-            )
+            assert np.all(model_eva.y_true_proba_eva.shape == (len(model_eva.y), len(model_eva.ynames)))
             assert model_eva.y_pred_proba_eva is not None
-            assert np.all(
-                model_eva.y_pred_proba_eva.shape == (len(model_eva.y), len(model_eva.ynames))
-            )
+            assert np.all(model_eva.y_pred_proba_eva.shape == (len(model_eva.y), len(model_eva.ynames)))
             assert len(model_eva.sid_eva) > 0
 
         # Clear test report dir
@@ -349,9 +341,7 @@ class TestModelEva:
     def test_classifier_evaluation() -> None:
         """Test classifier evaluation workflow."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            model_eva = modeleva_initialization_classification(
-                temp_dir, data_split="10-fold", n_samples=20
-            )
+            model_eva = modeleva_initialization_classification(temp_dir, data_split="10-fold", n_samples=20)
             model_eva.classifier_evaluation()
             metrics_filename = f"Classification_performance_{model_eva.model_label}.csv"
             roc_filename = f"ROC_curve_{model_eva.model_label}.png"
@@ -412,7 +402,7 @@ class TestModelEva:
             assert list(influence.columns) == [
                 "Sample_ID",
                 "A_probability_Cooks_distance_like",
-                "B_probability_Cooks_distance_like"
+                "B_probability_Cooks_distance_like",
             ]
             assert influence.shape == (20, 3)
             assert influence.iloc[:, :].isna().sum().sum() == 0

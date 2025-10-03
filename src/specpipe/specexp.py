@@ -203,20 +203,14 @@ class SpecExp:
 
         # ROI I/O - file-loaded ROIs & console-added ROIs
         # [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path]  # noqa: E501
-        self._rois_from_file: list[
-            tuple[str, str, str, str, str, list[list[tuple[float, float]]], str, str]
-        ] = []
+        self._rois_from_file: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]], str, str]] = []
         # [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
-        self._rois_from_coords: list[
-            tuple[str, str, str, str, str, list[list[tuple[float, float]]]]
-        ] = []
+        self._rois_from_coords: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]] = []
 
         # All ROIs - updated in any ROI addtion or loading
         # [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
         self._rois: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]] = []
-        self._rois_sample: list[
-            tuple[str, str, str, str, str, list[list[tuple[float, float]]]]
-        ] = []
+        self._rois_sample: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]] = []
         self._rois_mask: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]] = []
 
         # Standalone spectra
@@ -261,9 +255,7 @@ class SpecExp:
         value_df.columns = ["ID", "label"]
         value_df = value_df.astype(str)
         if len(self._sample_labels) == 0:
-            raise ValueError(
-                "Cannot set sample labels: No samples exist.\nPlease add samples first."
-            )
+            raise ValueError("Cannot set sample labels: No samples exist.\nPlease add samples first.")
         else:
             value_df = dataframe_validator(shape=(len(self._sample_labels), 2))(value_df)
         # Validate labels
@@ -273,18 +265,14 @@ class SpecExp:
         lb_list_valid = [v for v in lb_list if v != "-"]
         if len(lbset) < len(lb_list_valid):
             duplicates = [v for v in lb_list if lb_list.count(v) > 1]
-            raise ValueError(
-                f"Sample labels must be unique, got duplicated label(s) : {duplicates}"
-            )
+            raise ValueError(f"Sample labels must be unique, got duplicated label(s) : {duplicates}")
         # Validate IDs
         idv_list = list(value_df["ID"])
         ids_list = [lbt[0] for lbt in self._sample_labels]
         idv = set(idv_list)
         ids = set(ids_list)
         if idv == ids:
-            new_lbs = [
-                (sid, value_df["label"][value_df["ID"] == sid].values[0]) for sid in ids_list
-            ]
+            new_lbs = [(sid, value_df["label"][value_df["ID"] == sid].values[0]) for sid in ids_list]
         else:
             raise ValueError(
                 f"Given sample labels and existed sample labels do not match\n\n\
@@ -297,9 +285,7 @@ class SpecExp:
         return self._sample_targets
 
     @sample_targets.setter
-    def sample_targets(
-        self, value: Union[pd.DataFrame, list[tuple[str, str, Union[str, bool, int, float]]]]
-    ) -> None:
+    def sample_targets(self, value: Union[pd.DataFrame, list[tuple[str, str, Union[str, bool, int, float]]]]) -> None:
         # Validate retrieved
         if type(value) is pd.DataFrame:
             if (value.columns == ["Sample_ID", "Sample_label", "Target_value"]).all() & (
@@ -314,9 +300,7 @@ class SpecExp:
         value_df.columns = ["label", "value"]
         value_df["label"] = value_df["label"].astype(str)
         if len(self._sample_labels) == 0:
-            raise ValueError(
-                "Cannot set target values: No samples exist.\nPlease add samples first."
-            )
+            raise ValueError("Cannot set target values: No samples exist.\nPlease add samples first.")
         if len(self._sample_targets) == 0:
             value_df = dataframe_validator(shape=(len(self._sample_labels), 2))(value_df)
         else:
@@ -340,8 +324,7 @@ class SpecExp:
             sample_targets = [lt + (t,) for lt, t in zip(self._sample_labels, value_df["value"])]
         elif labelv == labels:
             sample_targets = [
-                lt + (value_df["value"][value_df["label"] == lt[1]].values[0],)
-                for lt in self._sample_labels
+                lt + (value_df["value"][value_df["label"] == lt[1]].values[0],) for lt in self._sample_labels
             ]
         else:
             raise ValueError(
@@ -373,9 +356,7 @@ class SpecExp:
 
     @groups.setter
     def groups(self, value: list[str]) -> None:
-        raise ValueError(
-            "groups cannot be modified directly, use method 'add_groups' and 'rm_group' instead"
-        )
+        raise ValueError("groups cannot be modified directly, use method 'add_groups' and 'rm_group' instead")
 
     @property
     def images(self) -> list[tuple[str, str, str, str, str]]:
@@ -383,9 +364,7 @@ class SpecExp:
 
     @images.setter
     def images(self, value: list[tuple[str, str, str, str, str]]) -> None:
-        raise ValueError(
-            "images cannot be modified directly, use method 'add_images' and 'rm_images' instead"
-        )
+        raise ValueError("images cannot be modified directly, use method 'add_images' and 'rm_images' instead")
 
     @property
     def images_data(self) -> list[tuple[str, str, str, str, str]]:
@@ -393,9 +372,7 @@ class SpecExp:
 
     @images_data.setter
     def images_data(self, value: list[tuple[str, str, str, str, str]]) -> None:
-        raise ValueError(
-            "images_data cannot be modified directly, use method 'add_images' and 'rm_images' instead"
-        )
+        raise ValueError("images_data cannot be modified directly, use method 'add_images' and 'rm_images' instead")
 
     @property
     def raster_masks(self) -> list[tuple[str, str, str, str, str]]:
@@ -403,9 +380,7 @@ class SpecExp:
 
     @raster_masks.setter
     def raster_masks(self, value: list[tuple[str, str, str, str, str]]) -> None:
-        raise ValueError(
-            "raster_masks cannot be modified directly, use method 'add_images' and 'rm_images' instead"
-        )
+        raise ValueError("raster_masks cannot be modified directly, use method 'add_images' and 'rm_images' instead")
 
     @property
     def rois_from_file(
@@ -429,9 +404,7 @@ class SpecExp:
         return self._rois_from_coords
 
     @rois_from_coords.setter
-    def rois_from_coords(
-        self, value: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]
-    ) -> None:
+    def rois_from_coords(self, value: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]) -> None:
         raise ValueError(
             "rois_from_coords cannot be modified directly, use method 'add_roi_by_coords' and 'rm_rois' instead"
         )
@@ -441,9 +414,7 @@ class SpecExp:
         return self._rois
 
     @rois.setter
-    def rois(
-        self, value: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]
-    ) -> None:
+    def rois(self, value: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]) -> None:
         raise ValueError("SpecExp.rois cannot be modified")
 
     @property
@@ -451,9 +422,7 @@ class SpecExp:
         return self._rois_sample
 
     @rois_sample.setter
-    def rois_sample(
-        self, value: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]
-    ) -> None:
+    def rois_sample(self, value: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]) -> None:
         raise ValueError("SpecExp.rois_sample cannot be modified")
 
     @property
@@ -461,9 +430,7 @@ class SpecExp:
         return self._rois_mask
 
     @rois_mask.setter
-    def rois_mask(
-        self, value: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]
-    ) -> None:
+    def rois_mask(self, value: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]) -> None:
         raise ValueError("SpecExp.rois_mask cannot be modified")
 
     @property
@@ -471,9 +438,7 @@ class SpecExp:
         return self._standalone_specs
 
     @standalone_specs.setter
-    def standalone_specs(
-        self, value: list[tuple[str, str, str, str, list[Union[float, int]]]]
-    ) -> None:
+    def standalone_specs(self, value: list[tuple[str, str, str, str, list[Union[float, int]]]]) -> None:
         raise ValueError(
             "SpecExp.standalone_specs cannot be modified directly, \
                 use method 'add_standalone_specs' and 'rm_standalone_specs' instead"
@@ -484,9 +449,7 @@ class SpecExp:
         return self._standalone_specs_sample
 
     @standalone_specs_sample.setter
-    def standalone_specs_sample(
-        self, value: list[tuple[str, str, str, str, list[Union[float, int]]]]
-    ) -> None:
+    def standalone_specs_sample(self, value: list[tuple[str, str, str, str, list[Union[float, int]]]]) -> None:
         raise ValueError(
             "SpecExp.standalone_specs_sample cannot be modified directly, \
                 use method 'add_standalone_specs' and 'rm_standalone_specs' instead"
@@ -797,9 +760,7 @@ class SpecExp:
             if len(img_path_total) > 0:
                 self._add_image_paths(group_name, mask_of, img_path_total)
             else:
-                print(
-                    f"\nNo files found with the given names or name patterns: \n{image_name_list}"
-                )
+                print(f"\nNo files found with the given names or name patterns: \n{image_name_list}")
 
         else:
             raise ValueError("Neither name_pattern nor path_list is assigned")
@@ -881,9 +842,7 @@ class SpecExp:
         return_dataframe: Literal[True] = True,
     ) -> Annotated[
         pd.DataFrame,
-        AfterValidator(
-            dataframe_validator({"ID": str, "Group": str, "Image": str, "Type": str, "Path": str})
-        ),
+        AfterValidator(dataframe_validator({"ID": str, "Group": str, "Image": str, "Type": str, "Path": str})),
     ]: ...
 
     # Get image items by image [0 name list, 1 group]
@@ -901,11 +860,7 @@ class SpecExp:
     ) -> Optional[
         Annotated[
             pd.DataFrame,
-            AfterValidator(
-                dataframe_validator(
-                    {"ID": str, "Group": str, "Image": str, "Type": str, "Path": str}
-                )
-            ),
+            AfterValidator(dataframe_validator({"ID": str, "Group": str, "Image": str, "Type": str, "Path": str})),
         ]
     ]:
         """
@@ -1017,15 +972,9 @@ class SpecExp:
             # Get removed image items
             for imgn in filt_imgn_list:
                 get_results = {
-                    "img": self._get_images(
-                        image_name=[imgn], group_name=group_name, mask_of=mask_of
-                    ),
-                    "roif": self._get_rois(
-                        image_name=imgn, group_name=group_name, source_type="file"
-                    ),
-                    "roic": self._get_rois(
-                        image_name=imgn, group_name=group_name, source_type="coords"
-                    ),
+                    "img": self._get_images(image_name=[imgn], group_name=group_name, mask_of=mask_of),
+                    "roif": self._get_rois(image_name=imgn, group_name=group_name, source_type="file"),
+                    "roic": self._get_rois(image_name=imgn, group_name=group_name, source_type="coords"),
                 }
                 # Get updated images, roif and roic
                 for key in removed_total.keys():
@@ -1033,9 +982,7 @@ class SpecExp:
                     assert type(removed_items) is list
                     removed_list = removed_total[key]
                     for ritem in removed_items:
-                        if (len(removed_list) == 0) or (
-                            ritem[0] not in [imgt[0] for imgt in removed_list]
-                        ):
+                        if (len(removed_list) == 0) or (ritem[0] not in [imgt[0] for imgt in removed_list]):
                             removed_total[key].append(ritem)
 
         # Get updates
@@ -1087,9 +1034,7 @@ class SpecExp:
     @validate_call
     def _rois_from_file_to_df(
         self,
-        roi_item_list: list[
-            tuple[str, str, str, str, str, list[list[tuple[float, float]]], str, str]
-        ],
+        roi_item_list: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]], str, str]],
         print_simple: bool = True,
         return_df: bool = False,
     ) -> Optional[pd.DataFrame]:
@@ -1128,9 +1073,7 @@ class SpecExp:
         """
         Convert roic list to pandas dataframe or print simplified roic dataframe.
         """
-        df_roic = pd.DataFrame(
-            roi_c_item_list, columns=["ID", "Group", "Image", "ROI_name", "ROI_type", "Coordinates"]
-        )
+        df_roic = pd.DataFrame(roi_c_item_list, columns=["ID", "Group", "Image", "ROI_name", "ROI_type", "Coordinates"])
         if print_simple:
             with pd.option_context("display.max_rows", None, "display.max_columns", None):
                 print(df_roic.iloc[:, 1:-1])
@@ -1225,9 +1168,7 @@ class SpecExp:
     # Receive ROI in self._rois_from_file from parsed ROI items
     # self._rois_from_file: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path]  # noqa: E501
     @validate_call
-    def _roi_receiver(
-        self, new_roi_list: list, failed_filename_list: list, failed_error_list: list
-    ) -> None:
+    def _roi_receiver(self, new_roi_list: list, failed_filename_list: list, failed_error_list: list) -> None:
         """
         Add ROIs from parsed lists to self._rois_from_file.
 
@@ -1287,9 +1228,7 @@ class SpecExp:
 
         # Save err report
         if len(fail_err_list) > 0:
-            df_err = pd.DataFrame(
-                fail_err_list, columns=["Item", "Path", "Error_line", "Error_message"]
-            )
+            df_err = pd.DataFrame(fail_err_list, columns=["Item", "Path", "Error_line", "Error_message"])
             df_err.to_csv(report_dir + "_failed_ROI_loading_" + cts + ".csv", index=False)
             # Print err
             print("\nLoading from following ROI files failed:\n", fail_list)
@@ -1547,9 +1486,7 @@ class SpecExp:
             else:
                 non_existing_paths.append(roi_path)
         if len(existing_paths) == 0:
-            warn_msg = (
-                "\nAll ROI file paths in the given lists are invalid. No ROI file is added.\n"
-            )
+            warn_msg = "\nAll ROI file paths in the given lists are invalid. No ROI file is added.\n"
             warnings.warn(warn_msg, UserWarning, stacklevel=2)
             return
         if len(non_existing_paths) > 0:
@@ -1663,9 +1600,7 @@ class SpecExp:
         for coordlist in vertex_coordinate_pair_lists:
             # Validate integrity of vertex coordinate list of every polygon
             if len(coordlist) < 4:
-                raise ValueError(
-                    "number of vertex coordinate pairs should be at least 4 for a polygon"
-                )
+                raise ValueError("number of vertex coordinate pairs should be at least 4 for a polygon")
             # Convert coordinate numeric types to float
             coordlist1 = [(float(coordpair[0]), float(coordpair[1])) for coordpair in coordlist]
             # Force side vector integrity - last coordinates return to start to form a closed shape
@@ -1675,9 +1610,7 @@ class SpecExp:
             vertex_coordinate_pair_lists1.append(coordlist1)
 
         # Construct ROI item
-        roi_id = (
-            "Console-added-ROI_" + group_name + "_" + image_name.replace(".", "-") + "_" + roi_name
-        )
+        roi_id = "Console-added-ROI_" + group_name + "_" + image_name.replace(".", "-") + "_" + roi_name
 
         # Update rois_from_coords
         new_roic_item = (
@@ -1836,7 +1769,8 @@ class SpecExp:
                 else:
                     warnings.warn(
                         "Only ROIs from file support retrieving by ROI file names, the filename criterion is ignored.",
-                        UserWarning, stacklevel=3
+                        UserWarning,
+                        stacklevel=3,
                     )
                     condrfn = True
             # All conditions
@@ -2042,9 +1976,7 @@ class SpecExp:
                         ]
                     )
                 else:
-                    return pd.DataFrame(
-                        columns=["ID", "Group", "Image", "ROI_name", "ROI_type", "Coordinates"]
-                    )
+                    return pd.DataFrame(columns=["ID", "Group", "Image", "ROI_name", "ROI_type", "Coordinates"])
 
         # Search ROIs
         matched_items = self._get_rois(
@@ -2812,17 +2744,13 @@ class SpecExp:
             else:
                 # Validate uniqueness
                 if len(set(sample_names)) < len(sample_names):
-                    raise ValueError(
-                        "Duplicate sample names are not allowed, please provide unique names"
-                    )
+                    raise ValueError("Duplicate sample names are not allowed, please provide unique names")
                 # Validate naming format
                 for sn in sample_names:
                     if "dalone_spec_sample_%#" in sn:
                         if len(sn.split("dalone_spec_sample_%#")) > 1:
                             if not sn.split("dalone_spec_sample_%#")[1].isdigit():
-                                raise ValueError(
-                                    f"Given sample conflicts with default name format: '{sn}'"
-                                )
+                                raise ValueError(f"Given sample conflicts with default name format: '{sn}'")
                 sample_names1 = sample_names
         else:
             # Generate default sample names
@@ -2844,9 +2772,7 @@ class SpecExp:
             else:
                 maxsnn = 0
             # Default sample names
-            sample_names1 = [
-                ("Standalone_spec_sample_%#" + str(i + 1 + maxsnn)) for i in range(len(spec_data))
-            ]
+            sample_names1 = [("Standalone_spec_sample_%#" + str(i + 1 + maxsnn)) for i in range(len(spec_data))]
 
         # Validate input data
         splen = len(spec_data[0])
@@ -2872,12 +2798,8 @@ class SpecExp:
 
         # Remove existed items for update
         if len(self._standalone_specs) > 0:
-            not_updated_sspecs = [
-                spect for spect in self._standalone_specs if spect[3] not in added_sspec_names
-            ]
-            updated_sspecs = [
-                spect for spect in self._standalone_specs if spect[3] in added_sspec_names
-            ]
+            not_updated_sspecs = [spect for spect in self._standalone_specs if spect[3] not in added_sspec_names]
+            updated_sspecs = [spect for spect in self._standalone_specs if spect[3] in added_sspec_names]
         else:
             updated_sspecs = []
             not_updated_sspecs = []
@@ -2894,12 +2816,8 @@ class SpecExp:
         self._update_sample_sspecs()
 
         # Print report
-        df_updated = pd.DataFrame(
-            updated_sspecs, columns=["ID", "Group", "Use_type", "Sample_name", "Spectral_data"]
-        )
-        df_added = pd.DataFrame(
-            new_sspecs, columns=["ID", "Group", "Use_type", "Sample_name", "Spectral_data"]
-        )
+        df_updated = pd.DataFrame(updated_sspecs, columns=["ID", "Group", "Use_type", "Sample_name", "Spectral_data"])
+        df_added = pd.DataFrame(new_sspecs, columns=["ID", "Group", "Use_type", "Sample_name", "Spectral_data"])
         if not silent_run:
             if len(updated_sspecs) > 0:
                 print("\nFollowing standalone spectra are updated:\n")
@@ -2953,9 +2871,7 @@ class SpecExp:
         )
         df_sspecs_meta = df_sspecs.iloc[:, :-1]
         df_sspecs_data = pd.DataFrame([spect[4] for spect in self._standalone_specs])
-        df_sspecs_data.columns = [
-            ("Band_" + str(i + 1)) for i in range(len(df_sspecs_data.columns))
-        ]
+        df_sspecs_data.columns = [("Band_" + str(i + 1)) for i in range(len(df_sspecs_data.columns))]
         df_sspecs_out = pd.concat([df_sspecs_meta, df_sspecs_data], axis=1)
 
         # Write to csv
@@ -2966,15 +2882,11 @@ class SpecExp:
         # Current time for saving backups
         cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         if save_backup:
-            df_sspecs_out.to_csv(
-                wpath + f"Standalone_spectra_{self._create_time}_backup_{cts}.csv", index=False
-            )
+            df_sspecs_out.to_csv(wpath + f"Standalone_spectra_{self._create_time}_backup_{cts}.csv", index=False)
 
         # Print update reports
         if not silent_run:
-            print(
-                f"\nStandalone spectra are saved in: \n\n{wpath}Standalone_spectra_{self._create_time}.csv\n"
-            )
+            print(f"\nStandalone spectra are saved in: \n\n{wpath}Standalone_spectra_{self._create_time}.csv\n")
             if save_backup:
                 print(
                     f"\nStandalone spectra backup are saved as:\
@@ -2997,11 +2909,7 @@ class SpecExp:
         """  # noqa: E501
         # Default path
         if csv_file_path is None:
-            dpath = (
-                self._report_directory
-                + "Standalone_spectral_data/"
-                + f"Standalone_spectra_{self._create_time}.csv"
-            )
+            dpath = self._report_directory + "Standalone_spectral_data/" + f"Standalone_spectra_{self._create_time}.csv"
         else:
             dpath = csv_file_path
 
@@ -3203,9 +3111,7 @@ class SpecExp:
 
         if len(result) > 0:
             # Convert result to dataframe
-            df_sspec = pd.DataFrame(
-                result, columns=["ID", "Group", "Use_type", "Sample_name", "Spectral_data"]
-            )
+            df_sspec = pd.DataFrame(result, columns=["ID", "Group", "Use_type", "Sample_name", "Spectral_data"])
             # Print report
             if print_result:
                 with pd.option_context("display.max_rows", None, "display.max_columns", None):
@@ -3217,9 +3123,7 @@ class SpecExp:
             if print_result:
                 print("\nNo matched standalone spectrum item found")
             if return_dataframe:
-                return pd.DataFrame(
-                    columns=["ID", "Group", "Use_type", "Sample_name", "Spectral_data"]
-                )
+                return pd.DataFrame(columns=["ID", "Group", "Use_type", "Sample_name", "Spectral_data"])
         return None
 
     # Alias
@@ -3284,9 +3188,7 @@ class SpecExp:
                     print("All standalone spectra are removed")
         else:
             if not silent_run:
-                print(
-                    "\nNo matched standalone spectrum item found. No standalone spectra are removed"
-                )
+                print("\nNo matched standalone spectrum item found. No standalone spectra are removed")
 
         # Updated saved file
         self._update_sspecs_file(silent_run=True)
@@ -3339,9 +3241,7 @@ class SpecExp:
     @overload
     def ls_sample_labels(
         self, return_dataframe: Literal[True] = True
-    ) -> Annotated[
-        pd.DataFrame, AfterValidator(dataframe_validator({"Sample_ID": str, "Label": str}))
-    ]: ...
+    ) -> Annotated[pd.DataFrame, AfterValidator(dataframe_validator({"Sample_ID": str, "Label": str}))]: ...
 
     @overload
     def ls_sample_labels(self, return_dataframe: Literal[False] = False) -> None: ...
@@ -3351,11 +3251,7 @@ class SpecExp:
     @validate_call
     def ls_sample_labels(
         self, return_dataframe: bool = True
-    ) -> Optional[
-        Annotated[
-            pd.DataFrame, AfterValidator(dataframe_validator({"Sample_ID": str, "Label": str}))
-        ]
-    ]:
+    ) -> Optional[Annotated[pd.DataFrame, AfterValidator(dataframe_validator({"Sample_ID": str, "Label": str}))]]:
         """
         Retrieve sample labels as dataframe.
 
@@ -3527,9 +3423,7 @@ class SpecExp:
 
         # Convert sample_targets to dataframe
         if len(self.sample_targets) > 0:
-            dft = pd.DataFrame(
-                self.sample_targets, columns=["Sample_ID", "Sample_label", "Target_value"]
-            )
+            dft = pd.DataFrame(self.sample_targets, columns=["Sample_ID", "Sample_label", "Target_value"])
         else:
             dft = pd.DataFrame(
                 [(lbt[1], "") for lbt in self.sample_labels],
@@ -3566,9 +3460,7 @@ class SpecExp:
             If true, the dataframe is returned, or the dataframe is printed. The default is True.
         """
         if len(self.sample_targets) > 0:
-            dft = pd.DataFrame(
-                self.sample_targets, columns=["Sample_ID", "Sample_label", "Target_value"]
-            )
+            dft = pd.DataFrame(self.sample_targets, columns=["Sample_ID", "Sample_label", "Target_value"])
         else:
             tvs = [(st[0], st[1], np.nan) for st in self.sample_labels]
             dft = pd.DataFrame(tvs, columns=["Sample_ID", "Sample_label", "Target_value"])
@@ -3654,9 +3546,7 @@ class SpecExp:
 
         # Dump copy
         if copy:
-            dump_path1 = (
-                dump_dir + f"SpecExp_data_configuration_{self.create_time}_copy_at_{cts}.dill"
-            )
+            dump_path1 = dump_dir + f"SpecExp_data_configuration_{self.create_time}_copy_at_{cts}.dill"
             dump_path1_sp = os.path.splitext(dump_path1)
             ci = 0
             while os.path.exists(dump_path1):
@@ -3695,9 +3585,7 @@ class SpecExp:
         # Load file path
         if config_file_path == "":
             dump_path0 = (
-                self.report_directory
-                + "SpecExp_configuration/"
-                + f"SpecExp_data_configuration_{self.create_time}.dill"
+                self.report_directory + "SpecExp_configuration/" + f"SpecExp_data_configuration_{self.create_time}.dill"
             )
         elif ("/" not in config_file_path) & ("\\" not in config_file_path):
             dump_path0 = self.report_directory + "SpecExp_configuration/" + config_file_path

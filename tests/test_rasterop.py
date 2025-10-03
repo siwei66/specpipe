@@ -137,9 +137,7 @@ class TestCropROI(unittest.TestCase):
             # Create test raster with 50x100 dimensions and 224 bands (like AVIRIS)
             create_test_raster(raster_path, width=100, height=50, bands=224)
 
-            roi_coordinates = [
-                [(20.0, 10.0), (80.0, 10.0), (80.0, 40.0), (20.0, 40.0), (20.0, 10.0)]
-            ]
+            roi_coordinates = [[(20.0, 10.0), (80.0, 10.0), (80.0, 40.0), (20.0, 40.0), (20.0, 10.0)]]
 
             croproi(raster_path, roi_coordinates, output_path)
 
@@ -198,9 +196,7 @@ class TestCropROI(unittest.TestCase):
             # Create test raster with 50x100 dimensions and 200 bands
             create_test_raster(raster_path, width=100, height=50, bands=200)
 
-            roi_coordinates = [
-                [(20.0, 10.0), (80.0, 10.0), (80.0, 40.0), (20.0, 40.0), (20.0, 10.0)]
-            ]
+            roi_coordinates = [[(20.0, 10.0), (80.0, 10.0), (80.0, 40.0), (20.0, 40.0), (20.0, 10.0)]]
 
             croproi(raster_path, roi_coordinates, output_path)
 
@@ -813,9 +809,7 @@ class TestPixelArrayApply:
     @staticmethod
     def band_expansion_function(spectra_2d: np.ndarray) -> np.ndarray:
         """Test function that expands bands (4 -> 6)"""
-        return np.column_stack(
-            [spectra_2d, spectra_2d[:, :2]]
-        )  # Add first two bands as fifth and sixth
+        return np.column_stack([spectra_2d, spectra_2d[:, :2]])  # Add first two bands as fifth and sixth
 
     @staticmethod
     def test_basic_functionality() -> None:
@@ -1107,6 +1101,7 @@ class TestPixelArrayApply:
 
 
 # %% test functions : pixel_tensor_apply
+
 
 @pytest.mark.skipif(not HAS_CUDA, reason="No GPU available")
 class TestPixelTensorApply(unittest.TestCase):
@@ -1527,9 +1522,7 @@ class TestPixelTensorHyperApply(unittest.TestCase):
         """Function that reduces bands"""
         tensor = tensor.float()
         # Simple mean/std normalization
-        normalized = (tensor - tensor.mean(dim=1, keepdim=True)) / (
-            tensor.std(dim=1, keepdim=True) + 1e-8
-        )
+        normalized = (tensor - tensor.mean(dim=1, keepdim=True)) / (tensor.std(dim=1, keepdim=True) + 1e-8)
         # Return first 2 "components"
         return normalized[:, :2, :]
 
@@ -1949,7 +1942,7 @@ class TestPixelApply:
                 spectral_function=TestPixelApply.dummy_spectral_function_spec,
                 function_type="spec",
                 return_output_path=True,
-                progress=False
+                progress=False,
             )
             assert result.endswith("_px_app_dummy_spectral_function_spec.tif")
             assert os.path.exists(result)
@@ -2095,7 +2088,7 @@ class TestPixelApply:
                     function_type="spec",
                     output_path=output_path,
                     return_output_path=False,
-                    progress=False
+                    progress=False,
                 )
                 assert result is None
 

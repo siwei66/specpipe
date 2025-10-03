@@ -32,9 +32,7 @@ from .specio import simple_type_validator
 
 # Crop ROI from a raster image and save to a new image
 @simple_type_validator
-def croproi(
-    raster_path: str, roi_coordinates: list[list[tuple[float, float]]], output_path: str
-) -> None:
+def croproi(raster_path: str, roi_coordinates: list[list[tuple[float, float]]], output_path: str) -> None:
     """
     Crop ROI from a raster image and save croped region to a new image.
 
@@ -220,9 +218,7 @@ def dtype_mapper(  # noqa: C901
         else:
             raise ValueError(f"Unsupported raster data type: {dtype}")
     else:
-        raise ValueError(
-            f"Unsupported map_type, map_type must be 'numpy', 'torch' or 'raster', got: '{map_type}'"
-        )
+        raise ValueError(f"Unsupported map_type, map_type must be 'numpy', 'torch' or 'raster', got: '{map_type}'")
 
 
 def auto_fp(  # noqa: C901
@@ -423,9 +419,7 @@ def pixel_spec_apply(
             # Process in tiles
             if progress:
                 print(f"\nProcessing image with tile size {tile_size}x{tile_size}\n")
-            for i in tqdm(
-                range(0, height, tile_size), total=int(height / tile_size) + 1, disable=not progress
-            ):
+            for i in tqdm(range(0, height, tile_size), total=int(height / tile_size) + 1, disable=not progress):
                 for j in range(0, width, tile_size):
                     # Define window for current tile
                     win = Window(
@@ -497,9 +491,7 @@ def pixel_array_apply(
             # Process in tiles
             if progress:
                 print(f"\nProcessing image with tile size {tile_size}x{tile_size}\n")
-            for i in tqdm(
-                range(0, height, tile_size), total=int(height / tile_size) + 1, disable=not progress
-            ):
+            for i in tqdm(range(0, height, tile_size), total=int(height / tile_size) + 1, disable=not progress):
                 for j in range(0, width, tile_size):
                     # Define window for current tile
                     win = Window(
@@ -593,9 +585,7 @@ def pixel_tensor_apply(  # noqa: C901
             if progress:
                 print(f"\nProcessing image with tile size {tile_size}x{tile_size}\n")
 
-            for i in tqdm(
-                range(0, height, tile_size), total=int(height / tile_size) + 1, disable=not progress
-            ):
+            for i in tqdm(range(0, height, tile_size), total=int(height / tile_size) + 1, disable=not progress):
                 for j in range(0, width, tile_size):
                     # Define window for current tile
                     win = Window(
@@ -614,9 +604,7 @@ def pixel_tensor_apply(  # noqa: C901
 
                     # Create tensor from tile-data and move to GPU
                     with torch.cuda.stream(stream):
-                        tile_tensor = (
-                            torch.from_numpy(tile_data).pin_memory().to(device, non_blocking=True)
-                        )
+                        tile_tensor = torch.from_numpy(tile_data).pin_memory().to(device, non_blocking=True)
 
                     # Convert tensor dtype
                     if tile_tensor.dtype is not dtype_mapper(dtype, "torch"):
@@ -718,9 +706,7 @@ def pixel_tensor_hyper_apply(  # noqa: C901
 
                 # Convert to [row_chunk, C, W] for processing
                 with torch.cuda.stream(stream):
-                    row_tensor = (
-                        torch.from_numpy(row_data).pin_memory().to(device, non_blocking=True)
-                    )
+                    row_tensor = torch.from_numpy(row_data).pin_memory().to(device, non_blocking=True)
                 row_tensor = row_tensor.permute(1, 0, 2)  # [row_chunk, C, W]
 
                 # Convert tensor dtype
@@ -821,15 +807,11 @@ def pixel_apply(
         raise ValueError(f"\nInvalid image_path: {image_path} \nImage file does not exist.")
     output_dir_path = os.path.dirname(output_path)
     if not os.path.exists(output_dir_path):
-        raise ValueError(
-            f"\nInvalid output directory: {output_dir_path} \nDirectory does not exist."
-        )
+        raise ValueError(f"\nInvalid output directory: {output_dir_path} \nDirectory does not exist.")
 
     # Validate tile size and batch size
     if (tile_size != -1) & (tile_size < 1):
-        raise ValueError(
-            f"\nInvalid tile_size, got: {tile_size} \nIf provided, tile_size must be positive integer."
-        )
+        raise ValueError(f"\nInvalid tile_size, got: {tile_size} \nIf provided, tile_size must be positive integer.")
 
     # Apply function
     # Spec apply
@@ -842,15 +824,11 @@ def pixel_apply(
 
     # Tensor apply
     elif function_type.lower() == "tensor":
-        pixel_tensor_apply(
-            image_path, output_path, spectral_function, dtype, tile_size, "cuda", progress
-        )
+        pixel_tensor_apply(image_path, output_path, spectral_function, dtype, tile_size, "cuda", progress)
 
     # Hyper-tensor apply
     elif function_type.lower() == "tensor_hyper":
-        pixel_tensor_hyper_apply(
-            image_path, output_path, spectral_function, dtype, tile_size, "cuda", progress
-        )
+        pixel_tensor_hyper_apply(image_path, output_path, spectral_function, dtype, tile_size, "cuda", progress)
 
     # Else
     else:

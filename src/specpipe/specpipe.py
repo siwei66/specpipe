@@ -59,11 +59,7 @@ global ModelEva
 @simple_type_validator
 def _target_type_validation_for_serialization(
     pc_sample_list: list[tuple[str, tuple[int], Any, Annotated[Any, arraylike_validator(ndim=1)]]],
-) -> list[
-    tuple[
-        str, tuple[int], Union[str, int, bool, float], Annotated[Any, arraylike_validator(ndim=1)]
-    ]
-]:
+) -> list[tuple[str, tuple[int], Union[str, int, bool, float], Annotated[Any, arraylike_validator(ndim=1)]]]:
     """Fix typing for integer after dill serialization."""
     for loaded_i, loaded_sample in enumerate(pc_sample_list):
         loaded_y = loaded_sample[2]
@@ -114,9 +110,7 @@ def _dl_val(data_level: Union[str, int]) -> tuple[int, str]:
             dlind = data_levels.index(data_level)
     elif type(data_level) is int:
         if data_level not in data_level_n:
-            raise ValueError(
-                f"data_level number must be one of {data_level_n}, but got: {data_level}"
-            )
+            raise ValueError(f"data_level number must be one of {data_level_n}, but got: {data_level}")
         else:
             dlind = data_level
     return (dlind, data_levels[dlind])
@@ -422,33 +416,17 @@ def _preprocessing_sample(  # noqa: C901
                             if dl_in == 0:
                                 chain_result.append(method_func(step_input_data))
                             elif dl_in == 1:
-                                chain_result.append(
-                                    pixel_apply(
-                                        step_input_data, method_func, "spec", progress=False
-                                    )
-                                )
+                                chain_result.append(pixel_apply(step_input_data, method_func, "spec", progress=False))
                             elif dl_in == 2:
-                                chain_result.append(
-                                    pixel_apply(
-                                        step_input_data, method_func, "array", progress=False
-                                    )
-                                )
+                                chain_result.append(pixel_apply(step_input_data, method_func, "array", progress=False))
                             elif dl_in == 3:
-                                chain_result.append(
-                                    pixel_apply(
-                                        step_input_data, method_func, "tensor", progress=False
-                                    )
-                                )
+                                chain_result.append(pixel_apply(step_input_data, method_func, "tensor", progress=False))
                             elif dl_in == 4:
                                 chain_result.append(
-                                    pixel_apply(
-                                        step_input_data, method_func, "tensor_hyper", progress=False
-                                    )
+                                    pixel_apply(step_input_data, method_func, "tensor_hyper", progress=False)
                                 )
                             elif dl_in == 5:
-                                chain_result.append(
-                                    method_func(step_input_data, sample_data["roi_coords"])
-                                )
+                                chain_result.append(method_func(step_input_data, sample_data["roi_coords"]))
                             elif (dl_in >= 6) & (dl_in <= 7):
                                 chain_result.append(method_func(step_input_data))
                             # Save calculated step results
@@ -458,17 +436,11 @@ def _preprocessing_sample(  # noqa: C901
                             for proc_id in step_procs:
                                 step_id = step_id + "proc_" + str(proc_id) + "-"
                             # Store step result and calculation status
-                            status_results[stepi].append(
-                                (step_id, step_procs, dl_in, dl_out, chain_result[-1])
-                            )
+                            status_results[stepi].append((step_id, step_procs, dl_in, dl_out, chain_result[-1]))
                             calc_status[stepi].append(step_procs)
                     except Exception as e:
                         method_item = tuple(method_item)
-                        method_item_out = (
-                            method_item[1:5]
-                            + (method_item[5].__class__.__name__,)
-                            + method_item[6:8]
-                        )
+                        method_item_out = method_item[1:5] + (method_item[5].__class__.__name__,) + method_item[6:8]
                         raise ValueError(
                             f"\nTest failed for chain: \nChain index: {chain_ind}, \nChain: {chain};\
                                 \n\nProcess ID: {step}, \nProcess item: {method_item_out}, \n\nError message: \n{e}"
@@ -531,7 +503,8 @@ def _preprocessing_sample(  # noqa: C901
                 raise warnings.warn(
                     "When dump_result is False, \
                         the result is always returned and the return_step_result argument is ignored.",
-                    UserWarning, stacklevel=3
+                    UserWarning,
+                    stacklevel=3,
                 )
 
     # Error handling
@@ -554,9 +527,7 @@ def _preprocessing_sample(  # noqa: C901
         else:
             sample_data_label = sample_data["label"]
         # Write error log
-        err_msg = (
-            f"Failed in the preprocessing of '{sample_data_label}', error message: \n\n{str(e)}"
-        )
+        err_msg = f"Failed in the preprocessing of '{sample_data_label}', error message: \n\n{str(e)}"
         with open(error_log_path, "w") as f:
             f.write(err_msg)
         raise ValueError(e) from e
@@ -671,9 +642,7 @@ class _ModelMethod:
                 influence_analysis_config=self.influence_analysis_config,
             )
 
-    def __call__(
-        self, sample_list: list, data_label: str, report_directory: Optional[str] = None
-    ) -> None:
+    def __call__(self, sample_list: list, data_label: str, report_directory: Optional[str] = None) -> None:
         self.evaluation(sample_list, data_label, report_directory)
 
 
@@ -750,9 +719,7 @@ def _model_evaluator(  # noqa: C901
     # Validate model processes
     for procit in model_processes:
         if procit[3] != "model":
-            raise ValueError(
-                f"Model process must have output data level of 'model', but got: '{procit[3]}'"
-            )
+            raise ValueError(f"Model process must have output data level of 'model', but got: '{procit[3]}'")
         if not callable(procit[-3]):
             raise ValueError(
                 f"Invalid model evaluation method, \
@@ -815,9 +782,7 @@ def _model_evaluator(  # noqa: C901
                     silent_all=silent_all,
                 )
         else:
-            raise ValueError(
-                f"Model only accepts data level 'spec1d' as input, but got: {dl_in_name}"
-            )
+            raise ValueError(f"Model only accepts data level 'spec1d' as input, but got: {dl_in_name}")
 
     # Update progress
     log_path = model_report_dir + "modeling_progress_log.dill"
@@ -828,7 +793,8 @@ def _model_evaluator(  # noqa: C901
         else:
             warnings.warn(
                 f"Sample_list_label must be unique, got duplicated label: {sample_list_label}",
-                UserWarning, stacklevel=3
+                UserWarning,
+                stacklevel=3,
             )
         dump_vars(log_path, {"modeling_progress_log": modeling_progress_log}, backup=False)
     else:
@@ -869,9 +835,7 @@ def _model_evaluator_mp(
         pc_sample_list = _target_type_validation_for_serialization(pc_sample_list)
         pchain = pc_it["chain_procs"]
         # Use preprocess chain ID as chain label
-        pproc_chain_label = [
-            f"Preprocessing_#{pci}" for pci, pc in enumerate(pchains) if pc == pchain
-        ][0]
+        pproc_chain_label = [f"Preprocessing_#{pci}" for pci, pc in enumerate(pchains) if pc == pchain][0]
         _model_evaluator(
             preprocess_result=pc_sample_list,
             preprocess_chain=pchain,
@@ -976,9 +940,7 @@ class SpecPipe:
 
         # Validate report diretory
         if not os.path.isdir(spec_exp._report_directory):
-            raise ValueError(
-                f"\nReport directory of given SpecExp is invalid: \n'{spec_exp._report_directory}'"
-            )
+            raise ValueError(f"\nReport directory of given SpecExp is invalid: \n'{spec_exp._report_directory}'")
 
         # Validate group
         if len(spec_exp.groups) == 0:
@@ -987,28 +949,18 @@ class SpecPipe:
         # Validate sample data configs
         if len(spec_exp.standalone_specs_sample) == 0:
             if len(spec_exp.images) == 0:
-                raise ValueError(
-                    "Neither image path nor standalone spectrum is found in given SpecExp"
-                )
+                raise ValueError("Neither image path nor standalone spectrum is found in given SpecExp")
             elif len(spec_exp.rois_sample) == 0:
-                raise ValueError(
-                    "Neither sample ROI nor standalone spectrum is found in given SpecExp"
-                )
+                raise ValueError("Neither sample ROI nor standalone spectrum is found in given SpecExp")
             for g in spec_exp.groups:
-                group_images = spec_exp.ls_images(
-                    group_name=g, return_dataframe=True, print_result=False
-                )
+                group_images = spec_exp.ls_images(group_name=g, return_dataframe=True, print_result=False)
                 group_rois = spec_exp.ls_rois(
                     group_name=g, roi_type="sample", return_dataframe=True, print_result=False
                 )
                 if len(group_images) == 0:
-                    raise ValueError(
-                        f"Neither image nor standalone spectrum is found in group: '{g}'"
-                    )
+                    raise ValueError(f"Neither image nor standalone spectrum is found in group: '{g}'")
                 elif len(group_rois) == 0:
-                    raise ValueError(
-                        f"Neither image sample ROI nor standalone spectrum is found in group: '{g}'"
-                    )
+                    raise ValueError(f"Neither image sample ROI nor standalone spectrum is found in group: '{g}'")
         else:
             if len(spec_exp.images) > 0 or len(spec_exp.rois_sample) > 0:
                 raise ValueError(
@@ -1042,9 +994,7 @@ class SpecPipe:
 
         # Sample target values
         # [0 fixed sample id, 1 user assinged labels, 2 Target values]
-        self._sample_targets: list[tuple[str, str, Union[str, bool, int, float]]] = (
-            spec_exp.sample_targets
-        )
+        self._sample_targets: list[tuple[str, str, Union[str, bool, int, float]]] = spec_exp.sample_targets
 
         # Report directory
         self._report_directory: str = self.spec_exp._report_directory
@@ -1142,9 +1092,7 @@ class SpecPipe:
                 if v > v0:
                     v0 = v
                 else:
-                    raise ValueError(
-                        f"Band wavelengths must be in an ascending order without ties, got: {value}"
-                    )
+                    raise ValueError(f"Band wavelengths must be in an ascending order without ties, got: {value}")
         self._band_wavelength = value
 
     ## Read only or immuatable properties
@@ -1154,9 +1102,7 @@ class SpecPipe:
 
     @sample_targets.setter
     def sample_targets(self, value: list[tuple[str, str, Union[str, bool, int, float]]]) -> None:
-        raise ValueError(
-            "sample_targets cannot be modified in SpecPipe, please update using 'SpecExp' instead"
-        )
+        raise ValueError("sample_targets cannot be modified in SpecPipe, please update using 'SpecExp' instead")
 
     @property
     def process(self) -> list[tuple[str, str, str, str, int, Any, int, int]]:
@@ -1164,9 +1110,7 @@ class SpecPipe:
 
     @process.setter
     def process(self, value: list[tuple[str, str, str, str, int, Any, int, int]]) -> None:
-        raise ValueError(
-            "process cannot be modified directly, use 'add_process' and 'rm_process' instead"
-        )
+        raise ValueError("process cannot be modified directly, use 'add_process' and 'rm_process' instead")
 
     @property
     def process_steps(self) -> list:
@@ -1190,9 +1134,7 @@ class SpecPipe:
 
     @custom_chains.setter
     def custom_chains(self, value: list) -> None:
-        raise ValueError(
-            "custom_chains cannot be modified directly, use 'custom_chains_from_df' to set custom_chains"
-        )
+        raise ValueError("custom_chains cannot be modified directly, use 'custom_chains_from_df' to set custom_chains")
 
     @property
     def sample_data(self) -> list[dict[str, Any]]:
@@ -1313,9 +1255,7 @@ class SpecPipe:
                 json.dump(td1, f)
 
             # Testing spectrum table
-            td2 = pd.DataFrame(
-                roitable, columns=[("Band_" + str(i + 1)) for i in range(roitable.shape[1])]
-            )
+            td2 = pd.DataFrame(roitable, columns=[("Band_" + str(i + 1)) for i in range(roitable.shape[1])])
             td2.to_csv(sdir + "Pre_execution_data_roi_specs.csv", index=False)
 
             # Output for pre-execution testing data
@@ -1351,9 +1291,7 @@ class SpecPipe:
                 os.makedirs(sdir)
 
             # Testing spectrum table
-            td2 = pd.DataFrame(
-                [list(spec1d)], columns=[("Band_" + str(i + 1)) for i in range(len(spec1d))]
-            )
+            td2 = pd.DataFrame([list(spec1d)], columns=[("Band_" + str(i + 1)) for i in range(len(spec1d))])
             td2.to_csv(sdir + "Pre_execution_data_standalone_specs.csv", index=False)
 
             # Output for pre-execution testing data
@@ -1424,9 +1362,7 @@ class SpecPipe:
                     testing_data = self._pretest_data["spec1d"]
                     result = method(testing_data)
                 else:
-                    raise ValueError(
-                        "Input data level cannot be 'model' or 8 (corresponding index)."
-                    )
+                    raise ValueError("Input data level cannot be 'model' or 8 (corresponding index).")
             else:
                 # Model method is not validated here
                 return method
@@ -1483,10 +1419,7 @@ class SpecPipe:
                                                 )
                                                 # Read all bands for current tile (shape: [bands, rows, cols])
                                                 sample = src.read(window=win)
-                                                if not (
-                                                    np.all(sample == src.nodata)
-                                                    or np.all(np.isnan(sample))
-                                                ):
+                                                if not (np.all(sample == src.nodata) or np.all(np.isnan(sample))):
                                                     all_no_data = False
                                                     break
                                     else:
@@ -1782,10 +1715,7 @@ class SpecPipe:
         output_data_level = 8
         # Application sequence of non-model processes with input data level spec1d / 7
         preprocess_dl7 = self.ls_process(input_data_level=7, return_result=True, print_result=False)
-        app_seqs = [
-            proci[4]
-            for proci in np.array(preprocess_dl7[preprocess_dl7["Output_data_level"] != "model"])
-        ]
+        app_seqs = [proci[4] for proci in np.array(preprocess_dl7[preprocess_dl7["Output_data_level"] != "model"])]
         application_sequence = max(app_seqs) + 1
         method = model_method
         process_label = ""
@@ -2352,9 +2282,7 @@ class SpecPipe:
         if len(proc_label_item) == 1:
             return str(proc_label_item[0, 1])
         elif len(proc_label_item) == 0:
-            raise ValueError(
-                f"Got invalid process ID '{process_id}', no corresponding process label found."
-            )
+            raise ValueError(f"Got invalid process ID '{process_id}', no corresponding process label found.")
         else:
             raise ValueError(
                 f"Process ID '{process_id}' has multiple label references: {proc_label_item[:, 1]}. \
@@ -2386,9 +2314,7 @@ class SpecPipe:
                 ref_table = self._process_id_label_ref()
                 for i in range(df_chains.shape[0]):
                     for j in range(df_chains.shape[1]):
-                        df_chains_label.iloc[i, j] = self._process_id_to_label(
-                            df_chains.iloc[i, j], ref_table
-                        )
+                        df_chains_label.iloc[i, j] = self._process_id_to_label(df_chains.iloc[i, j], ref_table)
                 if print_label:
                     with pd.option_context("display.max_rows", None, "display.max_columns", None):
                         print(df_chains_label)
@@ -2423,9 +2349,9 @@ class SpecPipe:
         It is recommended to modify the dataframe from method 'process_chains_to_df' and set the modified dataframe as custom chains.
         """  # noqa: E501
         # Validate chain df
-        process_chain_dataframe = dataframe_validator(
-            dtype="str", ncol=len(self._process_chains[0])
-        )(process_chain_dataframe)
+        process_chain_dataframe = dataframe_validator(dtype="str", ncol=len(self._process_chains[0]))(
+            process_chain_dataframe
+        )
 
         # Convert chain df to list
         cchain = [tuple(row) for row in process_chain_dataframe.to_numpy()]
@@ -2515,9 +2441,7 @@ class SpecPipe:
                             (prps[i] in prop.__name__) & (not exact_match)
                         )
                 else:
-                    cond = ((prps[i] == prop) & exact_match) | (
-                        (str(prps[i]) in str(prop)) & (not exact_match)
-                    )
+                    cond = ((prps[i] == prop) & exact_match) | ((str(prps[i]) in str(prop)) & (not exact_match))
                 rcond = rcond & cond
 
             # Retrieval
@@ -2803,9 +2727,7 @@ class SpecPipe:
                             ) from e
                 with pd.option_context("display.max_rows", None, "display.max_columns", None):
                     df_proc_simple = df_proc.iloc[:, [1, 2, 3, 4, 5]]
-                    print(
-                        f"\nFollowing processes are removed from the pipeline: \n{df_proc_simple}"
-                    )
+                    print(f"\nFollowing processes are removed from the pipeline: \n{df_proc_simple}")
             else:
                 print("\nNo matched process found")
 
@@ -2821,23 +2743,15 @@ class SpecPipe:
         # ROI item format: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
         # Img item format: [0 id, 1 group, 2 image_name, 3 mask_of, 4 image_path]
         # Target value item format: [0 fixed sample id, 1 user assinged labels, 2 Target values]
-        if (len(self.spec_exp.rois_sample) > 0) and (
-            len(self.spec_exp.standalone_specs_sample) == 0
-        ):
+        if (len(self.spec_exp.rois_sample) > 0) and (len(self.spec_exp.standalone_specs_sample) == 0):
             sample_data: list[dict] = []
             for roit in self.spec_exp.rois_sample:
                 sdata: dict[str, Any] = {}
                 sdata["ID"] = roit[0]
-                sdata["label"] = [
-                    lbt[1] for lbt in self.spec_exp.sample_labels if lbt[0] == roit[0]
-                ][0]
-                sdata["target"] = [
-                    tg[2] for tg in self.spec_exp.sample_targets if tg[0] == roit[0]
-                ][0]
+                sdata["label"] = [lbt[1] for lbt in self.spec_exp.sample_labels if lbt[0] == roit[0]][0]
+                sdata["target"] = [tg[2] for tg in self.spec_exp.sample_targets if tg[0] == roit[0]][0]
                 sdata["img_path"] = [
-                    imgt[4]
-                    for imgt in self.spec_exp.images
-                    if ((imgt[1] == roit[1]) & (imgt[2] == roit[2]))
+                    imgt[4] for imgt in self.spec_exp.images if ((imgt[1] == roit[1]) & (imgt[2] == roit[2]))
                 ][0]
                 sdata["roi_coords"] = roit[5]
                 sample_data.append(sdata)
@@ -2845,19 +2759,13 @@ class SpecPipe:
 
         # Standalone spectra (level ind 7)
         # Standalone spectrum item format: [0 id, 1 group, 2 use_type, 3 sample_name, 4 spectral_data_list]
-        elif (len(self.spec_exp.standalone_specs_sample) > 0) and (
-            len(self.spec_exp.rois_sample) == 0
-        ):
+        elif (len(self.spec_exp.standalone_specs_sample) > 0) and (len(self.spec_exp.rois_sample) == 0):
             sample_data = []
             for st in self.spec_exp.standalone_specs_sample:
                 sdata = {}
                 sdata["ID"] = st[0]
-                sdata["label"] = [lbt[1] for lbt in self.spec_exp.sample_labels if lbt[0] == st[0]][
-                    0
-                ]
-                sdata["target"] = [tg[2] for tg in self.spec_exp.sample_targets if tg[0] == st[0]][
-                    0
-                ]
+                sdata["label"] = [lbt[1] for lbt in self.spec_exp.sample_labels if lbt[0] == st[0]][0]
+                sdata["target"] = [tg[2] for tg in self.spec_exp.sample_targets if tg[0] == st[0]][0]
                 sdata["spec1d"] = tuple(st[4])
                 sample_data.append(sdata)
             self._sample_data = sample_data
@@ -3003,9 +2911,7 @@ class SpecPipe:
                         )
 
                     # Save preprocess chain of sample_list
-                    with open(
-                        specpipe_report_directory + f"test_run/Preprocess_chain_#{pci}.txt", "w"
-                    ) as f:
+                    with open(specpipe_report_directory + f"test_run/Preprocess_chain_#{pci}.txt", "w") as f:
                         for ppci, pproc in enumerate(status_result[1]):
                             if ppci < (len(status_result[1]) - 1):
                                 f.write(f"{pproc}\n")
@@ -3024,9 +2930,7 @@ class SpecPipe:
                         # Build testing sample list
                         if model_methodi.is_regression:
                             # Regression mock data
-                            test_samples: list[
-                                tuple[str, Any, Union[float, int, bool, str], np.ndarray]
-                            ] = [
+                            test_samples: list[tuple[str, Any, Union[float, int, bool, str], np.ndarray]] = [
                                 (
                                     str(i),
                                     ts_shape,
@@ -3048,13 +2952,7 @@ class SpecPipe:
                                     str(i),
                                     ts_shape,
                                     str(["a", "b"][int(i % 2)]),
-                                    tsample
-                                    * (
-                                        1
-                                        + test_data_range
-                                        * 0.25
-                                        * (i % 2 + 0.1 * np.random.rand(1)[0])
-                                    ),
+                                    tsample * (1 + test_data_range * 0.25 * (i % 2 + 0.1 * np.random.rand(1)[0])),
                                 )
                                 for i in range(sample_min_size)
                             ]
@@ -3065,9 +2963,7 @@ class SpecPipe:
                             report_directory=model_report_dir,
                         )
                     else:
-                        raise ValueError(
-                            f"Model only accepts data level 'spec1d' as input, but got: {dl_in_name}"
-                        )
+                        raise ValueError(f"Model only accepts data level 'spec1d' as input, but got: {dl_in_name}")
 
     # Run entire pipeline
     # Sample data format - ROI: {ID, label, target, img_path, roi_coords}
@@ -3127,14 +3023,13 @@ class SpecPipe:
                 warnings.warn(
                     "Windows users must run multiprocessing within block \n\nif __name__ == '__main__': \n\n\
                     Please make sure all of your main codes in the script are placed within this block.",
-                    UserWarning, stacklevel=2
+                    UserWarning,
+                    stacklevel=2,
                 )
 
         # Added chain testing
         if not self.tested:
-            self.test_run(
-                test_modeling=True, return_result=False, dump_result=False, dump_backup=False
-            )
+            self.test_run(test_modeling=True, return_result=False, dump_result=False, dump_backup=False)
 
         # Preprocessing
         self._preprocessor(
@@ -3147,9 +3042,7 @@ class SpecPipe:
         )
 
         # Construct sample_list
-        self._sample_list_constructor(
-            result_directory=result_directory, to_csv=to_csv, show_progress=show_progress
-        )
+        self._sample_list_constructor(result_directory=result_directory, to_csv=to_csv, show_progress=show_progress)
 
         # Clear step result data after sample list construction after finishing sample_list construction
         if not keep_chain_results:
@@ -3199,16 +3092,12 @@ class SpecPipe:
                 finished_samples = []
             else:
                 finished_samples = [
-                    f.split(".")[0]
-                    for f in os.listdir(log_dir_path)
-                    if os.path.isfile(log_dir_path + f)
+                    f.split(".")[0] for f in os.listdir(log_dir_path) if os.path.isfile(log_dir_path + f)
                 ]
                 existed_samples = [sd["ID"] for sd in self.sample_data]
                 finished_samples = [sdid for sdid in finished_samples if sdid in existed_samples]
             if len(finished_samples) > 0:
-                rest_sample_data = [
-                    sd for sd in self.sample_data if sd["ID"] not in finished_samples
-                ]
+                rest_sample_data = [sd for sd in self.sample_data if sd["ID"] not in finished_samples]
             else:
                 rest_sample_data = self.sample_data
 
@@ -3289,9 +3178,7 @@ class SpecPipe:
                 )
             for pti in preprocess_result_paths:
                 if type(pti) is not str:
-                    raise TypeError(
-                        f"\nResult file path must be str, got path: {pti}, with type: {type(pti)}"
-                    )
+                    raise TypeError(f"\nResult file path must be str, got path: {pti}, with type: {type(pti)}")
                 elif not os.path.exists(pti):
                     raise ValueError(f"\nGot invalid path: {pti}")
             # Update preprocess result file paths
@@ -3368,20 +3255,14 @@ class SpecPipe:
             # Sample_list item: (0 - Sample id, 1 - Original shape, 2 - Target value, 3 - Sample predictor value)
             # Typing: list[tuple[str, tuple[int], Union[str,int,bool,float], Annotated[Any,arraylike_validator(ndim=1)]]]  # noqa: E501
             res_path_dill = preprocess_result_dir + chain_name1 + ".dill"
-            dump_vars(
-                res_path_dill, {"chain_ind": pci, "chain_procs": pchain, "chain_res": pre_results}
-            )
+            dump_vars(res_path_dill, {"chain_ind": pci, "chain_procs": pchain, "chain_res": pre_results})
 
             # Save results to CSV
             if to_csv:
                 # Results to table (df)
-                chain_res_table = [
-                    (pres[0], str(pres[1]), pres[2]) + tuple(pres[3]) for pres in pre_results
-                ]
+                chain_res_table = [(pres[0], str(pres[1]), pres[2]) + tuple(pres[3]) for pres in pre_results]
                 arr_chain_res = np.array(chain_res_table)
-                coln_chain_res = ["Sample_ID", "X_shape", "y"] + [
-                    f"x{i}" for i in range(arr_chain_res.shape[1] - 3)
-                ]
+                coln_chain_res = ["Sample_ID", "X_shape", "y"] + [f"x{i}" for i in range(arr_chain_res.shape[1] - 3)]
                 df_chain_res = pd.DataFrame(arr_chain_res, columns=coln_chain_res)
                 # Add chain name to table content (as first col)
                 df_chain_res = pd.concat(
@@ -3418,7 +3299,8 @@ class SpecPipe:
         else:
             warnings.warn(
                 f"Step_results path is invalid:\n{result_directory}\nNo 'PreprocessingChainResult' is cleared.",
-                UserWarning, stacklevel=3
+                UserWarning,
+                stacklevel=3,
             )
 
     # Run modeling on single dataset
@@ -3461,7 +3343,8 @@ class SpecPipe:
                 warnings.warn(
                     "Windows users must run multiprocessing within block \n\nif __name__ == '__main__': \n\n\
                     Please make sure all of your main codes in the script are placed within this block.",
-                    UserWarning, stacklevel=2
+                    UserWarning,
+                    stacklevel=2,
                 )
 
         # Close existing pyplot to save memory
@@ -3474,9 +3357,7 @@ class SpecPipe:
         # Preprocessing dir
         preprocess_result_dir = result_directory + "Preprocessing/"
         if not os.path.exists(preprocess_result_dir):
-            raise ValueError(
-                f"\nPreprocessing result directory not found, got path:\n{preprocess_result_dir}"
-            )
+            raise ValueError(f"\nPreprocessing result directory not found, got path:\n{preprocess_result_dir}")
         # Modeling dir
         model_result_dir = result_directory + "Modeling/"
         if not os.path.exists(model_result_dir):
@@ -3496,15 +3377,12 @@ class SpecPipe:
                 pchains.append(pchain)
         # Validate result file existence
         cd_paths = [
-            f"{preprocess_result_dir}PreprocessingChainResult_chain_ind_{pci}.dill"
-            for pci in range(len(pchains))
+            f"{preprocess_result_dir}PreprocessingChainResult_chain_ind_{pci}.dill" for pci in range(len(pchains))
         ]
         pchains_f = []
         for pci, cdp in enumerate(cd_paths):
             if not os.path.exists(cdp):
-                raise ValueError(
-                    f"\nPreprocessing result file of chain {pchains[pci]} not found, path : \n{cdp}\n"
-                )
+                raise ValueError(f"\nPreprocessing result file of chain {pchains[pci]} not found, path : \n{cdp}\n")
             cprocs = load_vars(cdp)["chain_procs"]
             pchains_f.append(cprocs)
         spcs = set(pchains)
@@ -3544,14 +3422,10 @@ class SpecPipe:
                         print(f"\nModeling preprocessing result {pci + 1}/{len(rest_cd_paths)} :")
                     pc_it = load_vars(cdp)
                     pc_sample_list = pc_it["chain_res"]
-                    pc_sample_list = _target_type_validation_for_serialization(
-                        pc_sample_list
-                    )
+                    pc_sample_list = _target_type_validation_for_serialization(pc_sample_list)
                     pchain = pc_it["chain_procs"]
                     # Use preprocess chain ID as chain label
-                    pproc_chain_label = [
-                        f"Preprocessing_#{pci}" for pci, pc in enumerate(pchains) if pc == pchain
-                    ][0]
+                    pproc_chain_label = [f"Preprocessing_#{pci}" for pci, pc in enumerate(pchains) if pc == pchain][0]
                     _model_evaluator(
                         preprocess_result=pc_sample_list,
                         preprocess_chain=pchain,
@@ -3630,9 +3504,7 @@ class SpecPipe:
             try:
                 os.remove(log_path)
             except PermissionError as e:
-                raise PermissionError(
-                    f"\nNo permission to clear existed running log : \n'{log_path}'.\n"
-                ) from e
+                raise PermissionError(f"\nNo permission to clear existed running log : \n'{log_path}'.\n") from e
             except Exception as e:
                 raise ValueError(f"\nError in clearing existed running log : \n{e}\n") from e
 
@@ -3701,7 +3573,8 @@ class SpecPipe:
                 warnings.warn(
                     "Windows users must run multiprocessing within block \n\nif __name__ == '__main__': \n\n\
                     Please make sure all of your main codes in the script are placed within this block.",
-                    UserWarning, stacklevel=2
+                    UserWarning,
+                    stacklevel=2,
                 )
 
         # Test process

@@ -192,9 +192,7 @@ class TestROISpec(unittest.TestCase):
             extractor = ROISpec()
 
             # Attempt extraction with empty polygon list
-            with pytest.raises(
-                ValueError, match="No valid polygon found in the given roi_coordinates"
-            ):
+            with pytest.raises(ValueError, match="No valid polygon found in the given roi_coordinates"):
                 extractor.roispec(test_raster, [])
 
         if os.path.exists(test_raster):
@@ -381,9 +379,7 @@ class TestPixCount(unittest.TestCase):
             )
 
             # Create test raster
-            _ = create_test_raster(
-                tmp_path, width=4, height=4, bands=1, nodata_value=-9999, dtype="float32", data=data
-            )
+            _ = create_test_raster(tmp_path, width=4, height=4, bands=1, nodata_value=-9999, dtype="float32", data=data)
 
             roi_coordinates = [[(0.5, 0.5), (0.5, 3.5), (3.5, 3.5), (3.5, 0.5)]]
 
@@ -556,9 +552,7 @@ class TestMinBbox:
                 dtype="float32",
             )
 
-            roi_coordinates = [
-                [(10.0, 10.0), (90.0, 10.0), (90.0, 90.0), (10.0, 90.0), (10.0, 10.0)]
-            ]
+            roi_coordinates = [[(10.0, 10.0), (90.0, 10.0), (90.0, 90.0), (10.0, 90.0), (10.0, 10.0)]]
             minimum_valid_pixel = 100
 
             result = minbbox(tmp_path, roi_coordinates, minimum_valid_pixel)
@@ -594,9 +588,7 @@ class TestMinBbox:
             roi_coordinates = [[(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0), (0.0, 0.0)]]
             minimum_valid_pixel = 2000
 
-            result = minbbox(
-                tmp_path, roi_coordinates, minimum_valid_pixel, valid_threshold=(1, 10000)
-            )
+            result = minbbox(tmp_path, roi_coordinates, minimum_valid_pixel, valid_threshold=(1, 10000))
 
             # Should return a smaller bounding box
             assert len(result) == 1
@@ -630,9 +622,7 @@ class TestMinBbox:
             minimum_valid_pixel = 50
             valid_threshold = (100.0, 200.0)  # Only values between 100-200 are valid
 
-            result = minbbox(
-                tmp_path, roi_coordinates, minimum_valid_pixel, valid_threshold=valid_threshold
-            )
+            result = minbbox(tmp_path, roi_coordinates, minimum_valid_pixel, valid_threshold=valid_threshold)
 
             # Should find the region with values in threshold range
             assert len(result) == 1
@@ -667,14 +657,10 @@ class TestMinBbox:
             minimum_valid_pixel = 100
 
             # Test band 1 (all valid)
-            result_band1 = minbbox(
-                tmp_path, roi_coordinates, minimum_valid_pixel, valid_threshold=(1, 100), band=1
-            )
+            result_band1 = minbbox(tmp_path, roi_coordinates, minimum_valid_pixel, valid_threshold=(1, 100), band=1)
 
             # Test band 2 (only center valid)
-            result_band2 = minbbox(
-                tmp_path, roi_coordinates, minimum_valid_pixel, valid_threshold=(1, 100), band=2
-            )
+            result_band2 = minbbox(tmp_path, roi_coordinates, minimum_valid_pixel, valid_threshold=(1, 100), band=2)
 
             # Band 1 should return original ROI, Band 2 should return larger bbox
             assert result_band1[0][2][0] <= result_band2[0][2][0]  # Original ROI
@@ -734,9 +720,7 @@ class TestMinBbox:
             minimum_valid_pixel = 1
             valid_threshold = (1.0, 2.0)  # No pixels in this range
 
-            result = minbbox(
-                tmp_path, roi_coordinates, minimum_valid_pixel, valid_threshold=valid_threshold
-            )
+            result = minbbox(tmp_path, roi_coordinates, minimum_valid_pixel, valid_threshold=valid_threshold)
 
             # Should return the original bounds since no valid pixels found
             assert result == roi_coordinates
@@ -762,9 +746,7 @@ class TestMinBbox:
                 dtype="float32",
             )
 
-            roi_coordinates = [
-                [(10.0, 10.0), (40.0, 10.0), (40.0, 40.0), (10.0, 40.0), (10.0, 10.0)]
-            ]
+            roi_coordinates = [[(10.0, 10.0), (40.0, 10.0), (40.0, 40.0), (10.0, 40.0), (10.0, 10.0)]]
             minimum_valid_pixel = 10
 
             result = minbbox(tmp_path, roi_coordinates, minimum_valid_pixel)
@@ -1263,9 +1245,7 @@ class TestBandHist:
     def test_basic_functionality() -> None:
         """Test basic functionality with integer bins"""
         # Create test data
-        spec_array = np.array(
-            [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [10.0, 11.0, 12.0]]
-        )
+        spec_array = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [10.0, 11.0, 12.0]])
 
         # Test with band 0 and 3 bins
         result = bandhist(spec_array, band=0, bins=3)
@@ -1314,9 +1294,7 @@ class TestBandHist:
     @staticmethod
     def test_with_nan_values() -> None:
         """Test handling of NaN values"""
-        spec_array = np.array(
-            [[1.0, np.nan, 3.0], [4.0, 5.0, 6.0], [np.nan, 8.0, 9.0], [10.0, 11.0, 12.0]]
-        )
+        spec_array = np.array([[1.0, np.nan, 3.0], [4.0, 5.0, 6.0], [np.nan, 8.0, 9.0], [10.0, 11.0, 12.0]])
 
         # Should handle NaN values gracefully
         result = bandhist(spec_array, band=1, bins=3)
@@ -2067,9 +2045,7 @@ class TestStats2d:
     @staticmethod
     def test_insufficient_samples() -> None:
         """Test Stats2d.stats2d with insufficient samples"""
-        arr = np.array(
-            [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [10.0, 11.0, 12.0]]
-        )  # Only 4 samples
+        arr = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [10.0, 11.0, 12.0]])  # Only 4 samples
 
         with pytest.raises(ValueError, match="Sample size must be at least 5"):
             Stats2d().stats2d(arr)
@@ -2368,9 +2344,7 @@ class TestArrSpectralAngles:
 
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)  # 4 bands
 
-        with pytest.raises(
-            ValueError, match="input spectra_array does not match with reference_spectrum"
-        ):
+        with pytest.raises(ValueError, match="input spectra_array does not match with reference_spectrum"):
             arr_spectral_angles(spectra_array, reference_spectrum)
 
     @staticmethod
@@ -2536,9 +2510,9 @@ class TestNumSigDigit:
 
         for value, sig_digits, mode, expected in test_cases:
             result = num_sig_digit(value, sig_digits, mode)
-            assert math.isclose(result, expected, rel_tol=1e-10), (
-                f"Failed for value={value}, sig_digits={sig_digits}, mode={mode}"
-            )
+            assert math.isclose(
+                result, expected, rel_tol=1e-10
+            ), f"Failed for value={value}, sig_digits={sig_digits}, mode={mode}"
 
 
 # %% Test - num_sig_digit

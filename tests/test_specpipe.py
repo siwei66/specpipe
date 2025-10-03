@@ -43,6 +43,7 @@ from specpipe.specio import silent  # noqa: E402
 
 # Funcs to test
 from specpipe.specpipe import SpecPipe, _dl_val  # noqa: E402
+
 # ruff: noqa: I001
 
 # Confirm proper LOKY_MAX_CPU_COUNT
@@ -133,14 +134,10 @@ def replace_nan(spec: np.ndarray) -> np.ndarray:
 
 
 # Test helper functions : create_test_spec_pipe
-def create_test_spec_pipe(
-    dir_path: str, sample_n: int = 10, n_bands: int = 8, is_regression: bool = True
-) -> SpecPipe:
+def create_test_spec_pipe(dir_path: str, sample_n: int = 10, n_bands: int = 8, is_regression: bool = True) -> SpecPipe:
     """Create a standard test SpecPipe instance."""
     # Create test spec exp
-    test_exp = create_test_spec_exp(
-        dir_path=dir_path, sample_n=sample_n, n_bands=n_bands, is_regression=is_regression
-    )
+    test_exp = create_test_spec_exp(dir_path=dir_path, sample_n=sample_n, n_bands=n_bands, is_regression=is_regression)
     pipe = SpecPipe(test_exp)
 
     # Add process
@@ -200,18 +197,14 @@ class TestSpecPipe(unittest.TestCase):
 
             # Add group - no img
             test_exp.add_groups(["test_group"])
-            with pytest.raises(
-                ValueError, match="Neither image path nor standalone spectrum is found"
-            ):
+            with pytest.raises(ValueError, match="Neither image path nor standalone spectrum is found"):
                 SpecPipe(test_exp)
 
             # Add img - no ROI
             img_path = test_dir + "/test_img.tif"
             create_test_raster(raster_path=img_path, width=50, height=50, bands=4)
             test_exp.add_images("test_group", ["test_img.tif"], test_dir)
-            with pytest.raises(
-                ValueError, match="Neither sample ROI nor standalone spectrum is found"
-            ):
+            with pytest.raises(ValueError, match="Neither sample ROI nor standalone spectrum is found"):
                 SpecPipe(test_exp)
 
             # Add ROI - no targets
@@ -420,24 +413,18 @@ class TestSpecPipe(unittest.TestCase):
             # Filter conditions
             procs = pipe.ls_process(input_data_level=0, print_result=False, return_result=True)
             assert procs.shape == (3, 8)
-            procs = pipe.ls_process(
-                input_data_level=0, application_sequence=0, print_result=False, return_result=True
-            )
+            procs = pipe.ls_process(input_data_level=0, application_sequence=0, print_result=False, return_result=True)
             assert procs.shape == (2, 8)
             procs = pipe.ls_process(output_data_level=1, print_result=False, return_result=True)
             assert procs.shape == (1, 8)
             procs = pipe.ls_process(method="snv", print_result=False, return_result=True)
             assert procs.shape == (1, 8)
             # No match
-            procs = pipe.ls_process(
-                input_data_level=0, output_data_level=1, print_result=False, return_result=True
-            )
+            procs = pipe.ls_process(input_data_level=0, output_data_level=1, print_result=False, return_result=True)
             assert procs.shape == (0, 8)
 
             # Not exact match
-            procs = pipe.ls_process(
-                method="snv", exact_match=False, print_result=False, return_result=True
-            )
+            procs = pipe.ls_process(method="snv", exact_match=False, print_result=False, return_result=True)
             assert procs.shape == (4, 8)
 
             # Not return result
@@ -515,28 +502,19 @@ class TestSpecPipe(unittest.TestCase):
             pipe.add_process(0, 0, 0, original_img)
             pipe.add_process(5, 7, 0, roi_mean)
             assert len(pipe.ls_process(return_result=True, print_result=False)) == 2
-            assert (
-                len(pipe.ls_process(output_data_level=8, return_result=True, print_result=False))
-                == 0
-            )
+            assert len(pipe.ls_process(output_data_level=8, return_result=True, print_result=False)) == 0
             assert len(pipe.process_steps) == 2
             assert len(pipe.process_chains) == 1
 
             # Add models
             pipe.add_process(7, 8, 0, regressor)
             assert len(pipe.ls_process(return_result=True, print_result=False)) == 3
-            assert (
-                len(pipe.ls_process(output_data_level=8, return_result=True, print_result=False))
-                == 1
-            )
+            assert len(pipe.ls_process(output_data_level=8, return_result=True, print_result=False)) == 1
             assert len(pipe.process_steps) == 3
             assert len(pipe.process_chains) == 1
             pipe.add_process(7, 8, 0, regressor)
             assert len(pipe.ls_process(return_result=True, print_result=False)) == 4
-            assert (
-                len(pipe.ls_process(output_data_level=8, return_result=True, print_result=False))
-                == 2
-            )
+            assert len(pipe.ls_process(output_data_level=8, return_result=True, print_result=False)) == 2
             assert len(pipe.process_steps) == 3
             assert len(pipe.process_chains) == 2
 
@@ -564,14 +542,7 @@ class TestSpecPipe(unittest.TestCase):
             assert len(pipe.ls_model(return_result=True, print_result=False)) == 1
             pipe.add_process(7, 8, 0, regressor)
             assert len(pipe.ls_model(return_result=True, print_result=False)) == 2
-            assert (
-                len(
-                    pipe.ls_model(
-                        model_id=pipe.process_chains[0][-1], return_result=True, print_result=False
-                    )
-                )
-                == 1
-            )
+            assert len(pipe.ls_model(model_id=pipe.process_chains[0][-1], return_result=True, print_result=False)) == 1
             assert pipe.ls_model(return_result=False, print_result=True) is None
 
         # Clear test report dir
@@ -663,10 +634,7 @@ class TestSpecPipe(unittest.TestCase):
             pcs_df = pipe.process_chains_to_df(print_label=False)
             assert pcs_df.shape == (2, 3)
             assert (pcs_df.to_numpy() == np.array(pipe.process_chains)).all()
-            assert np.all(
-                pipe.process_chains_to_df(print_label=False)
-                == pipe.process_chains_to_df(print_label=True)
-            )
+            assert np.all(pipe.process_chains_to_df(print_label=False) == pipe.process_chains_to_df(print_label=True))
 
             # Test return_label = True
             pcs_dfs = pipe.process_chains_to_df(print_label=False, return_label=True)
@@ -767,9 +735,7 @@ class TestSpecPipe(unittest.TestCase):
 
             assert pipe.tested is True
             assert pipe.sample_data == []
-            assert os.path.exists(
-                f"{test_dir}/test_run/Step_results/PreprocessingTestingResult.dill"
-            )
+            assert os.path.exists(f"{test_dir}/test_run/Step_results/PreprocessingTestingResult.dill")
 
             # Backup result
             plt.close("all")
@@ -778,8 +744,7 @@ class TestSpecPipe(unittest.TestCase):
             result_dills = [
                 name
                 for name in os.listdir(f"{test_dir}/test_run/Step_results/")
-                if "PreprocessingTestingResult" in name
-                and name != "PreprocessingTestingResult.dill"
+                if "PreprocessingTestingResult" in name and name != "PreprocessingTestingResult.dill"
             ]
             assert len(result_dills) > 0
 
@@ -847,9 +812,7 @@ class TestSpecPipe(unittest.TestCase):
 
             assert pipe.tested is True
             assert pipe.sample_data == []
-            assert os.path.exists(
-                f"{test_dir}/test_run/Step_results/PreprocessingTestingResult.dill"
-            )
+            assert os.path.exists(f"{test_dir}/test_run/Step_results/PreprocessingTestingResult.dill")
 
             # Backup result
             plt.close("all")
@@ -858,8 +821,7 @@ class TestSpecPipe(unittest.TestCase):
             result_dills = [
                 name
                 for name in os.listdir(f"{test_dir}/test_run/Step_results/")
-                if "PreprocessingTestingResult" in name
-                and name != "PreprocessingTestingResult.dill"
+                if "PreprocessingTestingResult" in name and name != "PreprocessingTestingResult.dill"
             ]
             assert len(result_dills) > 0
 
@@ -879,9 +841,7 @@ class TestSpecPipe(unittest.TestCase):
 
         # Assert resulting files
         preproc_img_names = [
-            name
-            for name in os.listdir(test_dir)
-            if "test_img" in name and ".tif" in name and name != "test_img.tif"
+            name for name in os.listdir(test_dir) if "test_img" in name and ".tif" in name and name != "test_img.tif"
         ]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
         assert len(preproc_img_names) == len(preprocs)
@@ -889,12 +849,8 @@ class TestSpecPipe(unittest.TestCase):
         assert os.path.exists(result_dir)
 
         # Result files
-        preproc_csv_names = [
-            f"PreprocessingChainResult_chain_ind_{i}.csv" for i in range(len(preprocs))
-        ]
-        preproc_dill_names = [
-            f"PreprocessingChainResult_chain_ind_{i}.dill" for i in range(len(preprocs))
-        ]
+        preproc_csv_names = [f"PreprocessingChainResult_chain_ind_{i}.csv" for i in range(len(preprocs))]
+        preproc_dill_names = [f"PreprocessingChainResult_chain_ind_{i}.dill" for i in range(len(preprocs))]
         assert set(preproc_csv_names).issubset(set(os.listdir(result_dir)))
         assert set(preproc_dill_names).issubset(set(os.listdir(result_dir)))
 
@@ -940,16 +896,12 @@ class TestSpecPipe(unittest.TestCase):
 
             # Models for application
             app_model_path = model_report_dir + dirname + "/Model_for_application/"
-            model_files = [
-                n for n in os.listdir(app_model_path) if "app_model_" in n and ".dill" in n
-            ]
+            model_files = [n for n in os.listdir(app_model_path) if "app_model_" in n and ".dill" in n]
             assert len(model_files) > 0
 
             # Models in validation
             val_model_path = model_report_dir + dirname + "/Model_in_validation/"
-            model_files = [
-                n for n in os.listdir(val_model_path) if "val_model_" in n and ".dill" in n
-            ]
+            model_files = [n for n in os.listdir(val_model_path) if "val_model_" in n and ".dill" in n]
             assert len(model_files) > 0
             n_fold = len(model_files)
 
@@ -998,16 +950,12 @@ class TestSpecPipe(unittest.TestCase):
 
             # Models for application
             app_model_path = model_report_dir + dirname + "/Model_for_application/"
-            model_files = [
-                n for n in os.listdir(app_model_path) if "app_model_" in n and ".dill" in n
-            ]
+            model_files = [n for n in os.listdir(app_model_path) if "app_model_" in n and ".dill" in n]
             assert len(model_files) > 0
 
             # Models in validation
             val_model_path = model_report_dir + dirname + "/Model_in_validation/"
-            model_files = [
-                n for n in os.listdir(val_model_path) if "val_model_" in n and ".dill" in n
-            ]
+            model_files = [n for n in os.listdir(val_model_path) if "val_model_" in n and ".dill" in n]
             assert len(model_files) > 0
             n_fold = len(model_files)
 
@@ -1189,9 +1137,7 @@ class TestSpecPipe(unittest.TestCase):
             result_dir = f"{test_dir}/Preprocessing/"
             step_dir_content = os.listdir(f"{result_dir}/Step_results/")
             preproc_step_names = [
-                name
-                for name in step_dir_content
-                if "PreprocessingResult_sample_" in name and ".dill" in name
+                name for name in step_dir_content if "PreprocessingResult_sample_" in name and ".dill" in name
             ]
             assert len(preproc_step_names) > 0
             assert len(preproc_step_names) < len(pipe.sample_data)
