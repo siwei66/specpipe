@@ -877,7 +877,11 @@ def envi_roi_coords(roi_xml_path: str) -> list[dict[str, Any]]:
             raise ValueError(f"no polygon for ROI {roiname} is found")
         poly_coords = []
         for polygs in roipolys:
-            roicoord = polygs.find("Coordinates").text.strip()
+            roicoord_found = polygs.find("Coordinates")
+            if roicoord_found is not None:
+                roicoord = roicoord_found.text.strip()
+            else:
+                raise ValueError("No 'Coordinates' found in given xml file.")
             coord = re.findall(r"-?\d+\.?\d*[eE][+-]?\d+|-?\d+\.?\d*", roicoord)
             coordpairs = []
             for i in range(int(len(coord) / 2)):
