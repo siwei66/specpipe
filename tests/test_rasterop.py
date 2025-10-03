@@ -561,7 +561,8 @@ class TestPixelSpecApply:
     @staticmethod
     def spectral_function_with_different_output(spectrum: np.ndarray) -> np.ndarray:
         """Spectral function that returns different number of bands"""
-        return np.array([np.sum(spectrum), np.mean(spectrum), np.max(spectrum)])
+        result: np.ndarray = np.array([np.sum(spectrum), np.mean(spectrum), np.max(spectrum)])
+        return result
 
     @staticmethod
     def test_basic_functionality() -> None:
@@ -820,7 +821,8 @@ class TestPixelArrayApply:
     @staticmethod
     def band_expansion_function(spectra_2d: np.ndarray) -> np.ndarray:
         """Test function that expands bands (4 -> 6)"""
-        return np.column_stack([spectra_2d, spectra_2d[:, :2]])  # Add first two bands as fifth and sixth
+        result: np.ndarray = np.column_stack([spectra_2d, spectra_2d[:, :2]])
+        return result  # Add first two bands as fifth and sixth
 
     @staticmethod
     def test_basic_functionality() -> None:
@@ -1025,7 +1027,8 @@ class TestPixelArrayApply:
             """Normalize each spectrum and compute mean"""
             normalized: np.ndarray = spectra_2d / np.linalg.norm(spectra_2d, axis=1, keepdims=True)
             mean_band: np.ndarray = np.mean(normalized, axis=1, keepdims=True)
-            return np.column_stack([normalized, mean_band])
+            result: np.ndarray = np.column_stack([normalized, mean_band])
+            return result
 
         with tempfile.TemporaryDirectory() as temp_dir:
             input_path: str = os.path.join(temp_dir, "input.tif")
@@ -1077,7 +1080,8 @@ class TestPixelArrayApply:
 
             # Function with wrong signature (no parameters)
             def invalid_function() -> np.ndarray:
-                return np.array([[1, 2]])
+                result: np.ndarray = np.array([[1, 2]])
+                return result
 
             # This should raise an error when the function is called
             with pytest.raises((TypeError, ValueError)):

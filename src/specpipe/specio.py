@@ -859,7 +859,7 @@ def envi_roi_coords(roi_xml_path: str) -> list[dict[str, Any]]:
     with open(roi_xml_path, "r") as f:
         roi_data = f.read()
     soup = BeautifulSoup(roi_data, "xml")
-    sroi = soup.findAll("Region")
+    sroi = soup.find_all("Region")
     rn = len(sroi)
     if rn < 1:
         raise ValueError(f"No ROI is found in the provided xml file, got file content: \n\n{soup.prettify()}")
@@ -868,7 +868,7 @@ def envi_roi_coords(roi_xml_path: str) -> list[dict[str, Any]]:
     for n in range(rn):
         roii = sroi[n]
         roiname = roii.get("name")
-        roipolys = roii.findAll("Polygon")
+        roipolys = roii.find_all("Polygon")
         if len(roipolys) == 1:
             polytype = "Polygon"
         elif len(roipolys) > 1:

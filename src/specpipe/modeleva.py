@@ -883,7 +883,7 @@ class ModelEva:
 
         # Unseen class
         for ri, pp_row in enumerate(y_pred_proba):
-            na_num = np.sum(np.isnan(pp_row))
+            na_num: int = int(np.sum(np.isnan(pp_row)))
             if na_num > 1:
                 pp_row[np.isnan(pp_row)] = 0
                 y_pred_proba[ri] = pp_row
@@ -1434,7 +1434,7 @@ class ModelEva:
 
             # Unseen class
             for ri, pp_row in enumerate(p_full):
-                na_num = np.sum(np.isnan(pp_row))
+                na_num: int = int(np.sum(np.isnan(pp_row)))
                 if na_num > 1:
                     pp_row[np.isnan(pp_row)] = 0
                     p_full[ri] = pp_row

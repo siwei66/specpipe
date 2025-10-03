@@ -194,12 +194,12 @@ def pixcount(
                 # Count
                 masked, _ = mask(src, [polygon], crop=True, nodata=src.nodata, indexes=[band], all_touched=True)
                 if threshold is None:
-                    count = np.sum(masked[0] != src.nodata)
+                    count: int = int(np.sum(masked[0] != src.nodata))
                 else:
                     if threshold[0] >= threshold[1]:
                         raise ValueError(f"Invalid threshold range: {threshold}")
-                    count = np.sum(
-                        (masked[0] != src.nodata) & (masked[0] >= threshold[0]) & (masked[0] <= threshold[1])
+                    count = int(
+                        np.sum((masked[0] != src.nodata) & (masked[0] >= threshold[0]) & (masked[0] <= threshold[1]))
                     )
             else:
                 count = 0
@@ -556,7 +556,8 @@ def smopt(measure: str) -> Callable:  # noqa: C901
             raise ValueError("Undefined measure name, please provide the measure function instead")
 
     def msfunc(arr: Annotated[Any, arraylike_validator(ndim=2, as_type=float)]) -> np.ndarray:
-        return np.array(mfunc(arr, axis=0))
+        result: np.ndarray = np.array(mfunc(arr, axis=0))
+        return result
 
     return msfunc
 
@@ -623,7 +624,8 @@ class Stats2d:
         """
         Mean values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        return np.array(np.nanmean(data_array_2d, axis=axis))
+        result: np.ndarray = np.array(np.nanmean(data_array_2d, axis=axis))
+        return result
 
     @staticmethod
     @simple_type_validator
@@ -631,7 +633,8 @@ class Stats2d:
         """
         Standard deviation values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        return np.array(np.nanstd(data_array_2d, axis=axis))
+        result: np.ndarray = np.array(np.nanstd(data_array_2d, axis=axis))
+        return result
 
     @staticmethod
     @simple_type_validator
@@ -639,7 +642,8 @@ class Stats2d:
         """
         Variance values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        return np.array(np.nanvar(data_array_2d, axis=axis))
+        result: np.ndarray = np.array(np.nanvar(data_array_2d, axis=axis))
+        return result
 
     @staticmethod
     @simple_type_validator
@@ -647,7 +651,8 @@ class Stats2d:
         """
         Skewness values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        return np.array(moment2d(data_array_2d, 3, standardized=True, axis=axis))
+        result: np.ndarray = np.array(moment2d(data_array_2d, 3, standardized=True, axis=axis))
+        return result
 
     @staticmethod
     @simple_type_validator
@@ -655,7 +660,8 @@ class Stats2d:
         """
         Kurtosis values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        return np.array(moment2d(data_array_2d, 4, standardized=True, axis=axis))
+        result: np.ndarray = np.array(moment2d(data_array_2d, 4, standardized=True, axis=axis))
+        return result
 
     @staticmethod
     @simple_type_validator
@@ -663,7 +669,8 @@ class Stats2d:
         """
         Min values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        return np.array(np.nanmin(data_array_2d, axis=axis))
+        result: np.ndarray = np.array(np.nanmin(data_array_2d, axis=axis))
+        return result
 
     @staticmethod
     @simple_type_validator
@@ -671,7 +678,8 @@ class Stats2d:
         """
         Median values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        return np.array(np.nanmedian(data_array_2d, axis=axis))
+        result: np.ndarray = np.array(np.nanmedian(data_array_2d, axis=axis))
+        return result
 
     @staticmethod
     @simple_type_validator
@@ -679,7 +687,8 @@ class Stats2d:
         """
         Max values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        return np.array(np.nanmax(data_array_2d, axis=axis))
+        result: np.ndarray = np.array(np.nanmax(data_array_2d, axis=axis))
+        return result
 
     # Return stats values only, single measure only
     @simple_type_validator
@@ -690,9 +699,11 @@ class Stats2d:
         """
         measure = self.measure
         if type(measure) is str:
-            return np.array(Stats2d(measure).stats2d(data_array_2d)[measure])
+            result: np.ndarray = np.array(Stats2d(measure).stats2d(data_array_2d)[measure])
+            return result
         elif callable(measure):
-            return np.array(Stats2d(measure).stats2d(data_array_2d)[measure.__name__])
+            result = np.array(Stats2d(measure).stats2d(data_array_2d)[measure.__name__])
+            return result
         elif measure is None:
             raise ValueError("'measure' must be specified for 'Stats2d' when calling this method, got None.")
         else:
@@ -771,7 +782,7 @@ class Stats2d:
             mfuncs = [smopt(mn) for mn in mnames]
 
         # Computing measures
-        mvalues = {}
+        mvalues: dict = {}
         for mn, mfunc in zip(mnames, mfuncs):
             mvalues[mn] = mfunc(arr)
 
@@ -790,7 +801,8 @@ def roi_mean(image_path: str, roi_coordinates: list[list[tuple[Union[int, float]
     roi_coordinates : list[list[tuple[Union[int, float],Union[int, float]]]]
         Lists of vertex coordinate pairs of the polygons of a region of interest (ROI).
     """
-    return np.array(Stats2d().mean(ROISpec("float64").roispec(image_path, roi_coordinates)))
+    result: np.ndarray = np.array(Stats2d().mean(ROISpec("float64").roispec(image_path, roi_coordinates)))
+    return result
 
 
 def roi_std(image_path: str, roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]]) -> np.ndarray:
@@ -805,7 +817,8 @@ def roi_std(image_path: str, roi_coordinates: list[list[tuple[Union[int, float],
     roi_coordinates : list[list[tuple[Union[int, float],Union[int, float]]]]
         Lists of vertex coordinate pairs of the polygons of a region of interest (ROI).
     """
-    return np.array(Stats2d().std(ROISpec("float64").roispec(image_path, roi_coordinates)))
+    result: np.ndarray = np.array(Stats2d().std(ROISpec("float64").roispec(image_path, roi_coordinates)))
+    return result
 
 
 def roi_median(image_path: str, roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]]) -> np.ndarray:
@@ -820,7 +833,8 @@ def roi_median(image_path: str, roi_coordinates: list[list[tuple[Union[int, floa
     roi_coordinates : list[list[tuple[Union[int, float],Union[int, float]]]]
         Lists of vertex coordinate pairs of the polygons of a region of interest (ROI).
     """
-    return np.array(Stats2d().median(ROISpec("float64").roispec(image_path, roi_coordinates)))
+    result: np.ndarray = np.array(Stats2d().median(ROISpec("float64").roispec(image_path, roi_coordinates)))
+    return result
 
 
 # %% ROI spectral angle tools
@@ -945,7 +959,7 @@ def arr_spectral_angles(
 
     # Calculating spec angles
     npix = spectra_array.shape[0]
-    spec_angle = np.zeros(npix)
+    spec_angle: np.ndarray = np.zeros(npix)
     for i in range(npix):
         spec_angle[i] = spectral_angle(reference_spectrum, spectra_array[i, :], invalid_raise=invalid_raise)
     return spec_angle
@@ -1007,7 +1021,8 @@ def np_sig_digit(arr_like: Annotated[Any, arraylike_validator()], sig_digit: int
         rdfunc = np.floor  # type: ignore[assignment]
     else:
         raise ValueError(f"mode must one of 'round', 'ceil' and 'floor', but got: '{mode}'")
-    return np.array(rdfunc(arr_like * factor) / factor)
+    result: np.ndarray = np.array(rdfunc(arr_like * factor) / factor)
+    return result
 
 
 # For any scalar real number regardless of types - behavioral validation

@@ -1682,7 +1682,8 @@ class TestCmval:
         test_arr = np.array([[1.0, 2.0], [3.0, 4.0]])
 
         def array_func(arr: np.ndarray) -> np.ndarray:
-            return np.array([np.mean(arr)])  # Return 1D array with single element
+            result: np.ndarray = np.array([np.mean(arr)])
+            return result  # Return 1D array with single element
 
         result_func = cmval(test_arr, array_func)
         assert result_func is array_func
@@ -1824,7 +1825,11 @@ class TestCmval:
         test_arr = np.array([[], []])  # Empty 2D array
 
         def empty_func(arr: np.ndarray) -> float:
-            return 0.0 if arr.size == 0 else np.mean(arr)
+            if arr.size == 0:
+                result: float = 0.0
+            else:
+                result = float(np.mean(arr))
+            return result
 
         # Should work with empty array
         result_func = cmval(test_arr, empty_func)
@@ -1958,7 +1963,7 @@ class TestStats2d:
     @staticmethod
     def test_values_property_callable_measure() -> None:
         """Test Stats2d.values property with callable measure"""
-        arr = np.array(
+        arr: np.ndarray = np.array(
             [
                 [1.0, 2.0, 3.0],
                 [4.0, 5.0, 6.0],
@@ -1969,7 +1974,8 @@ class TestStats2d:
         )
 
         def custom_measure(data: np.ndarray) -> np.ndarray:
-            return np.array([1.0, 2.0, 3.0])
+            result: np.ndarray = np.array([1.0, 2.0, 3.0])
+            return result
 
         stats = Stats2d(measure=custom_measure)
         result = stats.values(arr)

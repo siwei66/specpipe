@@ -184,7 +184,7 @@ pipe.add_process(5, 7, 0, roi_median)
 
 # 3.4 Sample data wrangling
 # Create a function to remove nan and inf values
-def replace_nan(v: np.ndarray) -> np.ndarray:
+def replace_nan(v: np.ndarray) -> np.ndarray:  # type: ignore
     return np.nan_to_num(v, nan=0.0, posinf=0.0, neginf=0.0)
 
 

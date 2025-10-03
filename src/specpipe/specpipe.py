@@ -2273,7 +2273,8 @@ class SpecPipe:
             else:
                 label_name = proc[5].__name__
             ref_table.append((proc[0], label_name))
-        return np.array(ref_table)
+        result: np.ndarray = np.array(ref_table)
+        return result
 
     # Convert process ID to process label
     def _process_id_to_label(self, process_id: str, ref_table: np.ndarray) -> str:
@@ -2922,7 +2923,7 @@ class SpecPipe:
                     # Sample_list: (0 - Sample id, 1 - Original shape, 2 - Target value, 3 - Sample predictor value)
                     # if (dl_in_ind != 0) & (dl_in_ind != 5):
                     if dl_in_ind == 7:
-                        test_data_range = np.nanmax(tsample) - np.nanmin(tsample)
+                        test_data_range: float = float(np.nanmax(tsample) - np.nanmin(tsample))
                         # Model report dir
                         model_report_dir = specpipe_report_directory + "test_run/"
                         if not os.path.exists(model_report_dir):

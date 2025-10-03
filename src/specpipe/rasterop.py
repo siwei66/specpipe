@@ -196,27 +196,34 @@ def dtype_mapper(  # noqa: C901
     }
     if map_type.lower() == "numpy":
         if dtype in list(np_map.values()):
+            result_np: Union[type, str, np.dtype, torch.dtype] = dtype
             return dtype
         elif dtype in list(np_map.keys()):
-            return np_map[dtype]
+            result_np = np_map[dtype]
+            return result_np
         else:
             raise ValueError(f"Unsupported NumPy data type: {dtype}")
     elif map_type.lower() == "torch":
         if dtype in list(torch_map.values()):
-            return dtype
+            result_torch: Union[type, str, np.dtype, torch.dtype] = dtype
+            return result_torch
         elif dtype in list(torch_map.keys()):
-            return torch_map[dtype]
+            result_torch = torch_map[dtype]
+            return result_torch
         elif min_compatible & (dtype in list(torch_ext.keys())):
             return torch_ext[dtype]
         else:
             raise ValueError(f"Unsupported PyTorch data type: {dtype}")
     elif map_type.lower() == "raster":
         if dtype in list(raster_type.values()):
-            return dtype
+            result_ras: Union[type, str, np.dtype, torch.dtype] = dtype
+            return result_ras
         elif dtype in list(raster_type.keys()):
-            return raster_type[dtype]
+            result_ras = raster_type[dtype]
+            return result_ras
         elif min_compatible & (dtype in list(raster_ext.keys())):
-            return raster_ext[dtype]
+            result_ras = raster_ext[dtype]
+            return result_ras
         else:
             raise ValueError(f"Unsupported raster data type: {dtype}")
     else:
@@ -295,16 +302,16 @@ def auto_fp(  # noqa: C901
 
         elif data.dtype in long_types:
             # Get min and max values of non_zeros
-            max_val = np.max(np.abs(data))
+            max_val: float = float(np.max(np.abs(data)))
             non_zero_data = data[data != 0]
             if non_zero_data.size > 0:
-                min_val = np.min(np.abs(non_zero_data))
+                min_val: float = float(np.min(np.abs(non_zero_data)))
             else:
                 min_val = fp16_min
 
             # If data fits in FP16 natively
             if max_val <= fp16_max and min_val >= fp16_min:
-                arr_fp16 = data.astype(np.float16)
+                arr_fp16: np.ndarray = data.astype(np.float16)
                 if np.allclose(data, arr_fp16.astype(data.dtype), rtol=rtol, atol=atol):
                     return (arr_fp16, 1.0)
 
@@ -349,10 +356,10 @@ def auto_fp(  # noqa: C901
 
         elif (data.dtype is torch.float32) or (data.dtype is torch.float64):
             # Get min and max values of non_zeros
-            max_val = data.abs().max()
+            max_val = float(data.abs().max())
             non_zero_data = data[data != 0]
             if non_zero_data.numel() > 0:
-                min_val = non_zero_data.abs().min()
+                min_val = float(non_zero_data.abs().min())
             else:
                 min_val = fp16_min
 
