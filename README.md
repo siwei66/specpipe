@@ -42,14 +42,13 @@ Follow these steps to install the project:
 
 ### 1.  Prepare mock spectral experiment data
 
-Create a directory for mock experiment data:
-The example uses a temporary directory
+- Create a directory for mock experiment data (The example uses a temporary directory):
     ```python
     import tempfile
     data_dir = tempfile.mkdtemp(prefix="specpipe_example_")
     ```
 
-Create mock data:
+- Create mock data:
     ```python
     from specpipe import create_test_raster, create_test_roi_xml
     create_test_raster(f"{data_dir}/example.tif")
@@ -60,36 +59,36 @@ Create mock data:
 
 #### 2.1 Create a spectral experiment instance
 
-Here we use the same directory as report directory:
+- Here we use the same directory as report directory:
     ```python
     report_dir = data_dir
     ```
 
-Create a SpecExp instance:
+- Create a SpecExp instance:
     ```python
     from specpipe import SpecExp
     exp = SpecExp(report_dir)
     ```
 The instance stores and organizes the data loading configurations of an experiment, which faciliates lazy-loading.
 
-Check report directory:
+- Check report directory:
     ```python
     exp.report_directory
     ```
 
 #### 2.2. Experiment group management
 
-Add experiment groups:
+- Add experiment groups:
     ```python
     exp.add_groups(['group_1', 'group_2'])
     ```
 
-Check groups:
+- Check groups:
     ```python
     exp.ls_groups()
     ```
 
-Remove a group:
+- Remove a group:
     ```python
     exp.rm_group('group_2')
     ```
@@ -97,7 +96,7 @@ Remove a group:
 
 #### 2.3. Raster image management
 
-Add raster images:
+- Add raster images:
     ```python
     exp.add_images(
         group_name = 'group_1', 
@@ -106,7 +105,7 @@ Add raster images:
         )
     ```
 
-Check added images:
+- Check added images:
     ```python
     exp.ls_images()
     ```
@@ -114,28 +113,28 @@ Check added images:
 
 #### 2.4. Region of interest (ROI) management
 
-Load image ROIs using suffix to image names:
+- Load image ROIs using suffix to image names:
     ```python
     exp.add_rois_by_suffix('group_1', '_roi.xml', data_dir)
     ```
 
-Remove ROIs by name:
+- Remove ROIs by name:
     ```python
     exp.rm_rois(roi_name='ROI_10')
     ```
 
-Load ROIs to a image using ROI files by paths:
+- Load ROIs to a image using ROI files by paths:
     ```python
     exp.add_rois_by_file('group_1', [f"{data_dir}/example_roi.xml"], image_name='example.tif')
     ```
 
-Check added ROIs:
+- Check added ROIs:
     ```python
     exp.ls_rois()
     ```
 The example xml ROI file contains 10 ROIs.
 
-Check sample ROIs:
+- Check sample ROIs:
     ```python
     exp.ls_rois_sample()
     ```
@@ -145,46 +144,46 @@ Check sample ROIs:
 
 ##### 2.5.1 Set sample labels
 
-Get current sample label dataframe:
+- Get current sample label dataframe:
     ```python
     labels = exp.ls_labels()
     ```
 
-Set new sample labels in the dataframe:
+- Set new sample labels in the dataframe:
 Here we use sample_1, sample_2 ... sample_10
     ```python
     labels.iloc[:,1] = [f'sample_{str(i+1)}' for i in range(len(labels))]
     ```
 
-Update sample labels using the updated dataframe:
+- Update sample labels using the updated dataframe:
     ```python
     exp.sample_labels = labels
     ```
 
-Check sample labels:
+- Check sample labels:
     ```python
     exp.ls_labels()
     ```
 
 ##### 2.5.2 Set target values
 
-List target value dataframe:
+- List target value dataframe:
     ```python
     targets = exp.ls_sample_targets()
     ```
 
-Create mock target values for regression and update target dataframe:
+- Create mock target values for regression and update target dataframe:
 Here we use 1 to 10
     ```python
     targets['Target_value'] = [i for i in range(len(targets))]
     ```
 
-Load target values from updated target dataframe:
+- Load target values from updated target dataframe:
     ```python
     exp.sample_targets_from_df(targets)
     ```
 
-Check target values:
+- Check target values:
     ```python
     exp.ls_targets()
     ```
@@ -192,49 +191,56 @@ Check target values:
 
 ### 3. Design testing pipeline
 
-SpecPipe follows a structured data processing workflow with these sequential data levels:
+- SpecPipe follows a structured data processing workflow with these sequential data levels:
     ```text
     Raster image data -> ROI spectra -> ROI statistics -> Traits to model
     ```
 
-The technical data levels in SpecPipe includes:
+- The technical data levels in SpecPipe includes:
     ```text
     Images: 
         0 - "image", input image path and output processed image path.
     
     Image pixel spectra: 
-        1 - "pixel_spec", 1D spectrum of image pixel (CPU processing of small images with simple functions accepting 1D spectra)
-        2 - "pixel_specs_array", 2D spectra array of image pixels (CPU processing using array functions, faster for larger images)
-        3 - "pixel_specs_tensor", 2D spectra tensor of image pixels (GPU processing for multispectral images)
-        4 - "pixel_hyperspecs_tensor", 2D hyperspectra tensor of image pixels (GPU processing using optimized tiling for hyperspectral images)
+        1 - "pixel_spec", 1D spectrum of image pixel (simple)
+    
+        2 - "pixel_specs_array", 2D spectra array of image pixels (fast)
+    
+        3 - "pixel_specs_tensor", 2D spectra tensor of image pixels (fast)
+    
+        4 - "pixel_hyperspecs_tensor", 2D hyperspectra tensor of image pixels (fastest)
+    
         (See "rasterop.pixel_apply" - apply processing functions to spectra of image pixels)
     
     Image ROIs:
-        5 - "image_roi", extract ROI spectra from raster images, commonly yielding an unsorted list of ROI spectra
-        6 - "roispecs", an array of ROI spectra
-        7 - "spec1d", 1D spectra, spectra statistics or arbitray 1D data extracted from "roispecs", or 1D spectra data from spectrascopy
+        5 - "image_roi", raster with sample ROIs, for spectrum extraction
+    
+        6 - "roispecs", 2D array of ROI spectra
+    
+        7 - "spec1d", arbitrary 1D data of samples, e.g. 1D spectra, spectra statistics
     
     Models:
         8 - "model", model evaluation with standard report output as files
     ```
 
-The corresponding workflow is:
+- The corresponding data processing workflow is:
     ```text
-    Raster image data:    0-"image" / 1-"pixel_spec" / 2-"pixel_specs_array" / 3-"pixel_specs_tensor" / 4-"pixel_hyperspecs_tensor"
+    Raster image data:    0 ~ 4
         ↓
-    Extract ROI spectra:  5-"image_roi"
+    Extract ROI spectra:  5 - "image_roi"
         ↓
-    ROI spectra:          6-"roispecs"
+    ROI spectra:          6 - "roispecs"
         ↓
-    ROI statistics:       7-"spec1d"
+    ROI statistics:       7 - "spec1d"
         ↓
-    Model evaluation:     8-"model"
+    Model evaluation:     8 - "model"
     ```
 The processing functions are wrapped in the pipeline according to the specified "data levels".
 Parallel processes can be added with identical "data level" and "application sequence", and they are arranged using full-factorial approach in the pipeline.
 
 
 #### 3.1 Create processing pipeline
+- Create processing pipeline from SpecExp instance configured above:
     ```python
     from specpipe import SpecPipe
     
@@ -243,9 +249,9 @@ Parallel processes can be added with identical "data level" and "application seq
 
 #### 3.2 Image processing
 
-Create some image processing functions, such as: 
+- Create some image processing functions, such as: 
 
-Standard normal variate: 
+- Standard normal variate: 
     ```python
     import numpy as np
     def snv(v):
@@ -255,13 +261,13 @@ Standard normal variate:
         return snv
     ```
 
-Raw data for performance comparison:
+- Raw data for performance comparison:
     ```python
     def raw(v):
         return v
     ```
 
-Add these processing functions to the pipeline:
+- Add these processing functions to the pipeline:
     ```python
     pipe.add_process(
         input_data_level = 'pixel_specs_array', 
@@ -271,7 +277,7 @@ Add these processing functions to the pipeline:
         )
     ```
 
-Or we can specify the data level using the corresponding number:
+- Or we can specify the data level using the corresponding number:
     ```python
     pipe.add_process(2, 2, 0, raw)
     ```
@@ -279,13 +285,13 @@ Or we can specify the data level using the corresponding number:
 
 #### 3.3 ROI statistics
 
-Import some ROI spectral statistic metrics:
+- Import some ROI spectral statistic metrics:
     ```python
     from specpipe import roi_mean
     from specpipe import roi_median
     ```
 
-Add these process to the pipeline:
+- Add these process to the pipeline:
     ```python
     pipe.add_process(
         input_data_level = 'image_roi', 
@@ -295,7 +301,7 @@ Add these process to the pipeline:
         )
     ```
 
-Or specify data level using number:
+- Or specify data level using number:
     ```python
     pipe.add_process(5, 7, 0, roi_median)
     ```
@@ -303,23 +309,23 @@ Or specify data level using number:
 
 #### 3.4 Sample data wrangling
 
-Create a function to remove nan and inf values:
+- Create a function to remove nan and inf values:
     ```python
     def replace_nan(v: np.ndarray) -> np.ndarray:
         return np.nan_to_num(v, nan=0.0, posinf=0.0, neginf=0.0)
     ```
 
-Add the process to the pipeline:
+- Add the process to the pipeline:
     ```python
     pipe.add_process('spec1d', 'spec1d', 0, replace_nan)
     ```
 
-Check all added processes:
+- Check all added processes:
     ```python
     pipe.ls_process()
     ```
 
-To remove added processes from the pipeline:
+- To remove added processes from the pipeline:
     ```python
     pipe.rm_process(method='raw')
     ```
@@ -328,7 +334,7 @@ Processes can be removed by various criteria, the example removes the function '
 
 #### 3.5 Add models to the pipeline
 
-Create some models:
+- Create some models:
     ```python
     from sklearn.linear_model import LinearRegression
     from sklearn.ensemble import RandomForestRegressor
@@ -341,24 +347,24 @@ Create some models:
     svr = SVR()
     ```
 
-Add model using "add_process":
+- Add model using "add_process":
     ```python
     pipe.add_process('spec1d', 'model', 1, linear_regressor, validation_method = '10-fold')
     pipe.add_process(7, 8, 1, rf_regressor, validation_method = '10-fold')
     ```
 
-Add model using add_model:
+- Add model using add_model:
     ```python
     pipe.add_model(knn_regressor, validation_method = '10-fold')
     pipe.add_model(svr, validation_method = '10-fold')
     ```
 
-Check added models:
+- Check added models:
     ```python
     pipe.ls_model()
     ```
 
-Check all processes including models:
+- Check all processes including models:
     ```python
     pipe.ls_process()
     ```
@@ -366,23 +372,23 @@ Check all processes including models:
 
 ### 4 Run pipeline
 
-Check processing chains of the pipeline:
+- Check processing chains of the pipeline:
     ```python
     pipe.ls_chains()
     ```
 
-Manually test all added processes:
+- Manually test all added processes:
     ```python
     pipe.test_run()
     ```
 The added processes are also automatically tested before formal run.
 
-Run pipeline:
+- Run pipeline:
     ```python
     pipe.run()
     ```
 
-Set resume True to enable resuming:
+- Set resume True to enable resuming:
     ```python
     pipe.run(resume=True)
     ```
@@ -391,16 +397,16 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
 
 ### 5 Running results
 
-The pipeline produces following results for every processing chain, including:
+- The pipeline produces following results for every processing chain, including:
 • Final and intermediate preprocessing results
 • Data configuration files
 • Validation and application models
 • Model evaluation reports
 • Visualization plots
 
-The resulting file structure is as follows:
+- **The resulting file structure is as follows:**
 
-For input data:
+- For input data:
     ```text
     data_directory/
     ├── SpecExp_configuration/
@@ -412,7 +418,7 @@ For input data:
     └── Your_ROIs.xml
     ```
 
-For regression tasks, the pipeline generates:
+- For regression tasks, the pipeline generates:
     ```text
     report_directory/
     ├── Modeling/
@@ -420,10 +426,10 @@ For regression tasks, the pipeline generates:
     │        ├── Data_chain_Preprocessing_#0_Model_(model label 0)/
     │        │   ├── Model_for_application/
     │        │   ├── Model_in_validation/
-    │        │   ├── Regression_performance.csv
     │        │   ├── Validation_results.csv
+    │        │   ├── Regression_performance.csv
     │        │   ├── Residual_analysis.csv
-    │        │   ├── Cooks_distance.csv
+    │        │   ├── Influence_analysis.csv
     │        │   ├── Scatter_plot.png
     │        │   └── Residual_plot.png
     │        ├── Data_chain_Preprocessing_#0_Model_(model label 1)/
@@ -439,7 +445,7 @@ For regression tasks, the pipeline generates:
     └── test_run/
     ```
 
-For classification tasks, the pipeline generates:
+- For classification tasks, the pipeline generates:
     ```text
     report_directory/
     ├── Modeling/
@@ -447,10 +453,10 @@ For classification tasks, the pipeline generates:
     │        ├── Data_chain_Preprocessing_#0_Model_(model label 0)/
     │        │   ├── Model_for_application/
     │        │   ├── Model_in_validation/
-    │        │   ├── Classification_performance.csv
     │        │   ├── Validation_results.csv
+    │        │   ├── Classification_performance.csv
     │        │   ├── Residual_analysis.csv
-    │        │   ├── Cooks_distance.csv
+    │        │   ├── Influence_analysis.csv
     │        │   └── ROC_curve.png
     │        ├── Data_chain_Preprocessing_#0_Model_(model label 1)/
     │        ├── Data_chain_Preprocessing_#1_Model_(model label 0)/
