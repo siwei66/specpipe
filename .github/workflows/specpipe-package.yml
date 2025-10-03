@@ -34,16 +34,16 @@ jobs:
 
     - name: Format with Black
       run: |
-        black --check --diff .
+        black --config pyproject.toml --check --diff .
 
     - name: Lint with Ruff
       run: |
-        ruff --check .
+        ruff --check --config pyproject.toml .
 
     - name: Type check with Mypy
       run: |
-        mypy src/specpipe/
-        mypy tests/
+        mypy --config-file pyproject.toml src/specpipe/
+        mypy --config-file pyproject.toml tests/
 
     - name: Test with pytest
       run: |
