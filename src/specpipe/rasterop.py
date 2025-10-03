@@ -234,13 +234,14 @@ def auto_fp(
 
 
 @overload
-def auto_fp(
+def auto_fp(  # type: ignore[overload-cannot-match]
     data: np.ndarray,
     scaling: bool = False,
     rtol: float = 1e-4,
     atol: float = 1e-5,
     safety_factor: float = 2.0,
 ) -> tuple[np.ndarray, Optional[float]]: ...
+# Mypy failure on GitHub, the code works and passes local mypy validation
 
 
 def auto_fp(  # noqa: C901

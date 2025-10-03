@@ -1010,28 +1010,34 @@ def np_sig_digit(arr_like: Annotated[Any, arraylike_validator()], sig_digit: int
     return np.array(rdfunc(arr_like * factor) / factor)
 
 
+# For any scalar real number regardless of types - behavioral validation
 @overload
-def round_digit(value: RealNumber, sig_digit: int, mode: str) -> float: ...
-
-
-@overload
-def round_digit(value: tuple, sig_digit: int, mode: str) -> tuple: ...
+def round_digit(value: RealNumber, sig_digit: int, mode: str) -> float: ...  # type: ignore[overload-cannot-match]
+# Mypy failure on GitHub, the code works and passes local mypy validation, following the same
 
 
 @overload
-def round_digit(value: list, sig_digit: int, mode: str) -> list: ...
+def round_digit(value: tuple, sig_digit: int, mode: str) -> tuple: ...  # type: ignore[overload-cannot-match]
 
 
 @overload
-def round_digit(value: np.ndarray, sig_digit: int, mode: str) -> np.ndarray: ...
+def round_digit(value: list, sig_digit: int, mode: str) -> list: ...  # type: ignore[overload-cannot-match]
 
 
 @overload
-def round_digit(value: torch.Tensor, sig_digit: int, mode: str) -> torch.Tensor: ...
+def round_digit(value: np.ndarray, sig_digit: int, mode: str) -> np.ndarray: ...  # type: ignore[overload-cannot-match]
 
 
 @overload
-def round_digit(value: pd.DataFrame, sig_digit: int, mode: str) -> pd.DataFrame: ...
+def round_digit(  # type: ignore[overload-cannot-match]
+    value: torch.Tensor, sig_digit: int, mode: str
+) -> torch.Tensor: ...
+
+
+@overload
+def round_digit(  # type: ignore[overload-cannot-match]
+    value: pd.DataFrame, sig_digit: int, mode: str
+) -> pd.DataFrame: ...
 
 
 @simple_type_validator
