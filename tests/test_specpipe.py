@@ -678,7 +678,7 @@ class TestSpecPipe(unittest.TestCase):
 
     @staticmethod
     @silent
-    def test_test_run_regression() -> None:
+    def test_test_run_regression() -> None:  # noqa: C901
         """Test test_run for regression tasks"""
 
         if os.getenv("SPECPIPE_PREPROCESS_RESUME_TEST_NUM") is not None:
@@ -723,14 +723,35 @@ class TestSpecPipe(unittest.TestCase):
         for dirname in procs_result_dirs:
             reports = lsdir_robust(model_report_dir + dirname)
             assert len(reports) == 8
+            # Output model dirs
             assert "Model_for_application" in reports
             assert "Model_in_validation" in reports
-            assert "Influence_analysis" in reports[0]
-            assert "Regression_performance" in reports[3]
-            assert "Residual_analysis" in reports[4]
-            assert "Residual_plot" in reports[5]
-            assert "Scatter_plot" in reports[6]
-            assert "Validation_results" in reports[7]
+            # Check report files
+            match_performance: int = 0
+            match_influence: int = 0
+            match_residual: int = 0
+            match_validation: int = 0
+            match_scatter: int = 0
+            match_res_plot: int = 0
+            for report in reports:
+                if "Validation_results" in report:
+                    match_validation = 1
+                if "Regression_performance" in report:
+                    match_performance = 1
+                if "Residual_analysis" in report:
+                    match_residual = 1
+                if "Influence_analysis" in report:
+                    match_influence = 1
+                if "Scatter_plot" in report:
+                    match_scatter = 1
+                if "Residual_plot" in report:
+                    match_res_plot = 1
+            assert match_validation == 1
+            assert match_performance == 1
+            assert match_residual == 1
+            assert match_influence == 1
+            assert match_scatter == 1
+            assert match_res_plot == 1
 
         # Full test
         plt.close("all")
@@ -759,7 +780,7 @@ class TestSpecPipe(unittest.TestCase):
 
     @staticmethod
     @silent
-    def test_test_run_classification() -> None:
+    def test_test_run_classification() -> None:  # noqa: C901
         """Test test_run for classification tasks"""
 
         if os.getenv("SPECPIPE_PREPROCESS_RESUME_TEST_NUM") is not None:
@@ -805,13 +826,31 @@ class TestSpecPipe(unittest.TestCase):
         for dirname in procs_result_dirs:
             reports = lsdir_robust(model_report_dir + dirname)
             assert len(reports) == 7
+            # Output model dirs
             assert "Model_for_application" in reports
             assert "Model_in_validation" in reports
-            assert "Classification_performance" in reports[0]
-            assert "Influence_analysis" in reports[1]
-            assert "Residual_analysis" in reports[4]
-            assert "ROC_curve" in reports[5]
-            assert "Validation_results" in reports[6]
+            # Check report files
+            match_performance: int = 0
+            match_influence: int = 0
+            match_residual: int = 0
+            match_validation: int = 0
+            match_roc: int = 0
+            for report in reports:
+                if "Validation_results" in report:
+                    match_validation = 1
+                if "Classification_performance" in report:
+                    match_performance = 1
+                if "Residual_analysis" in report:
+                    match_residual = 1
+                if "Influence_analysis" in report:
+                    match_influence = 1
+                if "ROC_curve" in report:
+                    match_roc = 1
+            assert match_validation == 1
+            assert match_performance == 1
+            assert match_residual == 1
+            assert match_influence == 1
+            assert match_roc == 1
 
         # Full test
         plt.close("all")
@@ -896,14 +935,35 @@ class TestSpecPipe(unittest.TestCase):
             # Reports
             reports = lsdir_robust(model_report_dir + dirname)
             assert len(reports) == 8
+            # Output model dirs
             assert "Model_for_application" in reports
             assert "Model_in_validation" in reports
-            assert "Influence_analysis" in reports[0]
-            assert "Regression_performance" in reports[3]
-            assert "Residual_analysis" in reports[4]
-            assert "Residual_plot" in reports[5]
-            assert "Scatter_plot" in reports[6]
-            assert "Validation_results" in reports[7]
+            # Check report files
+            match_performance: int = 0
+            match_influence: int = 0
+            match_residual: int = 0
+            match_validation: int = 0
+            match_scatter: int = 0
+            match_res_plot: int = 0
+            for report in reports:
+                if "Validation_results" in report:
+                    match_validation = 1
+                if "Regression_performance" in report:
+                    match_performance = 1
+                if "Residual_analysis" in report:
+                    match_residual = 1
+                if "Influence_analysis" in report:
+                    match_influence = 1
+                if "Scatter_plot" in report:
+                    match_scatter = 1
+                if "Residual_plot" in report:
+                    match_res_plot = 1
+            assert match_validation == 1
+            assert match_performance == 1
+            assert match_residual == 1
+            assert match_influence == 1
+            assert match_scatter == 1
+            assert match_res_plot == 1
 
             # Models for application
             app_model_path = model_report_dir + dirname + "/Model_for_application/"
@@ -952,13 +1012,31 @@ class TestSpecPipe(unittest.TestCase):
             # Reports
             reports = lsdir_robust(model_report_dir + dirname)
             assert len(reports) == 7
+            # Output model dirs
             assert "Model_for_application" in reports
             assert "Model_in_validation" in reports
-            assert "Classification_performance" in reports[0]
-            assert "Influence_analysis" in reports[1]
-            assert "Residual_analysis" in reports[4]
-            assert "ROC_curve" in reports[5]
-            assert "Validation_results" in reports[6]
+            # Check report files
+            match_performance: int = 0
+            match_influence: int = 0
+            match_residual: int = 0
+            match_validation: int = 0
+            match_roc: int = 0
+            for report in reports:
+                if "Validation_results" in report:
+                    match_validation = 1
+                if "Classification_performance" in report:
+                    match_performance = 1
+                if "Residual_analysis" in report:
+                    match_residual = 1
+                if "Influence_analysis" in report:
+                    match_influence = 1
+                if "ROC_curve" in report:
+                    match_roc = 1
+            assert match_validation == 1
+            assert match_performance == 1
+            assert match_residual == 1
+            assert match_influence == 1
+            assert match_roc == 1
 
             # Models for application
             app_model_path = model_report_dir + dirname + "/Model_for_application/"

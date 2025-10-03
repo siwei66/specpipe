@@ -3598,6 +3598,9 @@ class TestLsdirRobust:
 
         assert len(list(files_listdir)) == len(list(files_lsdir_r))
 
+        if os.path.exists(test_dir):
+            shutil.rmtree(test_dir)
+
 
 # %% Test - roi_to_shp
 

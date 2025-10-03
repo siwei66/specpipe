@@ -1964,6 +1964,8 @@ class TestPixelApply:
 
         finally:
             os.remove(input_path)
+            if result is not None:
+                os.remove(result)
 
     @staticmethod
     def test_spec_function_type() -> None:
@@ -1988,6 +1990,8 @@ class TestPixelApply:
 
             finally:
                 os.remove(input_path)
+                if result is not None:
+                    os.remove(result)
 
     @staticmethod
     def test_array_function_type() -> None:
@@ -2109,6 +2113,8 @@ class TestPixelApply:
 
             finally:
                 os.remove(input_path)
+                if result is not None:
+                    os.remove(result)
 
 
 # %% Test - pixel_apply
