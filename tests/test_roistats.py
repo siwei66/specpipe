@@ -7,20 +7,18 @@ The following source code was created with AI assistance and has been human revi
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
-# Test
-# Testing third
-import math
-
 # OS Files
 import os
-
-# For local test - delete after use
 import tempfile
+
+# Test
 import unittest
 
 # Typing
 from typing import Any, Union
 
+# Testing third
+import math
 import numpy as np
 import pandas as pd
 import pytest
@@ -1121,7 +1119,8 @@ class TestMoment2D:
         assert all(np.isnan(x) for x in result_nan)
 
         # Test 'numpy' policy
-        result_numpy = moment2d(data, n=2, standardized=True, zero_division="numpy")
+        with pytest.warns(RuntimeWarning, match="invalid value encountered in divide"):
+            result_numpy = moment2d(data, n=2, standardized=True, zero_division="numpy")
         assert all(np.isnan(x) for x in result_numpy)
 
     @staticmethod

@@ -6,15 +6,14 @@ The following source code was created with AI assistance and has been human revi
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
-
 # Test
+import unittest
+import pytest
+
 # OS Files
 import os
 import shutil
-
-# For local test - delete after use
 import tempfile
-import unittest
 import warnings
 from pathlib import Path
 
@@ -29,7 +28,6 @@ import geopandas as gpd
 # Testing third
 import numpy as np
 import pandas as pd
-import pytest
 import torch
 from pydantic import BaseModel
 from shapely.geometry import MultiPolygon, Polygon
@@ -111,7 +109,7 @@ class TestSimpleTypeValidator:
         """Test Optional types and None values"""
 
         @simple_type_validator
-        def test_func(a: Optional[int], b: str = None) -> str:  # type: ignore[assignment]
+        def test_func(a: Optional[int], b: Optional[str] = None) -> str:  # type: ignore[assignment]
             return f"{a} {b}"
 
         # Valid calls with None
@@ -613,7 +611,7 @@ class TestArraylikeValidator:
     def test_dtype_validation() -> None:
         """Test dtype validation."""
         # Native type d_type
-        validator_float = arraylike_validator(d_type=float)
+        validator_float = arraylike_validator(d_type=np.float64)
         assert validator_float([1.0, 2.0, 3.0]).dtype == np.float64
         with pytest.raises(TypeError):
             validator_float([1, 2, 3])
@@ -642,7 +640,7 @@ class TestArraylikeValidator:
 
         # Other d_type
         validator_int = arraylike_validator(d_type=int)
-        assert validator_int([1, 2, 3]).dtype == np.int32
+        assert validator_int([1, 2, 3]).dtype == np.array([1, 2, 3]).astype(int).dtype
         with pytest.raises(TypeError):
             validator_int([1.0, 2.0, 3.0])
 

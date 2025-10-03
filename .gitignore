@@ -1,0 +1,13 @@
+# Python build and distribution
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

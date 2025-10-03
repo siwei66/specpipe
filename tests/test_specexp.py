@@ -10,7 +10,6 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 import os
 import shutil
 
-# For local test - delete after use
 import tempfile
 import unittest
 

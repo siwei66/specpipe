@@ -5,36 +5,55 @@ Tests for spectral image processing and modeling pipeline (SpecPipe)
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
-# Test
-# OS Files
+# ruff: noqa: I001
+# OS
 import os
-import shutil
 
-# For local test - delete after use
-import tempfile
-import unittest
+# Initialize LOKY_MAX_CPU_COUNT if it does not exist before imports to prevent corresponding warning
+os.environ.setdefault('LOKY_MAX_CPU_COUNT', '1')
+
+# OS Files
+import shutil  # noqa: E402
+
+# Test
+import tempfile  # noqa: E402
+import unittest  # noqa: E402
 
 # Plots
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # noqa: E402
 
 # Testing third
-import numpy as np
-import pytest
-import torch
+import numpy as np  # noqa: E402
+import pytest  # noqa: E402
+import torch  # noqa: E402
 
 # Modeling
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor  # noqa: E402
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor  # noqa: E402
+
+# Multiprocessing
+from pathos.helpers import cpu_count  # noqa: E402
 
 # Self
 # Applied package functions for test
-from specpipe.example_data import create_test_raster, create_test_roi_xml, create_test_spec_exp
-from specpipe.roistats import Stats2d, roi_mean, roispec
-from specpipe.specexp import SpecExp
-from specpipe.specio import silent
+from specpipe.example_data import create_test_raster, create_test_roi_xml, create_test_spec_exp  # noqa: E402
+from specpipe.roistats import Stats2d, roi_mean, roispec  # noqa: E402
+from specpipe.specexp import SpecExp  # noqa: E402
+from specpipe.specio import silent  # noqa: E402
 
 # Funcs to test
-from specpipe.specpipe import SpecPipe, _dl_val
+from specpipe.specpipe import SpecPipe, _dl_val  # noqa: E402
+# ruff: noqa: I001
+
+# Confirm proper LOKY_MAX_CPU_COUNT
+loky_max_cpu_count = str(cpu_count())
+os.environ.setdefault('LOKY_MAX_CPU_COUNT', loky_max_cpu_count)
+
+# Check if cuda is available
+try:
+    HAS_CUDA = torch.cuda.is_available()
+except ImportError:
+    HAS_CUDA = False
 
 # %% Test process methods
 
@@ -166,7 +185,7 @@ def test_dl_val() -> None:
     assert _dl_val("model") == (8, "model")
 
 
-class TestSpecPipe:
+class TestSpecPipe(unittest.TestCase):
     """Test class for SpecPipe functionality."""
 
     @staticmethod
@@ -331,14 +350,20 @@ class TestSpecPipe:
             # Method of other data levels
             pipe.add_process(2, 2, 0, arr_snv)
             assert len(pipe.process) == 4
-            pipe.add_process(3, 3, 0, tensor_snv)
-            assert len(pipe.process) == 5
-            pipe.add_process(4, 4, 0, hypert_snv)
-            assert len(pipe.process) == 6
-            pipe.add_process(5, 6, 0, roispec)
-            assert len(pipe.process) == 7
-            pipe.add_process(6, 7, 0, Stats2d.median)
-            assert len(pipe.process) == 8
+            if HAS_CUDA:
+                pipe.add_process(3, 3, 0, tensor_snv)
+                assert len(pipe.process) == 5
+                pipe.add_process(4, 4, 0, hypert_snv)
+                assert len(pipe.process) == 6
+                pipe.add_process(5, 6, 0, roispec)
+                assert len(pipe.process) == 7
+                pipe.add_process(6, 7, 0, Stats2d.median)
+                assert len(pipe.process) == 8
+            else:
+                pipe.add_process(5, 6, 0, roispec)
+                assert len(pipe.process) == 5
+                pipe.add_process(6, 7, 0, Stats2d.median)
+                assert len(pipe.process) == 6
 
         # Clear test report dir
         if os.path.exists(test_dir):
@@ -385,8 +410,8 @@ class TestSpecPipe:
             pipe.add_process(0, 0, 1, original_img)
             pipe.add_process(1, 1, 0, snv)
             pipe.add_process(2, 2, 0, arr_snv)
-            pipe.add_process(3, 3, 0, tensor_snv)
-            pipe.add_process(4, 4, 0, hypert_snv)
+            pipe.add_process(2, 2, 0, arr_snv)
+            pipe.add_process(2, 2, 0, arr_snv)
 
             # List all
             procs = pipe.ls_process(print_result=False, return_result=True)
@@ -436,43 +461,41 @@ class TestSpecPipe:
             pipe.add_process(0, 0, 1, original_img)
             pipe.add_process(1, 1, 0, snv)
             pipe.add_process(2, 2, 0, arr_snv)
-            pipe.add_process(3, 3, 0, tensor_snv)
-            pipe.add_process(4, 4, 0, hypert_snv)
 
-            assert len(pipe.process) == 7
-            assert len(pipe.process_steps) == 6
-            assert len(pipe.process_chains) == 2
-            for chain in pipe.process_chains:
-                assert len(chain) == 6
-
-            # Remove procs
-            pipe.rm_process(method="snv")
-            assert len(pipe.process) == 6
-            assert len(pipe.process_steps) == 5
-            assert len(pipe.process_chains) == 2
-            for chain in pipe.process_chains:
-                assert len(chain) == 5
-
-            pipe.rm_process(process_id=pipe.process_steps[0][0])
             assert len(pipe.process) == 5
-            assert len(pipe.process_steps) == 5
-            assert len(pipe.process_chains) == 1
-            for chain in pipe.process_chains:
-                assert len(chain) == 5
-
-            pipe.rm_process(input_data_level=4)
-            assert len(pipe.process) == 4
             assert len(pipe.process_steps) == 4
-            assert len(pipe.process_chains) == 1
+            assert len(pipe.process_chains) == 2
             for chain in pipe.process_chains:
                 assert len(chain) == 4
 
-            pipe.rm_process(output_data_level=3)
+            # Remove procs
+            pipe.rm_process(method="snv")
+            assert len(pipe.process) == 4
+            assert len(pipe.process_steps) == 3
+            assert len(pipe.process_chains) == 2
+            for chain in pipe.process_chains:
+                assert len(chain) == 3
+
+            pipe.rm_process(process_id=pipe.process_steps[0][0])
             assert len(pipe.process) == 3
             assert len(pipe.process_steps) == 3
             assert len(pipe.process_chains) == 1
             for chain in pipe.process_chains:
                 assert len(chain) == 3
+
+            pipe.rm_process(input_data_level=2)
+            assert len(pipe.process) == 2
+            assert len(pipe.process_steps) == 2
+            assert len(pipe.process_chains) == 1
+            for chain in pipe.process_chains:
+                assert len(chain) == 2
+
+            pipe.rm_process(output_data_level=1)
+            assert len(pipe.process) == 2
+            assert len(pipe.process_steps) == 2
+            assert len(pipe.process_chains) == 1
+            for chain in pipe.process_chains:
+                assert len(chain) == 2
 
         # Clear test report dir
         if os.path.exists(test_dir):

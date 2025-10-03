@@ -3482,9 +3482,9 @@ class SpecExp:
 
         # Default dtype
         if target_dtype is None:
-            dtp = {0: str}
+            dtp = {0: str, 1: str}
         else:
-            dtp = {0: str, 1: target_dtype}  # type: ignore[dict-item]
+            dtp = {0: str, 1: str, 2: target_dtype}  # type: ignore[dict-item]
             # Conditioned typing
 
         # Read df
@@ -3493,7 +3493,9 @@ class SpecExp:
         else:
             dft = pd.read_csv(path, dtype=dtp, header=None)
         dft.fillna("-", inplace=True)
-        dft.iloc[:, :-1] = dft.iloc[:, :-1].astype("object")
+        id_label_cols = dft.columns[:-1]
+        dft[id_label_cols] = dft[id_label_cols].astype("object")
+        # Old: dft.iloc[:, :-1] = dft.iloc[:, :-1].astype("object")
 
         # Update targets - formatting with property formatting function
         self.sample_targets = dft

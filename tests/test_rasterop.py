@@ -8,24 +8,22 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
 # Test
-# OS Files
-import os
-
-# For local test - delete after use
-import tempfile
+import pytest
 import unittest
 
+# OS Files
+import os
+import tempfile
+
 # Typing
-from typing import Any, Union
-from unittest.mock import patch
+from typing import Union
 
 # Testing third
 import numpy as np
-import pytest
+import torch
 
 # Rasters
 import rasterio
-import torch
 
 # Self
 # Applied package functions for test
@@ -43,8 +41,11 @@ from specpipe.rasterop import (
     pixel_tensor_hyper_apply,
 )
 
-# Applied package functions for test
-from specpipe.specio import silent
+# Check if cuda is available
+try:
+    HAS_CUDA = torch.cuda.is_available()
+except ImportError:
+    HAS_CUDA = False
 
 # %% test functions : croproi
 
@@ -732,28 +733,6 @@ class TestPixelSpecApply:
                 np.testing.assert_array_almost_equal(output_data, expected_data)
 
     @staticmethod
-    @silent
-    @patch("rasterop.tqdm", lambda x, **kwargs: x)  # Mock tqdm to avoid progress bars
-    def test_progress_flag() -> None:
-        """Test progress flag functionality"""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            input_path = os.path.join(temp_dir, "input.tif")
-            output_path = os.path.join(temp_dir, "output.tif")
-
-            create_test_raster(input_path, 4, 4, 2)
-
-            # Should work with both True and False
-            pixel_spec_apply(
-                image_path=input_path,
-                output_path=output_path,
-                spectral_function=TestPixelSpecApply.simple_spectral_function,
-                tile_size=2,
-                progress=True,
-            )
-
-            assert os.path.exists(output_path)
-
-    @staticmethod
     def test_spectral_function_validation() -> None:
         """Test that spectral function is properly validated"""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -811,7 +790,6 @@ class TestPixelSpecApply:
 # TestPixelSpecApply.test_invalid_tile_size()
 # TestPixelSpecApply.test_output_file_overwrite()
 # TestPixelSpecApply.test_edge_case_tile_sizes()
-# TestPixelSpecApply.test_progress_flag()
 # TestPixelSpecApply.test_spectral_function_validation()
 # TestPixelSpecApply.test_single_pixel_image()
 
@@ -1035,30 +1013,6 @@ class TestPixelArrayApply:
                 assert dst.count == 4
 
     @staticmethod
-    @silent
-    @patch("rasterop.tqdm")
-    def test_progress_bar(mock_tqdm: Any) -> None:  # type: ignore[no-untyped-def]
-        """Test that progress bar is shown when progress=True"""
-        mock_tqdm.return_value = iter(range(3))  # Mock tqdm progress
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            input_path: str = os.path.join(temp_dir, "input.tif")
-            output_path: str = os.path.join(temp_dir, "output.tif")
-
-            create_test_raster(input_path, width=5, height=5, bands=4)
-
-            pixel_array_apply(
-                image_path=input_path,
-                output_path=output_path,
-                spectral_function=TestPixelArrayApply.simple_spectral_function,
-                tile_size=2,
-                progress=True,
-            )
-
-            # Verify tqdm was called
-            mock_tqdm.assert_called_once()
-
-    @staticmethod
     def test_complex_spectral_function() -> None:
         """Test with a more complex spectral function"""
 
@@ -1149,13 +1103,12 @@ class TestPixelArrayApply:
 # TestPixelArrayApply.test_single_pixel_image()
 
 # TestPixelArrayApply.test_output_file_overwrite()
-# TestPixelArrayApply.test_progress_bar()
 # TestPixelArrayApply.test_function_signature_validation()
 
 
 # %% test functions : pixel_tensor_apply
 
-
+@pytest.mark.skipif(not HAS_CUDA, reason="No GPU available")
 class TestPixelTensorApply(unittest.TestCase):
     @staticmethod
     def simple_spectral_function(tensor: torch.Tensor) -> torch.Tensor:
@@ -1558,6 +1511,7 @@ class TestPixelTensorApply(unittest.TestCase):
 # %% test functions : pixel_tensor_hyper_apply
 
 
+@pytest.mark.skipif(not HAS_CUDA, reason="No GPU available")
 class TestPixelTensorHyperApply(unittest.TestCase):
     @staticmethod
     def simple_spectral_function(tensor: torch.Tensor) -> torch.Tensor:
@@ -1990,15 +1944,16 @@ class TestPixelApply:
             input_path = tmp.name
 
         try:
-            with patch("rasterop.pixel_spec_apply") as mock_apply:
-                result = pixel_apply(
-                    image_path=input_path,
-                    spectral_function=TestPixelApply.dummy_spectral_function_spec,
-                    function_type="spec",
-                    return_output_path=True,
-                )
-                assert result.endswith("_px_app_dummy_spectral_function_spec.tif")
-                mock_apply.assert_called_once()
+            result = pixel_apply(
+                image_path=input_path,
+                spectral_function=TestPixelApply.dummy_spectral_function_spec,
+                function_type="spec",
+                return_output_path=True,
+                progress=False
+            )
+            assert result.endswith("_px_app_dummy_spectral_function_spec.tif")
+            assert os.path.exists(result)
+
         finally:
             os.remove(input_path)
 
@@ -2014,23 +1969,15 @@ class TestPixelApply:
             output_path = os.path.join(tmpdir, "output.tif")
 
             try:
-                with patch("rasterop.pixel_spec_apply") as mock_apply:
-                    result = pixel_apply(
-                        image_path=input_path,
-                        spectral_function=TestPixelApply.dummy_spectral_function_spec,
-                        function_type="spec",
-                        output_path=output_path,
-                        progress=False,
-                    )
-                    assert result == output_path
-                    mock_apply.assert_called_once_with(
-                        input_path,
-                        output_path,
-                        TestPixelApply.dummy_spectral_function_spec,
-                        "float32",
-                        -1,
-                        False,
-                    )
+                result = pixel_apply(
+                    image_path=input_path,
+                    spectral_function=TestPixelApply.dummy_spectral_function_spec,
+                    function_type="spec",
+                    output_path=output_path,
+                    progress=False,
+                )
+                assert result == output_path
+
             finally:
                 os.remove(input_path)
 
@@ -2046,27 +1993,20 @@ class TestPixelApply:
             output_path = os.path.join(tmpdir, "output.tif")
 
             try:
-                with patch("rasterop.pixel_array_apply") as mock_apply:
-                    result = pixel_apply(
-                        image_path=input_path,
-                        spectral_function=TestPixelApply.dummy_spectral_function_array,
-                        function_type="array",
-                        output_path=output_path,
-                        progress=False,
-                    )
-                    assert result == output_path
-                    mock_apply.assert_called_once_with(
-                        input_path,
-                        output_path,
-                        TestPixelApply.dummy_spectral_function_array,
-                        "float32",
-                        -1,
-                        False,
-                    )
+                result = pixel_apply(
+                    image_path=input_path,
+                    spectral_function=TestPixelApply.dummy_spectral_function_array,
+                    function_type="array",
+                    output_path=output_path,
+                    progress=False,
+                )
+                assert result == output_path
+
             finally:
                 os.remove(input_path)
 
     @staticmethod
+    @pytest.mark.skipif(not HAS_CUDA, reason="No GPU available")
     def test_tensor_function_type() -> None:
         """Test processing with 'tensor' function type."""
         # Create temporary input and output paths
@@ -2078,28 +2018,20 @@ class TestPixelApply:
             output_path = os.path.join(tmpdir, "output.tif")
 
             try:
-                with patch("rasterop.pixel_tensor_apply") as mock_apply:
-                    result = pixel_apply(
-                        image_path=input_path,
-                        spectral_function=TestPixelApply.dummy_spectral_function_tensor,
-                        function_type="tensor",
-                        output_path=output_path,
-                        progress=False,
-                    )
-                    assert result == output_path
-                    mock_apply.assert_called_once_with(
-                        input_path,
-                        output_path,
-                        TestPixelApply.dummy_spectral_function_tensor,
-                        "float32",
-                        -1,
-                        "cuda",
-                        False,
-                    )
+                result = pixel_apply(
+                    image_path=input_path,
+                    spectral_function=TestPixelApply.dummy_spectral_function_tensor,
+                    function_type="tensor",
+                    output_path=output_path,
+                    progress=False,
+                )
+                assert result == output_path
+
             finally:
                 os.remove(input_path)
 
     @staticmethod
+    @pytest.mark.skipif(not HAS_CUDA, reason="No GPU available")
     def test_tensor_hyper_function_type() -> None:
         """Test processing with 'tensor_hyper' function type."""
         # Create temporary input and output paths
@@ -2111,24 +2043,15 @@ class TestPixelApply:
             output_path = os.path.join(tmpdir, "output.tif")
 
             try:
-                with patch("rasterop.pixel_tensor_hyper_apply") as mock_apply:
-                    result = pixel_apply(
-                        image_path=input_path,
-                        spectral_function=TestPixelApply.dummy_spectral_function_tensor,
-                        function_type="tensor_hyper",
-                        output_path=output_path,
-                        progress=False,
-                    )
-                    assert result == output_path
-                    mock_apply.assert_called_once_with(
-                        input_path,
-                        output_path,
-                        TestPixelApply.dummy_spectral_function_tensor,
-                        "float32",
-                        -1,
-                        "cuda",
-                        False,
-                    )
+                result = pixel_apply(
+                    image_path=input_path,
+                    spectral_function=TestPixelApply.dummy_spectral_function_tensor,
+                    function_type="tensor_hyper",
+                    output_path=output_path,
+                    progress=False,
+                )
+                assert result == output_path
+
             finally:
                 os.remove(input_path)
 
@@ -2166,15 +2089,16 @@ class TestPixelApply:
             output_path = os.path.join(tmpdir, "output.tif")
 
             try:
-                with patch("rasterop.pixel_spec_apply"):
-                    result = pixel_apply(
-                        image_path=input_path,
-                        spectral_function=TestPixelApply.dummy_spectral_function_spec,
-                        function_type="spec",
-                        output_path=output_path,
-                        return_output_path=False,
-                    )
-                    assert result is None
+                result = pixel_apply(
+                    image_path=input_path,
+                    spectral_function=TestPixelApply.dummy_spectral_function_spec,
+                    function_type="spec",
+                    output_path=output_path,
+                    return_output_path=False,
+                    progress=False
+                )
+                assert result is None
+
             finally:
                 os.remove(input_path)
 

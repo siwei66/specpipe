@@ -835,7 +835,8 @@ class ModelEva:
             if itr == 0:
                 y_true = y_test
                 y_pred = y_test_pred
-                y_pred_proba = pd.concat([pd.DataFrame(columns=ynames), y_test_pred_proba_df], ignore_index=True)
+                y_pred_proba = y_test_pred_proba_df.reindex(columns=ynames)
+                # Old: y_pred_proba = pd.concat([pd.DataFrame(columns=ynames), y_test_pred_proba_df], ignore_index=True)
                 sid_eva = list(sid_test)
             else:
                 y_true = np.concatenate((y_true, y_test), axis=0)
@@ -866,10 +867,17 @@ class ModelEva:
 
         # Generate y_true_proba
         y_true_proba = pd.DataFrame(encoder.fit_transform(y_true), columns=encoder.categories_[0])
-        y_true_proba = pd.concat([pd.DataFrame(columns=ynames), y_true_proba], ignore_index=True)
+        y_true_proba = y_true_proba.reindex(columns=ynames)
+        # Old: y_true_proba = pd.concat([pd.DataFrame(columns=ynames), y_true_proba], ignore_index=True)
 
         # Replace pandas nan
-        y_pred_proba = y_pred_proba.applymap(lambda x: np.nan if pd.isna(x) else x)
+        if hasattr(pd.DataFrame, 'map'):
+            # pandas >= 2.1.0
+            y_pred_proba = y_pred_proba.map(lambda x: np.nan if pd.isna(x) else x)
+        else:
+            # pandas < 2.1.0
+            y_pred_proba = y_pred_proba.applymap(lambda x: np.nan if pd.isna(x) else x)
+        # Old: y_pred_proba = y_pred_proba.applymap(lambda x: np.nan if pd.isna(x) else x)
 
         # Convert back to array
         y_true_proba = np.array(y_true_proba)
@@ -1425,10 +1433,17 @@ class ModelEva:
             # Custom model, independent runtime validated, following the same
             p_full = model_full.predict_proba(X_test)  # type: ignore[attr-defined]
             p_full = pd.DataFrame(p_full, columns=model_full.classes_, index=sid_test)  # type: ignore[attr-defined]
-            p_full = pd.concat([pd.DataFrame(columns=ynames), p_full], ignore_index=True)
+            p_full = p_full.reindex(columns=ynames)
+            # Old: p_full = pd.concat([pd.DataFrame(columns=ynames), p_full], ignore_index=True)
 
             # Replace pandas nan
-            p_full = p_full.applymap(lambda x: np.nan if pd.isna(x) else x)
+            if hasattr(pd.DataFrame, 'map'):
+                # pandas >= 2.1.0
+                p_full = p_full.map(lambda x: np.nan if pd.isna(x) else x)
+            else:
+                # pandas < 2.1.0
+                p_full = p_full.applymap(lambda x: np.nan if pd.isna(x) else x)
+            # Old: p_full = p_full.applymap(lambda x: np.nan if pd.isna(x) else x)
 
             # Convert back to array
             y_p_test = np.array(y_p_test)
@@ -1464,10 +1479,17 @@ class ModelEva:
                 # Predict on test X
                 p_loo = model_loo.predict_proba(X_test)  # type: ignore[attr-defined]
                 p_loo = pd.DataFrame(p_loo, columns=model_loo.classes_)  # type: ignore[attr-defined]
-                p_loo = pd.concat([pd.DataFrame(columns=ynames), p_loo], ignore_index=True)
+                p_loo = p_loo.reindex(columns=ynames)
+                # Old: p_loo = pd.concat([pd.DataFrame(columns=ynames), p_loo], ignore_index=True)
 
                 # Replace pandas nan
-                p_loo = p_loo.applymap(lambda x: np.nan if pd.isna(x) else x)
+                if hasattr(pd.DataFrame, 'map'):
+                    # pandas >= 2.1.0
+                    p_loo = p_loo.map(lambda x: np.nan if pd.isna(x) else x)
+                else:
+                    # pandas < 2.1.0
+                    p_loo = p_loo.applymap(lambda x: np.nan if pd.isna(x) else x)
+                # Old: p_loo = p_loo.applymap(lambda x: np.nan if pd.isna(x) else x)
 
                 # Convert back to array
                 p_loo = np.array(p_loo)
@@ -2282,10 +2304,17 @@ class ModelEva:
             # Custom model, independent runtime validated, following the same
             p_full = model_full.predict(X_test)  # type: ignore[attr-defined]
             p_full = pd.DataFrame(p_full, columns=["y_pred"], index=sid_test)
-            mse = np.mean((y_test - p_full) ** 2, axis=0)
+            mse = np.array(np.mean((y_test - p_full) ** 2, axis=0))
+            # Old: mse = np.mean((y_test - p_full) ** 2, axis=0)
 
             # Replace pandas nan
-            p_full = p_full.applymap(lambda x: np.nan if pd.isna(x) else x)
+            if hasattr(pd.DataFrame, 'map'):
+                # pandas >= 2.1.0
+                p_full = p_full.map(lambda x: np.nan if pd.isna(x) else x)
+            else:
+                # pandas < 2.1.0
+                p_full = p_full.applymap(lambda x: np.nan if pd.isna(x) else x)
+            # Old: p_full = p_full.applymap(lambda x: np.nan if pd.isna(x) else x)
 
             # Convert back to array
             p_full = np.array(p_full)
@@ -2309,7 +2338,13 @@ class ModelEva:
                 p_loo = pd.DataFrame(p_loo, columns=["y_pred"])
 
                 # Replace pandas nan
-                p_loo = p_loo.applymap(lambda x: np.nan if pd.isna(x) else x)
+                if hasattr(pd.DataFrame, 'map'):
+                    # pandas >= 2.1.0
+                    p_loo = p_loo.map(lambda x: np.nan if pd.isna(x) else x)
+                else:
+                    # pandas < 2.1.0
+                    p_loo = p_loo.applymap(lambda x: np.nan if pd.isna(x) else x)
+                # Old: p_loo = p_loo.applymap(lambda x: np.nan if pd.isna(x) else x)
 
                 # Convert back to array
                 p_loo = np.array(p_loo)
@@ -2318,7 +2353,9 @@ class ModelEva:
                 if X_train.shape[1] < 1:
                     raise ValueError(f"Invalid X_train, got: {X_train}, type: {type(X_train)}, shape: {X_train.shape}")
                 mse1 = mse + 1e-30
-                influence[train_ind[i]] = np.sum((p_full - p_loo) ** 2, axis=0) / (X_train.shape[1] * mse1)
+                influence[train_ind[i]] = np.sum((np.array(p_full) - np.array(p_loo)) ** 2, axis=0
+                                                 ) / (X_train.shape[1] * mse1)
+                # Old: influence[train_ind[i]] = np.sum((p_full - p_loo) ** 2, axis=0) / (X_train.shape[1] * mse1)
 
             # Store results
             influence_list.append(influence)
