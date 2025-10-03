@@ -225,7 +225,7 @@ class TestModelEva:
             with pytest.raises(ValueError, match="cannot be modified"):
                 model_eva.X = [[0, 1], [1, 2], [1, 2]]
             with pytest.raises(ValueError, match="cannot be modified"):
-                model_eva.dsp_inds = ["1", "2", "3"]
+                model_eva.dsp_inds = [("1", "2"), ("2", "1")]
             with pytest.raises(ValueError, match="cannot be modified"):
                 model_eva.y_true_eva = [1, 2, 3]
             with pytest.raises(ValueError, match="cannot be modified"):
@@ -325,8 +325,11 @@ class TestModelEva:
             model_eva._classifier_validation()
 
             assert len(model_time) > 0
-            assert len(model_eva._y_true_eva) == len(model_eva.y)
-            assert len(model_eva._y_pred_eva) == len(model_eva.y)
+            assert model_eva.y_true_eva is not None
+            assert model_eva.y_pred_eva is not None
+            assert model_eva.y is not None
+            assert len(model_eva.y_true_eva) == len(model_eva.y)
+            assert len(model_eva.y_pred_eva) == len(model_eva.y)
             assert model_eva.y_true_proba_eva is not None
             assert np.all(model_eva.y_true_proba_eva.shape == (len(model_eva.y), len(model_eva.ynames)))
             assert model_eva.y_pred_proba_eva is not None
@@ -505,10 +508,14 @@ class TestModelEva:
             model_eva._regressor_validation()
 
             assert len(model_time) > 0
-            assert len(model_eva._y_true_eva) == len(model_eva.y)
-            assert len(model_eva._y_pred_eva) == len(model_eva.y)
+            assert model_eva.y is not None
+            assert model_eva.sid_eva is not None
+            assert model_eva.y_true_eva is not None
+            assert model_eva.y_pred_eva is not None
             assert model_eva.y_true_proba_eva is None
             assert model_eva.y_pred_proba_eva is None
+            assert len(model_eva.y_true_eva) == len(model_eva.y)
+            assert len(model_eva.y_pred_eva) == len(model_eva.y)
             assert len(model_eva.sid_eva) > 0
 
         # Clear test report dir

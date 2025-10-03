@@ -203,15 +203,23 @@ class SpecExp:
 
         # ROI I/O - file-loaded ROIs & console-added ROIs
         # [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path]  # noqa: E501
-        self._rois_from_file: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]], str, str]] = []
+        self._rois_from_file: list[
+            tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]], str, str]
+        ] = []
         # [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
-        self._rois_from_coords: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]] = []
+        self._rois_from_coords: list[
+            tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]
+        ] = []
 
         # All ROIs - updated in any ROI addtion or loading
         # [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
-        self._rois: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]] = []
-        self._rois_sample: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]] = []
-        self._rois_mask: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]] = []
+        self._rois: list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]] = []
+        self._rois_sample: list[
+            tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]
+        ] = []
+        self._rois_mask: list[
+            tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]
+        ] = []
 
         # Standalone spectra
         # [0 id, 1 group, 2 use_type, 3 sample_name, 4 spectral_data_list]
@@ -385,12 +393,13 @@ class SpecExp:
     @property
     def rois_from_file(
         self,
-    ) -> list[tuple[str, str, str, str, str, list[list[tuple[float, float]]], str, str]]:
+    ) -> list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]], str, str]]:
         return self._rois_from_file
 
     @rois_from_file.setter
     def rois_from_file(
-        self, value: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]], str, str]]
+        self,
+        value: list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]], str, str]],
     ) -> None:
         raise ValueError(
             "rois_from_file cannot be modified directly, \
@@ -400,37 +409,49 @@ class SpecExp:
     @property
     def rois_from_coords(
         self,
-    ) -> list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]:
+    ) -> list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]]:
         return self._rois_from_coords
 
     @rois_from_coords.setter
-    def rois_from_coords(self, value: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]) -> None:
+    def rois_from_coords(
+        self, value: list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]]
+    ) -> None:
         raise ValueError(
             "rois_from_coords cannot be modified directly, use method 'add_roi_by_coords' and 'rm_rois' instead"
         )
 
     @property
-    def rois(self) -> list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]:
+    def rois(self) -> list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]]:
         return self._rois
 
     @rois.setter
-    def rois(self, value: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]) -> None:
+    def rois(
+        self, value: list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]]
+    ) -> None:
         raise ValueError("SpecExp.rois cannot be modified")
 
     @property
-    def rois_sample(self) -> list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]:
+    def rois_sample(
+        self,
+    ) -> list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]]:
         return self._rois_sample
 
     @rois_sample.setter
-    def rois_sample(self, value: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]) -> None:
+    def rois_sample(
+        self, value: list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]]
+    ) -> None:
         raise ValueError("SpecExp.rois_sample cannot be modified")
 
     @property
-    def rois_mask(self) -> list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]:
+    def rois_mask(
+        self,
+    ) -> list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]]:
         return self._rois_mask
 
     @rois_mask.setter
-    def rois_mask(self, value: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]) -> None:
+    def rois_mask(
+        self, value: list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]]
+    ) -> None:
         raise ValueError("SpecExp.rois_mask cannot be modified")
 
     @property
@@ -1034,7 +1055,9 @@ class SpecExp:
     @validate_call
     def _rois_from_file_to_df(
         self,
-        roi_item_list: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]], str, str]],
+        roi_item_list: list[
+            tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]], str, str]
+        ],
         print_simple: bool = True,
         return_df: bool = False,
     ) -> Optional[pd.DataFrame]:
@@ -1066,7 +1089,7 @@ class SpecExp:
     @validate_call
     def _df_roic(
         self,
-        roi_c_item_list: list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]],
+        roi_c_item_list: list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]],
         print_simple: bool = True,
         return_df: bool = False,
     ) -> Optional[pd.DataFrame]:
@@ -1721,8 +1744,8 @@ class SpecExp:
 
         # Source_type
         roit_list: Union[
-            list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]],
-            list[tuple[str, str, str, str, str, list[list[tuple[float, float]]], str, str]],
+            list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]],
+            list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]], str, str]],
         ]
         if source_type == "":
             roit_list = self._rois
@@ -1821,7 +1844,7 @@ class SpecExp:
                         "Image": str,
                         "ROI_name": str,
                         "ROI_type": str,
-                        "Coordinates": list[list[tuple[float, float]]],
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                     }
                 )
             ),
@@ -1836,7 +1859,7 @@ class SpecExp:
                         "Image": str,
                         "ROI_name": str,
                         "ROI_type": str,
-                        "Coordinates": list[list[tuple[float, float]]],
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                         "ROI_source_file": str,
                         "ROI_file_path": str,
                     }
@@ -1874,7 +1897,7 @@ class SpecExp:
                             "Image": str,
                             "ROI_name": str,
                             "ROI_type": str,
-                            "Coordinates": list[list[tuple[float, float]]],
+                            "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                         }
                     )
                 ),
@@ -1889,7 +1912,7 @@ class SpecExp:
                             "Image": str,
                             "ROI_name": str,
                             "ROI_type": str,
-                            "Coordinates": list[list[tuple[float, float]]],
+                            "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                             "ROI_source_file": str,
                             "ROI_file_path": str,
                         }
@@ -1941,8 +1964,8 @@ class SpecExp:
 
         # ROIs to search according to source_type
         roit_list: Union[
-            list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]],
-            list[tuple[str, str, str, str, str, list[list[tuple[float, float]]], str, str]],
+            list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]],
+            list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]], str, str]],
         ]
         if source_type == "":
             roit_list = self._rois
@@ -2028,7 +2051,7 @@ class SpecExp:
                     "Image": str,
                     "ROI_name": str,
                     "ROI_type": str,
-                    "Coordinates": list[list[tuple[float, float]]],
+                    "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                     "ROI_source_file": str,
                     "ROI_file_path": str,
                 }
@@ -2059,7 +2082,7 @@ class SpecExp:
                         "Image": str,
                         "ROI_name": str,
                         "ROI_type": str,
-                        "Coordinates": list[list[tuple[float, float]]],
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                         "ROI_source_file": str,
                         "ROI_file_path": str,
                     }
@@ -2131,7 +2154,7 @@ class SpecExp:
                     "Image": str,
                     "ROI_name": str,
                     "ROI_type": str,
-                    "Coordinates": list[list[tuple[float, float]]],
+                    "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                 }
             )
         ),
@@ -2160,7 +2183,7 @@ class SpecExp:
                         "Image": str,
                         "ROI_name": str,
                         "ROI_type": str,
-                        "Coordinates": list[list[tuple[float, float]]],
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                     }
                 )
             ),
@@ -2232,7 +2255,7 @@ class SpecExp:
                         "Image": str,
                         "ROI_name": str,
                         "ROI_type": str,
-                        "Coordinates": list[list[tuple[float, float]]],
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                     }
                 )
             ),
@@ -2247,7 +2270,7 @@ class SpecExp:
                         "Image": str,
                         "ROI_name": str,
                         "ROI_type": str,
-                        "Coordinates": list[list[tuple[float, float]]],
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                         "ROI_source_file": str,
                         "ROI_file_path": str,
                     }
@@ -2281,7 +2304,7 @@ class SpecExp:
                             "Image": str,
                             "ROI_name": str,
                             "ROI_type": str,
-                            "Coordinates": list[list[tuple[float, float]]],
+                            "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                         }
                     )
                 ),
@@ -2296,7 +2319,7 @@ class SpecExp:
                             "Image": str,
                             "ROI_name": str,
                             "ROI_type": str,
-                            "Coordinates": list[list[tuple[float, float]]],
+                            "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                             "ROI_source_file": str,
                             "ROI_file_path": str,
                         }
@@ -2370,7 +2393,7 @@ class SpecExp:
                         "Image": str,
                         "ROI_name": str,
                         "ROI_type": str,
-                        "Coordinates": list[list[tuple[float, float]]],
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                     }
                 )
             ),
@@ -2385,7 +2408,7 @@ class SpecExp:
                         "Image": str,
                         "ROI_name": str,
                         "ROI_type": str,
-                        "Coordinates": list[list[tuple[float, float]]],
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                         "ROI_source_file": str,
                         "ROI_file_path": str,
                     }
@@ -2419,7 +2442,7 @@ class SpecExp:
                             "Image": str,
                             "ROI_name": str,
                             "ROI_type": str,
-                            "Coordinates": list[list[tuple[float, float]]],
+                            "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                         }
                     )
                 ),
@@ -2434,7 +2457,7 @@ class SpecExp:
                             "Image": str,
                             "ROI_name": str,
                             "ROI_type": str,
-                            "Coordinates": list[list[tuple[float, float]]],
+                            "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
                             "ROI_source_file": str,
                             "ROI_file_path": str,
                         }

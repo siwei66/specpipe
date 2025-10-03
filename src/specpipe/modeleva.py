@@ -116,7 +116,7 @@ class ModelEva:
 
     Attributes:
     -----------
-    sample_list : list[tuple[str, tuple[int], Union[str,int,bool,float], np.ndarray]]
+    sample_list : list[tuple[str, tuple[int, ...], Union[str,int,bool,float], np.ndarray]]
         SpecPipe sample data as list of tuples containing:
         (sample ID, original shape, target value, predictor array)
 
@@ -179,7 +179,7 @@ class ModelEva:
         sample_list: list[
             tuple[
                 str,
-                tuple[int],
+                tuple[int, ...],
                 Union[str, int, bool, float],
                 Annotated[Any, arraylike_validator(ndim=1)],
             ]
@@ -224,7 +224,7 @@ class ModelEva:
         sample_data_structured = self._val_sample_list(sample_list)
         del sample_list
         self._sid: Annotated[Any, arraylike_validator(ndim=1)] = sample_data_structured[0]  # Sample ID
-        self._X_original_shape: tuple[int] = sample_data_structured[1]
+        self._X_original_shape: tuple[int, ...] = sample_data_structured[1]
         self._y: Annotated[Any, arraylike_validator(ndim=2)] = sample_data_structured[2]
         self._X: Annotated[Any, arraylike_validator(ndim=2)] = sample_data_structured[3]
         if sample_data_structured[2].dtype.kind in ("U", "S", "i", "b"):
@@ -302,11 +302,11 @@ class ModelEva:
         raise ValueError("Sample IDs (sid) cannot be modified directly, use method 'update_samples' to update sid")
 
     @property
-    def X_original_shape(self) -> tuple[int]:  # noqa: N802
+    def X_original_shape(self) -> tuple[int, ...]:  # noqa: N802
         return self._X_original_shape
 
     @X_original_shape.setter
-    def X_original_shape(self, value: tuple[int]) -> None:  # noqa: N802
+    def X_original_shape(self, value: tuple[int, ...]) -> None:  # noqa: N802
         raise ValueError(
             "X_original_shape cannot be modified directly, use method 'update_samples' to update X_original_shape"
         )
@@ -475,7 +475,7 @@ class ModelEva:
         sample_list: list[
             tuple[
                 str,
-                tuple[int],
+                tuple[int, ...],
                 Union[str, int, bool, float],
                 Annotated[Any, arraylike_validator(ndim=1)],
             ]
@@ -502,7 +502,7 @@ class ModelEva:
         sample_list: list[
             tuple[
                 str,
-                tuple[int],
+                tuple[int, ...],
                 Union[str, int, bool, float],
                 Annotated[Any, arraylike_validator(ndim=1)],
             ]

@@ -290,11 +290,14 @@ class TestAutoFP(unittest.TestCase):
         large_data = np.array([100000, 200000], dtype=np.float32)
 
         result, scale = auto_fp(large_data, scaling=True)
+        assert result is not None
+        assert scale is not None
         assert result.dtype == np.float16
         assert scale < 1.0  # Should be a scaling down factor
 
         # Verify scaling was applied correctly
         expected_scaled = large_data * scale
+        assert type(result) is np.ndarray
         assert np.allclose(result.astype(np.float32), expected_scaled, rtol=1e-4, atol=1e-5)
 
     @staticmethod
@@ -304,6 +307,8 @@ class TestAutoFP(unittest.TestCase):
         small_data = np.array([2e-7, 1e-7], dtype=np.float64)
 
         result, scale = auto_fp(small_data, scaling=True)
+        assert result is not None
+        assert scale is not None
         assert result.dtype == np.float16
         assert scale > 1.0  # Should be a scaling up factor
 
@@ -334,6 +339,8 @@ class TestAutoFP(unittest.TestCase):
         """Test torch float32 tensors that fit natively in FP16."""
         data = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)
         result, scale = auto_fp(data)
+        assert result is not None
+        assert scale is not None
         assert result.dtype == torch.float16
         assert scale == 1.0
 
@@ -344,6 +351,8 @@ class TestAutoFP(unittest.TestCase):
         large_data = torch.tensor([100000, 200000], dtype=torch.float32)
 
         result, scale = auto_fp(large_data, scaling=True)
+        assert result is not None
+        assert scale is not None
         assert result.dtype == torch.float16
         assert scale < 1.0
 
@@ -358,6 +367,8 @@ class TestAutoFP(unittest.TestCase):
         small_data = torch.tensor([2e-7, 1e-7], dtype=torch.float64)
 
         result, scale = auto_fp(small_data, scaling=True)
+        assert result is not None
+        assert scale is not None
         assert result.dtype == torch.float16
         assert scale > 1.0
 

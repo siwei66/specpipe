@@ -859,10 +859,13 @@ def spectral_angle(
     spec_1 = np.array(spec_1)
     spec_2 = np.array(spec_2)
 
+    spec_angle: float
+
     # Validate spectral vectors
     if np.all(spec_1 == np.zeros(spec_1.shape)) or np.all(spec_2 == np.zeros(spec_2.shape)):
         if not invalid_raise:
-            return np.nan
+            spec_angle = float(np.nan)
+            return spec_angle
         else:
             raise ValueError(f"Undefined spectral angle for given spectral vector: \n{spec_1} \nand \n{spec_2}")
 
@@ -951,20 +954,29 @@ def arr_spectral_angles(
 # %% Round to significant numbers
 
 
+class RealNumberMeta(type(Protocol)):  # type: ignore[misc]
+    def __instancecheck__(cls, instance: Any) -> bool:
+        # Exclude numpy arrays
+        if isinstance(instance, np.ndarray):
+            return False
+        # Include RealNumber
+        return hasattr(instance, '__mul__') and hasattr(instance, '__lt__')
+
+
 @runtime_checkable
-class RealNumberProtocol(Protocol):
-    def __mul__(self, v: Any) -> None: ...
-    def __lt__(self, v: Any) -> None: ...
+class RealNumber(Protocol, metaclass=RealNumberMeta):
+    def __mul__(self, v: Any) -> Any: ...
+    def __lt__(self, v: Any) -> bool: ...
 
 
-def num_sig_digit(v: RealNumberProtocol, sig_digit: int, mode: str = "round") -> float:
+def num_sig_digit(v: RealNumber, sig_digit: int, mode: str = "round") -> float:
     """
     Round a value to given significant digits. Choose mode between 'round' / 'ceil' / 'floor'.
     """
     if v == 0:
         return 0.0
     factor = 10 ** (sig_digit - 1 - math.floor(math.log10(abs(v))))  # type: ignore[arg-type]
-    # unrecognized user-defined RealNumberProtocol type
+    # unrecognized user-defined RealNumber type
     if mode == "round":
         rdfunc = round
     elif mode == "ceil":
@@ -999,7 +1011,7 @@ def np_sig_digit(arr_like: Annotated[Any, arraylike_validator()], sig_digit: int
 
 
 @overload
-def round_digit(value: RealNumberProtocol, sig_digit: int, mode: str) -> float: ...
+def round_digit(value: RealNumber, sig_digit: int, mode: str) -> float: ...
 
 
 @overload
@@ -1024,7 +1036,7 @@ def round_digit(value: pd.DataFrame, sig_digit: int, mode: str) -> pd.DataFrame:
 
 @simple_type_validator
 def round_digit(
-    value: Union[RealNumberProtocol, Annotated[Any, arraylike_validator()]],
+    value: Union[RealNumber, Annotated[Any, arraylike_validator()]],
     sig_digit: int,
     mode: str = "round",
 ) -> Union[float, tuple, list, np.ndarray, pd.Series, pd.DataFrame, torch.Tensor]:

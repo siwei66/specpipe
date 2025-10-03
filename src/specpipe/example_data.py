@@ -171,7 +171,7 @@ def create_test_spec_exp(dir_path: str, sample_n: int = 10, n_bands: int = 4, is
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 
-    exp1 = SpecExp(dir_path, log_loading=False)
+    exp1: SpecExp = SpecExp(dir_path, log_loading=False)
 
     # # Add test
     # group

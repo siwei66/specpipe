@@ -16,6 +16,8 @@ import unittest
 import pandas as pd
 import pytest
 
+from typing import Union
+
 # Self
 # Funcs to test
 from specpipe.specexp import SpecExp
@@ -178,7 +180,7 @@ class TestSpecExp(unittest.TestCase):
         self.spec_exp.add_groups(["test_group"])
 
         # Add images by name pattern
-        self.spec_exp.add_images("test_group", image_name="image*.tif", image_directory=self.images_dir)
+        self.spec_exp.add_images(group_name="test_group", image_name="image*.tif", image_directory=self.images_dir)
 
         # Check if images were added
         images = self.spec_exp.ls_images(return_dataframe=True)
@@ -186,18 +188,18 @@ class TestSpecExp(unittest.TestCase):
 
         # Add images by full path
         image_path = os.path.join(self.images_dir, "mask1.tif")
-        self.spec_exp.add_images("test_group", full_path=image_path, mask_of="image1.tif")
+        self.spec_exp.add_images(group_name="test_group", full_path=image_path, mask_of="image1.tif")
 
         # Check if mask was added
         masks = self.spec_exp.ls_images(mask_of="image1.tif", return_dataframe=True)
         assert len(masks) == 1
 
-        # Test adding images with invalid config of img_name and full_path
-        with pytest.raises(ValueError):
+        # Test adding images with duplicated config of img_name and full_path
+        with pytest.warns(UserWarning, match="Double definition of name pattern and paths"):
             self.spec_exp.add_images(
-                "test_group",
-                img_name="image1.tif",
-                full_path="/img_dir/image1.tif",
+                group_name="test_group",
+                image_name="image*.tif",
+                full_path=image_path,
                 image_directory=self.images_dir,
             )
 
@@ -358,7 +360,9 @@ class TestSpecExp(unittest.TestCase):
         self.spec_exp.add_images("test_group", image_name="image1.tif", image_directory=self.images_dir)
 
         # Add ROI by coordinates
-        coordinates = [[(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]]
+        coordinates: list[list[tuple[Union[int, float], Union[int, float]]]] = [
+            [(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]
+        ]
         self.spec_exp.add_roi_by_coords("test_roi", "test_group", "image1.tif", coordinates)
 
         # Check if ROI was added
@@ -375,7 +379,9 @@ class TestSpecExp(unittest.TestCase):
         self.spec_exp.add_images("test_group", image_name="image1.tif", image_directory=self.images_dir)
 
         # Add ROI by coordinates
-        coordinates = [[(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]]
+        coordinates: list[list[tuple[Union[int, float], Union[int, float]]]] = [
+            [(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]
+        ]
         self.spec_exp.add_roi_by_coords("test_roi", "test_group", "image1.tif", coordinates)
 
         # List all ROIs
@@ -396,7 +402,9 @@ class TestSpecExp(unittest.TestCase):
         self.spec_exp.add_images("test_group", image_name="image1.tif", image_directory=self.images_dir)
 
         # Add ROI by coordinates
-        coordinates = [[(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]]
+        coordinates: list[list[tuple[Union[int, float], Union[int, float]]]] = [
+            [(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]
+        ]
         self.spec_exp.add_roi_by_coords("test_roi", "test_group", "image1.tif", coordinates)
 
         # Remove ROI
@@ -475,7 +483,9 @@ class TestSpecExp(unittest.TestCase):
         # Add ROI to create samples
         self.spec_exp.add_images("test_group", image_name="image1.tif", image_directory=self.images_dir)
 
-        coordinates = [[(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]]
+        coordinates: list[list[tuple[Union[int, float], Union[int, float]]]] = [
+            [(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]
+        ]
         self.spec_exp.add_roi_by_coords("test_roi", "test_group", "image1.tif", coordinates)
 
         # Test listing sample labels
@@ -508,7 +518,9 @@ class TestSpecExp(unittest.TestCase):
         # Add ROI to create samples
         self.spec_exp.add_images("test_group", image_name="image1.tif", image_directory=self.images_dir)
 
-        coordinates = [[(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]]
+        coordinates: list[list[tuple[Union[int, float], Union[int, float]]]] = [
+            [(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]
+        ]
         self.spec_exp.add_roi_by_coords("test_roi", "test_group", "image1.tif", coordinates)
 
         # Set sample labels
@@ -550,7 +562,9 @@ class TestSpecExp(unittest.TestCase):
         self.spec_exp.add_groups(["test_group"])
         self.spec_exp.add_images("test_group", image_name="image1.tif", image_directory=self.images_dir)
 
-        coordinates = [[(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]]
+        coordinates: list[list[tuple[Union[int, float], Union[int, float]]]] = [
+            [(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]
+        ]
         self.spec_exp.add_roi_by_coords("test_roi", "test_group", "image1.tif", coordinates)
 
         # Save configuration

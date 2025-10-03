@@ -1138,7 +1138,7 @@ def df_from_csv(path: str, **kwargs) -> pd.DataFrame:  # type: ignore[no-untyped
 def roi_to_envi_xml(  # noqa: C901
     file_path: str,
     name: str = "",
-    coordinates: Optional[list[list[tuple[float, float]]]] = None,
+    coordinates: Optional[list[list[tuple[Union[int, float], Union[int, float]]]]] = None,
     crs: Union[str, CRS] = "none",
     color: Optional[tuple[int, int, int]] = None,
     roi_type: str = "polygon",
@@ -1304,7 +1304,7 @@ def roi_to_shp(  # noqa: C901
     file_path: str,
     crs: Union[str, CRS],
     name: str = "",
-    coordinates: Optional[list[list[tuple[float, float]]]] = None,
+    coordinates: Optional[list[list[tuple[Union[int, float], Union[int, float]]]]] = None,
     roi_type: str = "polygon",
     roi_list: Optional[list[dict[str, Any]]] = None,
     return_path: bool = True,

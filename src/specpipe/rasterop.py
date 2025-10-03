@@ -10,7 +10,7 @@ import os
 
 # For local test - delete after use
 # Typing
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Union, overload
 
 import numpy as np
 import rasterio
@@ -32,7 +32,9 @@ from .specio import simple_type_validator
 
 # Crop ROI from a raster image and save to a new image
 @simple_type_validator
-def croproi(raster_path: str, roi_coordinates: list[list[tuple[float, float]]], output_path: str) -> None:
+def croproi(
+    raster_path: str, roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]], output_path: str
+) -> None:
     """
     Crop ROI from a raster image and save croped region to a new image.
 
@@ -219,6 +221,26 @@ def dtype_mapper(  # noqa: C901
             raise ValueError(f"Unsupported raster data type: {dtype}")
     else:
         raise ValueError(f"Unsupported map_type, map_type must be 'numpy', 'torch' or 'raster', got: '{map_type}'")
+
+
+@overload
+def auto_fp(
+    data: np.ndarray,
+    scaling: bool = False,
+    rtol: float = 1e-4,
+    atol: float = 1e-5,
+    safety_factor: float = 2.0,
+) -> tuple[np.ndarray, Optional[float]]: ...
+
+
+@overload
+def auto_fp(
+    data: torch.Tensor,
+    scaling: bool = False,
+    rtol: float = 1e-4,
+    atol: float = 1e-5,
+    safety_factor: float = 2.0,
+) -> tuple[torch.Tensor, Optional[float]]: ...
 
 
 def auto_fp(  # noqa: C901

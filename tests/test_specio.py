@@ -2682,6 +2682,7 @@ class TestDfToCsv(unittest.TestCase):
             # With low threshold, should compress
             output_path1 = os.path.join(temp_dir, "test1.csv")
             result1 = df_to_csv(test_df, output_path1, compress_nvalue_threshold=1000, compression_format="zstd")
+            assert type(result1) is str
             assert result1.endswith(".zst")
             assert os.path.exists(result1)
 
