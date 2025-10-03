@@ -957,7 +957,7 @@ def arr_spectral_angles(
 class RealNumberMeta(type(Protocol)):  # type: ignore[misc]
     def __instancecheck__(cls, instance: Any) -> bool:
         # Exclude numpy arrays
-        if isinstance(instance, np.ndarray):
+        if hasattr(instance, '__len__'):
             return False
         # Include RealNumber
         return hasattr(instance, '__mul__') and hasattr(instance, '__lt__')

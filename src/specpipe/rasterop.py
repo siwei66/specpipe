@@ -225,22 +225,22 @@ def dtype_mapper(  # noqa: C901
 
 @overload
 def auto_fp(
-    data: np.ndarray,
-    scaling: bool = False,
-    rtol: float = 1e-4,
-    atol: float = 1e-5,
-    safety_factor: float = 2.0,
-) -> tuple[np.ndarray, Optional[float]]: ...
-
-
-@overload
-def auto_fp(
     data: torch.Tensor,
     scaling: bool = False,
     rtol: float = 1e-4,
     atol: float = 1e-5,
     safety_factor: float = 2.0,
 ) -> tuple[torch.Tensor, Optional[float]]: ...
+
+
+@overload
+def auto_fp(
+    data: np.ndarray,
+    scaling: bool = False,
+    rtol: float = 1e-4,
+    atol: float = 1e-5,
+    safety_factor: float = 2.0,
+) -> tuple[np.ndarray, Optional[float]]: ...
 
 
 def auto_fp(  # noqa: C901
