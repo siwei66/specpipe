@@ -40,7 +40,7 @@ from pathos.helpers import cpu_count  # noqa: E402
 from specpipe.example_data import create_test_raster, create_test_roi_xml, create_test_spec_exp  # noqa: E402
 from specpipe.roistats import Stats2d, roi_mean, roispec  # noqa: E402
 from specpipe.specexp import SpecExp  # noqa: E402
-from specpipe.specio import silent  # noqa: E402
+from specpipe.specio import silent, lsdir_robust  # noqa: E402
 
 # Funcs to test
 from specpipe.specpipe import SpecPipe, _dl_val  # noqa: E402
@@ -703,7 +703,7 @@ class TestSpecPipe(unittest.TestCase):
         assert pipe.tested is False
         assert os.path.exists(f"{test_dir}/test_run")
         preproc_img_names = [
-            name for name in os.listdir(test_dir) if "test_img" in name and ".tif" in name and name != "test_img.tif"
+            name for name in lsdir_robust(test_dir) if "test_img" in name and ".tif" in name and name != "test_img.tif"
         ]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
         assert len(preproc_img_names) == len(preprocs)
@@ -718,10 +718,10 @@ class TestSpecPipe(unittest.TestCase):
         # Assert report files
         model_report_dir = f"{test_dir}/test_run/Model_evaluation_reports/"
         assert os.path.exists(model_report_dir)
-        procs_result_dirs = os.listdir(model_report_dir)
+        procs_result_dirs = lsdir_robust(model_report_dir)
         assert len(procs_result_dirs) == len(pipe.process_chains)
         for dirname in procs_result_dirs:
-            reports = os.listdir(model_report_dir + dirname)
+            reports = lsdir_robust(model_report_dir + dirname)
             assert len(reports) == 8
             assert "Model_for_application" in reports
             assert "Model_in_validation" in reports
@@ -748,7 +748,7 @@ class TestSpecPipe(unittest.TestCase):
 
         result_dills = [
             name
-            for name in os.listdir(f"{test_dir}/test_run/Step_results/")
+            for name in lsdir_robust(f"{test_dir}/test_run/Step_results/")
             if "PreprocessingTestingResult" in name and name != "PreprocessingTestingResult.dill"
         ]
         assert len(result_dills) > 0
@@ -785,7 +785,7 @@ class TestSpecPipe(unittest.TestCase):
         assert pipe.tested is False
         assert os.path.exists(f"{test_dir}/test_run")
         preproc_img_names = [
-            name for name in os.listdir(test_dir) if "test_img" in name and ".tif" in name and name != "test_img.tif"
+            name for name in lsdir_robust(test_dir) if "test_img" in name and ".tif" in name and name != "test_img.tif"
         ]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
         assert len(preproc_img_names) == len(preprocs)
@@ -800,10 +800,10 @@ class TestSpecPipe(unittest.TestCase):
         # Assert report files
         model_report_dir = f"{test_dir}/test_run/Model_evaluation_reports/"
         assert os.path.exists(model_report_dir)
-        procs_result_dirs = os.listdir(model_report_dir)
+        procs_result_dirs = lsdir_robust(model_report_dir)
         assert len(procs_result_dirs) == len(pipe.process_chains)
         for dirname in procs_result_dirs:
-            reports = os.listdir(model_report_dir + dirname)
+            reports = lsdir_robust(model_report_dir + dirname)
             assert len(reports) == 7
             assert "Model_for_application" in reports
             assert "Model_in_validation" in reports
@@ -829,7 +829,7 @@ class TestSpecPipe(unittest.TestCase):
 
         result_dills = [
             name
-            for name in os.listdir(f"{test_dir}/test_run/Step_results/")
+            for name in lsdir_robust(f"{test_dir}/test_run/Step_results/")
             if "PreprocessingTestingResult" in name and name != "PreprocessingTestingResult.dill"
         ]
         assert len(result_dills) > 0
@@ -851,7 +851,7 @@ class TestSpecPipe(unittest.TestCase):
 
         # Assert resulting files
         preproc_img_names = [
-            name for name in os.listdir(test_dir) if "test_img" in name and ".tif" in name and name != "test_img.tif"
+            name for name in lsdir_robust(test_dir) if "test_img" in name and ".tif" in name and name != "test_img.tif"
         ]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
         assert len(preproc_img_names) == len(preprocs)
@@ -861,13 +861,13 @@ class TestSpecPipe(unittest.TestCase):
         # Result files
         preproc_csv_names = [f"PreprocessingChainResult_chain_ind_{i}.csv" for i in range(len(preprocs))]
         preproc_dill_names = [f"PreprocessingChainResult_chain_ind_{i}.dill" for i in range(len(preprocs))]
-        assert set(preproc_csv_names).issubset(set(os.listdir(result_dir)))
-        assert set(preproc_dill_names).issubset(set(os.listdir(result_dir)))
+        assert set(preproc_csv_names).issubset(set(lsdir_robust(result_dir)))
+        assert set(preproc_dill_names).issubset(set(lsdir_robust(result_dir)))
 
         # Step result files
         preproc_step_names = [
             name
-            for name in os.listdir(f"{result_dir}/Step_results/")
+            for name in lsdir_robust(f"{result_dir}/Step_results/")
             if "PreprocessingResult_sample_" in name and ".dill" in name
         ]
         assert len(preproc_step_names) == len(pipe.sample_data)
@@ -884,7 +884,7 @@ class TestSpecPipe(unittest.TestCase):
         assert os.path.exists(model_report_dir)
 
         # Report contents
-        model_reports = os.listdir(model_report_dir)
+        model_reports = lsdir_robust(model_report_dir)
         preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
         model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
@@ -894,7 +894,7 @@ class TestSpecPipe(unittest.TestCase):
         # Assert model evaluation reports of each chain
         for dirname in model_reports:
             # Reports
-            reports = os.listdir(model_report_dir + dirname)
+            reports = lsdir_robust(model_report_dir + dirname)
             assert len(reports) == 8
             assert "Model_for_application" in reports
             assert "Model_in_validation" in reports
@@ -907,23 +907,23 @@ class TestSpecPipe(unittest.TestCase):
 
             # Models for application
             app_model_path = model_report_dir + dirname + "/Model_for_application/"
-            model_files = [n for n in os.listdir(app_model_path) if "app_model_" in n and ".dill" in n]
+            model_files = [n for n in lsdir_robust(app_model_path) if "app_model_" in n and ".dill" in n]
             assert len(model_files) > 0
 
             # Models in validation
             val_model_path = model_report_dir + dirname + "/Model_in_validation/"
-            model_files = [n for n in os.listdir(val_model_path) if "val_model_" in n and ".dill" in n]
+            model_files = [n for n in lsdir_robust(val_model_path) if "val_model_" in n and ".dill" in n]
             assert len(model_files) > 0
             n_fold = len(model_files)
 
             # Data in validation
             val_X_train_files = [  # noqa: N806
-                n for n in os.listdir(val_model_path) if "val_X-train_" in n and ".csv" in n
+                n for n in lsdir_robust(val_model_path) if "val_X-train_" in n and ".csv" in n
             ]
             val_X_test_files = [  # noqa: N806
-                n for n in os.listdir(val_model_path) if "val_X-test_" in n and ".csv" in n
+                n for n in lsdir_robust(val_model_path) if "val_X-test_" in n and ".csv" in n
             ]
-            val_y_files = [n for n in os.listdir(val_model_path) if "val_y_" in n and ".csv" in n]
+            val_y_files = [n for n in lsdir_robust(val_model_path) if "val_y_" in n and ".csv" in n]
             assert len(val_X_train_files) == n_fold
             assert len(val_X_test_files) == n_fold
             assert len(val_y_files) == n_fold
@@ -940,7 +940,7 @@ class TestSpecPipe(unittest.TestCase):
         assert os.path.exists(model_report_dir)
 
         # Report contents
-        model_reports = os.listdir(model_report_dir)
+        model_reports = lsdir_robust(model_report_dir)
         preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
         model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
@@ -950,7 +950,7 @@ class TestSpecPipe(unittest.TestCase):
         # Assert model evaluation reports of each chain
         for dirname in model_reports:
             # Reports
-            reports = os.listdir(model_report_dir + dirname)
+            reports = lsdir_robust(model_report_dir + dirname)
             assert len(reports) == 7
             assert "Model_for_application" in reports
             assert "Model_in_validation" in reports
@@ -962,23 +962,23 @@ class TestSpecPipe(unittest.TestCase):
 
             # Models for application
             app_model_path = model_report_dir + dirname + "/Model_for_application/"
-            model_files = [n for n in os.listdir(app_model_path) if "app_model_" in n and ".dill" in n]
+            model_files = [n for n in lsdir_robust(app_model_path) if "app_model_" in n and ".dill" in n]
             assert len(model_files) > 0
 
             # Models in validation
             val_model_path = model_report_dir + dirname + "/Model_in_validation/"
-            model_files = [n for n in os.listdir(val_model_path) if "val_model_" in n and ".dill" in n]
+            model_files = [n for n in lsdir_robust(val_model_path) if "val_model_" in n and ".dill" in n]
             assert len(model_files) > 0
             n_fold = len(model_files)
 
             # Data in validation
             val_X_train_files = [  # noqa: N806
-                n for n in os.listdir(val_model_path) if "val_X-train_" in n and ".csv" in n
+                n for n in lsdir_robust(val_model_path) if "val_X-train_" in n and ".csv" in n
             ]
             val_X_test_files = [  # noqa: N806
-                n for n in os.listdir(val_model_path) if "val_X-test_" in n and ".csv" in n
+                n for n in lsdir_robust(val_model_path) if "val_X-test_" in n and ".csv" in n
             ]
-            val_y_files = [n for n in os.listdir(val_model_path) if "val_y_" in n and ".csv" in n]
+            val_y_files = [n for n in lsdir_robust(val_model_path) if "val_y_" in n and ".csv" in n]
             assert len(val_X_train_files) == n_fold
             assert len(val_X_test_files) == n_fold
             assert len(val_y_files) == n_fold
@@ -1157,7 +1157,7 @@ class TestSpecPipe(unittest.TestCase):
         # Assert step result files with break
         test_dir = pipe.report_directory
         result_dir = f"{test_dir}/Preprocessing/"
-        step_dir_content = os.listdir(f"{result_dir}/Step_results/")
+        step_dir_content = lsdir_robust(f"{result_dir}/Step_results/")
         preproc_step_names = [
             name for name in step_dir_content if "PreprocessingResult_sample_" in name and ".dill" in name
         ]
@@ -1165,8 +1165,8 @@ class TestSpecPipe(unittest.TestCase):
         assert len(preproc_step_names) < len(pipe.sample_data)
         assert "Error_logs" in step_dir_content
         assert "Preprocess_progress_logs" in step_dir_content
-        assert len(os.listdir(f"{result_dir}/Step_results/Error_logs")) == 1
-        assert len(os.listdir(f"{result_dir}/Step_results/Preprocess_progress_logs")) == 1
+        assert len(lsdir_robust(f"{result_dir}/Step_results/Error_logs")) == 1
+        assert len(lsdir_robust(f"{result_dir}/Step_results/Preprocess_progress_logs")) == 1
         result_fn = preproc_step_names[0]
         result_ctime = os.stat(f"{result_dir}/Step_results/{result_fn}").st_ctime_ns
 
@@ -1177,7 +1177,7 @@ class TestSpecPipe(unittest.TestCase):
 
         # Assert resume results
         TestSpecPipe.criteria_preprocessing_result(pipe)
-        step_dir_content = os.listdir(f"{result_dir}/Step_results/")
+        step_dir_content = lsdir_robust(f"{result_dir}/Step_results/")
         assert "Error_logs" in step_dir_content
         assert "Preprocess_progress_logs" not in step_dir_content
 
@@ -1224,14 +1224,14 @@ class TestSpecPipe(unittest.TestCase):
 
         # Test error log
         assert os.path.exists(result_dir)
-        assert "Error_logs" in os.listdir(result_dir)
+        assert "Error_logs" in lsdir_robust(result_dir)
 
         # Test running progress log
         assert os.path.exists(f"{model_report_dir}/modeling_progress_log.dill")
 
         # Test finished results
         assert os.path.exists(model_report_dir)
-        model_reports = os.listdir(model_report_dir)
+        model_reports = lsdir_robust(model_report_dir)
         preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
         model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
@@ -1293,14 +1293,14 @@ class TestSpecPipe(unittest.TestCase):
 
         # Test error log
         assert os.path.exists(result_dir)
-        assert "Error_logs" in os.listdir(result_dir)
+        assert "Error_logs" in lsdir_robust(result_dir)
 
         # Test running progress log
         assert os.path.exists(f"{model_report_dir}/modeling_progress_log.dill")
 
         # Test finished results
         assert os.path.exists(model_report_dir)
-        model_reports = os.listdir(model_report_dir)
+        model_reports = lsdir_robust(model_report_dir)
         preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
         model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)

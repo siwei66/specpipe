@@ -7,6 +7,7 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 
 # Basics
 import fnmatch
+import time
 
 # File operations
 import glob
@@ -1461,3 +1462,51 @@ def silent(func: Callable) -> Callable:
         return result
 
     return wrapper
+
+
+# %% Robust listdir
+
+
+def lsdir_robust(path: str, *, retry_limit: int = 5, time_wait_min: float = 0.5, time_wait_max: float = 20) -> list:
+    """
+    Substitution of listdir with retry for file-related testing using GitHub workflow actions.
+    """
+    # Validate configs
+    retry_limit = max(int(retry_limit), 1)
+    time_wait_min = max(time_wait_min, 0.1)
+    time_wait_max = max(time_wait_min, 0.2)
+
+    # Fetch loop
+    for retry in range(retry_limit):
+        # OS listdir method
+        try:
+            result = os.listdir(path)
+            if result is not None:
+                result1: list = list(result)
+                if len(result1) > 0:
+                    return result1
+
+        except OSError:
+            pass
+
+        # Glob method
+        try:
+            pattern_path = os.path.join(path, "*")
+            result = glob.glob(pattern_path)
+            if result is not None:
+                result1 = list(result)
+                if len(result1) > 0:
+                    return result1
+
+        except OSError:
+            pass
+
+        if retry < (retry_limit - 1):
+            # Wait time
+            time_wait_coef: float = (time_wait_max / time_wait_min) ** (1 / max(1, retry_limit - 1))
+            wait_time: float = time_wait_min * (time_wait_coef**retry)
+            time.sleep(wait_time)
+
+    # No result
+    result1 = []
+    return result1

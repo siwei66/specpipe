@@ -50,6 +50,7 @@ from specpipe.specio import (
     search_file,
     shp_roi_coords,
     simple_type_validator,
+    lsdir_robust,
 )
 
 # %% test functions : simple_type_validator
@@ -3557,6 +3558,50 @@ class TestRoiToShp:
 # TestRoiToShp.test_raises_error_insufficient_vertices()
 # TestRoiToShp.test_raises_error_unsupported_roi_type()
 # TestRoiToShp.test_multipolygon_geometry_creation()
+
+
+# %% test functions : roi_to_shp
+
+
+class TestLsdirRobust:
+    """Simple test for lsdir_robust"""
+
+    @staticmethod
+    def create_test_files(path: str) -> str:
+        """Create test files"""
+        # Validate path
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        # Dummy file names
+        names = ["aaa.a", "bbb.b", "ccc.c", "a123.test", "a123.sss", "b123.test"]
+
+        # Create dummy files
+        for file in names:
+            with open(os.path.join(path, file), "w") as f:
+                f.write("dummy image content")
+
+        return path
+
+    @staticmethod
+    def test_basic_functionality() -> None:
+        """Test functionality consistency of the function and os.listdir"""
+        # Create test files
+        test_dir = tempfile.mkdtemp()
+        _ = TestLsdirRobust.create_test_files(test_dir)
+
+        files_listdir = os.listdir(test_dir)
+        assert files_listdir is not None
+
+        files_lsdir_r = lsdir_robust(test_dir)
+        assert files_lsdir_r is not None
+
+        assert len(list(files_listdir)) == len(list(files_lsdir_r))
+
+
+# %% Test - roi_to_shp
+
+# TestLsdirRobust.test_basic_functionality()
 
 
 # %% Test main
