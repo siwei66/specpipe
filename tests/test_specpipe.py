@@ -8,6 +8,7 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 # ruff: noqa: I001
 # OS
 import os
+import time
 
 # Initialize LOKY_MAX_CPU_COUNT if it does not exist before imports to prevent corresponding warning
 os.environ.setdefault('LOKY_MAX_CPU_COUNT', '1')
@@ -76,7 +77,7 @@ def arr_ori(spec: np.ndarray) -> np.ndarray:
 
 # Array apply
 def arr_simple_half(spec: np.ndarray) -> np.ndarray:
-    half = spec / 2
+    half: np.ndarray = spec / 2
     return half
 
 
@@ -121,13 +122,13 @@ def hypert_snv(spectra_tensor: torch.Tensor) -> torch.Tensor:
 
 # Spec1d to Spec1d
 def spec_double(spec: np.ndarray) -> np.ndarray:
-    doubled = np.array(spec) * 2
+    doubled: np.ndarray = np.array(spec) * 2
     return doubled
 
 
 def replace_nan(spec: np.ndarray) -> np.ndarray:
-    spec = np.nan_to_num(spec, nan=0, posinf=0, neginf=0)
-    return spec
+    result: np.ndarray = np.nan_to_num(spec, nan=0, posinf=0, neginf=0)
+    return result
 
 
 # #%% test helper functions : create_test_spec_pipe
@@ -695,6 +696,7 @@ class TestSpecPipe(unittest.TestCase):
 
             plt.close("all")
             pipe.test_run(test_modeling=False, dump_result=False)
+            time.sleep(0.1)
 
             assert pipe.tested is False
             assert os.path.exists(f"{test_dir}/test_run")
@@ -709,6 +711,7 @@ class TestSpecPipe(unittest.TestCase):
             # Full test without saving result
             plt.close("all")
             pipe.test_run(dump_result=False)
+            time.sleep(0.1)
 
             # Assert modeling test status
             assert pipe.tested is True
@@ -732,6 +735,7 @@ class TestSpecPipe(unittest.TestCase):
             # Full test
             plt.close("all")
             pipe.test_run()
+            time.sleep(0.1)
 
             assert pipe.tested is True
             assert pipe.sample_data == []
@@ -740,6 +744,7 @@ class TestSpecPipe(unittest.TestCase):
             # Backup result
             plt.close("all")
             pipe.test_run(dump_backup=True)
+            time.sleep(0.1)
 
             result_dills = [
                 name
@@ -773,6 +778,7 @@ class TestSpecPipe(unittest.TestCase):
 
             plt.close("all")
             pipe.test_run(test_modeling=False, dump_result=False)
+            time.sleep(0.1)
 
             assert pipe.tested is False
             assert os.path.exists(f"{test_dir}/test_run")
@@ -787,6 +793,7 @@ class TestSpecPipe(unittest.TestCase):
             # Full test without saving result
             plt.close("all")
             pipe.test_run(dump_result=False)
+            time.sleep(0.1)
 
             # Assert modeling test status
             assert pipe.tested is True
@@ -809,6 +816,7 @@ class TestSpecPipe(unittest.TestCase):
             # Full test
             plt.close("all")
             pipe.test_run()
+            time.sleep(0.1)
 
             assert pipe.tested is True
             assert pipe.sample_data == []
@@ -817,6 +825,7 @@ class TestSpecPipe(unittest.TestCase):
             # Backup result
             plt.close("all")
             pipe.test_run(dump_backup=True)
+            time.sleep(0.1)
 
             result_dills = [
                 name
@@ -991,11 +1000,13 @@ class TestSpecPipe(unittest.TestCase):
             # Preprocessing
             assert pipe.sample_data == []
             pipe.preprocessing()
+            time.sleep(0.1)
 
             TestSpecPipe.criteria_preprocessing_result(pipe)
 
             # Modeling
             pipe.model_evaluation()
+            time.sleep(0.1)
 
             TestSpecPipe.criteria_regression_model_report(pipe)
 
@@ -1023,11 +1034,13 @@ class TestSpecPipe(unittest.TestCase):
             # Preprocessing
             assert pipe.sample_data == []
             pipe.preprocessing()
+            time.sleep(0.1)
 
             TestSpecPipe.criteria_preprocessing_result(pipe)
 
             # Modeling
             pipe.model_evaluation()
+            time.sleep(0.1)
 
             TestSpecPipe.criteria_classification_model_report(pipe)
 
@@ -1052,6 +1065,7 @@ class TestSpecPipe(unittest.TestCase):
             pipe = create_test_spec_pipe(test_dir, is_regression=True)
 
             pipe.run(n_processor=1)
+            time.sleep(0.1)
 
             TestSpecPipe.criteria_preprocessing_result(pipe)
             TestSpecPipe.criteria_regression_model_report(pipe)
@@ -1067,6 +1081,7 @@ class TestSpecPipe(unittest.TestCase):
             pipe = create_test_spec_pipe(test_dir, is_regression=False)
 
             pipe.run(n_processor=1)
+            time.sleep(0.1)
 
             TestSpecPipe.criteria_preprocessing_result(pipe)
             TestSpecPipe.criteria_classification_model_report(pipe)
@@ -1131,6 +1146,7 @@ class TestSpecPipe(unittest.TestCase):
             pipe._tested = True  # skip test_run
             with pytest.raises(ValueError, match="Preprocessing resume test raise"):
                 pipe.preprocessing(resume=True)
+                time.sleep(0.1)
 
             # Assert step result files with break
             test_dir = pipe.report_directory
@@ -1151,6 +1167,7 @@ class TestSpecPipe(unittest.TestCase):
             # Run rest
             del os.environ["SPECPIPE_PREPROCESS_RESUME_TEST_NUM"]
             pipe.preprocessing(resume=True)
+            time.sleep(0.1)
 
             # Assert resume results
             TestSpecPipe.criteria_preprocessing_result(pipe)
@@ -1184,12 +1201,14 @@ class TestSpecPipe(unittest.TestCase):
             pipe = create_test_spec_pipe(test_dir, is_regression=True)
 
             pipe.preprocessing()
+            time.sleep(0.1)
 
             # Test modeling with error break
             os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"] = "1"
             pipe._tested = True  # skip test_run
             with pytest.raises(ValueError, match="Modeling resume test raise"):
                 pipe.model_evaluation(resume=True)
+                time.sleep(0.1)
 
             # Result dir paths
             test_dir = pipe.report_directory
@@ -1219,6 +1238,7 @@ class TestSpecPipe(unittest.TestCase):
             # Run rest
             del os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"]
             pipe.model_evaluation(resume=True)
+            time.sleep(0.1)
 
             # Assert result
             TestSpecPipe.criteria_regression_model_report(pipe)
@@ -1249,12 +1269,14 @@ class TestSpecPipe(unittest.TestCase):
             pipe = create_test_spec_pipe(test_dir, is_regression=False)
 
             pipe.preprocessing()
+            time.sleep(0.1)
 
             # Test modeling with error break
             os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"] = "1"
             pipe._tested = True  # skip test_run
             with pytest.raises(ValueError, match="Modeling resume test raise"):
                 pipe.model_evaluation(resume=True)
+                time.sleep(0.1)
 
             # Result dir paths
             test_dir = pipe.report_directory
@@ -1284,6 +1306,7 @@ class TestSpecPipe(unittest.TestCase):
             # Run rest
             del os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"]
             pipe.model_evaluation(resume=True)
+            time.sleep(0.1)
 
             # Assert result
             TestSpecPipe.criteria_classification_model_report(pipe)

@@ -713,7 +713,8 @@ class Stats2d:
     @property
     def values(self) -> Callable:
         def wrapper(*args, **kwargs) -> np.ndarray:  # type: ignore[no-untyped-def]
-            return np.array(self._values(*args, **kwargs))
+            result: np.ndarray = np.array(self._values(*args, **kwargs))
+            return result
 
         # Set dynamic name
         if callable(self.measure):
