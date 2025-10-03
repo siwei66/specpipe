@@ -686,72 +686,74 @@ class TestSpecPipe(unittest.TestCase):
         if os.getenv("SPECPIPE_MODEL_RESUME_TEST_NUM") is not None:
             del os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"]
 
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create pipe
-            pipe = create_test_spec_pipe(dir_path=test_dir, sample_n=12)
+        # Test dir
+        test_dir = tempfile.mkdtemp()
 
-            # Fast test without saving result
-            assert pipe.tested is False
-            assert pipe.sample_data == []
+        # Create pipe
+        pipe = create_test_spec_pipe(dir_path=test_dir, sample_n=12)
 
-            plt.close("all")
-            pipe.test_run(test_modeling=False, dump_result=False)
-            time.sleep(0.1)
+        # Fast test without saving result
+        assert pipe.tested is False
+        assert pipe.sample_data == []
 
-            assert pipe.tested is False
-            assert os.path.exists(f"{test_dir}/test_run")
-            preproc_img_names = [
-                name
-                for name in os.listdir(test_dir)
-                if "test_img" in name and ".tif" in name and name != "test_img.tif"
-            ]
-            preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
-            assert len(preproc_img_names) == len(preprocs)
+        plt.close("all")
+        pipe.test_run(test_modeling=False, dump_result=False)
+        time.sleep(0.1)
 
-            # Full test without saving result
-            plt.close("all")
-            pipe.test_run(dump_result=False)
-            time.sleep(0.1)
+        assert pipe.tested is False
+        assert os.path.exists(f"{test_dir}/test_run")
+        preproc_img_names = [
+            name
+            for name in os.listdir(test_dir)
+            if "test_img" in name and ".tif" in name and name != "test_img.tif"
+        ]
+        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
+        assert len(preproc_img_names) == len(preprocs)
 
-            # Assert modeling test status
-            assert pipe.tested is True
-            # Assert report files
-            model_report_dir = f"{test_dir}/test_run/Model_evaluation_reports/"
-            assert os.path.exists(model_report_dir)
-            procs_result_dirs = os.listdir(model_report_dir)
-            assert len(procs_result_dirs) == len(pipe.process_chains)
-            for dirname in procs_result_dirs:
-                reports = os.listdir(model_report_dir + dirname)
-                assert len(reports) == 8
-                assert "Model_for_application" in reports
-                assert "Model_in_validation" in reports
-                assert "Influence_analysis" in reports[0]
-                assert "Regression_performance" in reports[3]
-                assert "Residual_analysis" in reports[4]
-                assert "Residual_plot" in reports[5]
-                assert "Scatter_plot" in reports[6]
-                assert "Validation_results" in reports[7]
+        # Full test without saving result
+        plt.close("all")
+        pipe.test_run(dump_result=False)
+        time.sleep(0.1)
 
-            # Full test
-            plt.close("all")
-            pipe.test_run()
-            time.sleep(0.1)
+        # Assert modeling test status
+        assert pipe.tested is True
+        # Assert report files
+        model_report_dir = f"{test_dir}/test_run/Model_evaluation_reports/"
+        assert os.path.exists(model_report_dir)
+        procs_result_dirs = os.listdir(model_report_dir)
+        assert len(procs_result_dirs) == len(pipe.process_chains)
+        for dirname in procs_result_dirs:
+            reports = os.listdir(model_report_dir + dirname)
+            assert len(reports) == 8
+            assert "Model_for_application" in reports
+            assert "Model_in_validation" in reports
+            assert "Influence_analysis" in reports[0]
+            assert "Regression_performance" in reports[3]
+            assert "Residual_analysis" in reports[4]
+            assert "Residual_plot" in reports[5]
+            assert "Scatter_plot" in reports[6]
+            assert "Validation_results" in reports[7]
 
-            assert pipe.tested is True
-            assert pipe.sample_data == []
-            assert os.path.exists(f"{test_dir}/test_run/Step_results/PreprocessingTestingResult.dill")
+        # Full test
+        plt.close("all")
+        pipe.test_run()
+        time.sleep(0.1)
 
-            # Backup result
-            plt.close("all")
-            pipe.test_run(dump_backup=True)
-            time.sleep(0.1)
+        assert pipe.tested is True
+        assert pipe.sample_data == []
+        assert os.path.exists(f"{test_dir}/test_run/Step_results/PreprocessingTestingResult.dill")
 
-            result_dills = [
-                name
-                for name in os.listdir(f"{test_dir}/test_run/Step_results/")
-                if "PreprocessingTestingResult" in name and name != "PreprocessingTestingResult.dill"
-            ]
-            assert len(result_dills) > 0
+        # Backup result
+        plt.close("all")
+        pipe.test_run(dump_backup=True)
+        time.sleep(0.1)
+
+        result_dills = [
+            name
+            for name in os.listdir(f"{test_dir}/test_run/Step_results/")
+            if "PreprocessingTestingResult" in name and name != "PreprocessingTestingResult.dill"
+        ]
+        assert len(result_dills) > 0
 
         # Clear test report dir
         if os.path.exists(test_dir):
@@ -768,71 +770,73 @@ class TestSpecPipe(unittest.TestCase):
             del os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"]
 
         # Test regression
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create pipe
-            pipe = create_test_spec_pipe(test_dir, is_regression=False)
+        # Test dir
+        test_dir = tempfile.mkdtemp()
 
-            # Fast test without saving result
-            assert pipe.tested is False
-            assert pipe.sample_data == []
+        # Create pipe
+        pipe = create_test_spec_pipe(test_dir, is_regression=False)
 
-            plt.close("all")
-            pipe.test_run(test_modeling=False, dump_result=False)
-            time.sleep(0.1)
+        # Fast test without saving result
+        assert pipe.tested is False
+        assert pipe.sample_data == []
 
-            assert pipe.tested is False
-            assert os.path.exists(f"{test_dir}/test_run")
-            preproc_img_names = [
-                name
-                for name in os.listdir(test_dir)
-                if "test_img" in name and ".tif" in name and name != "test_img.tif"
-            ]
-            preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
-            assert len(preproc_img_names) == len(preprocs)
+        plt.close("all")
+        pipe.test_run(test_modeling=False, dump_result=False)
+        time.sleep(0.1)
 
-            # Full test without saving result
-            plt.close("all")
-            pipe.test_run(dump_result=False)
-            time.sleep(0.1)
+        assert pipe.tested is False
+        assert os.path.exists(f"{test_dir}/test_run")
+        preproc_img_names = [
+            name
+            for name in os.listdir(test_dir)
+            if "test_img" in name and ".tif" in name and name != "test_img.tif"
+        ]
+        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
+        assert len(preproc_img_names) == len(preprocs)
 
-            # Assert modeling test status
-            assert pipe.tested is True
-            # Assert report files
-            model_report_dir = f"{test_dir}/test_run/Model_evaluation_reports/"
-            assert os.path.exists(model_report_dir)
-            procs_result_dirs = os.listdir(model_report_dir)
-            assert len(procs_result_dirs) == len(pipe.process_chains)
-            for dirname in procs_result_dirs:
-                reports = os.listdir(model_report_dir + dirname)
-                assert len(reports) == 7
-                assert "Model_for_application" in reports
-                assert "Model_in_validation" in reports
-                assert "Classification_performance" in reports[0]
-                assert "Influence_analysis" in reports[1]
-                assert "Residual_analysis" in reports[4]
-                assert "ROC_curve" in reports[5]
-                assert "Validation_results" in reports[6]
+        # Full test without saving result
+        plt.close("all")
+        pipe.test_run(dump_result=False)
+        time.sleep(0.1)
 
-            # Full test
-            plt.close("all")
-            pipe.test_run()
-            time.sleep(0.1)
+        # Assert modeling test status
+        assert pipe.tested is True
+        # Assert report files
+        model_report_dir = f"{test_dir}/test_run/Model_evaluation_reports/"
+        assert os.path.exists(model_report_dir)
+        procs_result_dirs = os.listdir(model_report_dir)
+        assert len(procs_result_dirs) == len(pipe.process_chains)
+        for dirname in procs_result_dirs:
+            reports = os.listdir(model_report_dir + dirname)
+            assert len(reports) == 7
+            assert "Model_for_application" in reports
+            assert "Model_in_validation" in reports
+            assert "Classification_performance" in reports[0]
+            assert "Influence_analysis" in reports[1]
+            assert "Residual_analysis" in reports[4]
+            assert "ROC_curve" in reports[5]
+            assert "Validation_results" in reports[6]
 
-            assert pipe.tested is True
-            assert pipe.sample_data == []
-            assert os.path.exists(f"{test_dir}/test_run/Step_results/PreprocessingTestingResult.dill")
+        # Full test
+        plt.close("all")
+        pipe.test_run()
+        time.sleep(0.1)
 
-            # Backup result
-            plt.close("all")
-            pipe.test_run(dump_backup=True)
-            time.sleep(0.1)
+        assert pipe.tested is True
+        assert pipe.sample_data == []
+        assert os.path.exists(f"{test_dir}/test_run/Step_results/PreprocessingTestingResult.dill")
 
-            result_dills = [
-                name
-                for name in os.listdir(f"{test_dir}/test_run/Step_results/")
-                if "PreprocessingTestingResult" in name and name != "PreprocessingTestingResult.dill"
-            ]
-            assert len(result_dills) > 0
+        # Backup result
+        plt.close("all")
+        pipe.test_run(dump_backup=True)
+        time.sleep(0.1)
+
+        result_dills = [
+            name
+            for name in os.listdir(f"{test_dir}/test_run/Step_results/")
+            if "PreprocessingTestingResult" in name and name != "PreprocessingTestingResult.dill"
+        ]
+        assert len(result_dills) > 0
 
         # Clear test report dir
         if os.path.exists(test_dir):
@@ -844,6 +848,7 @@ class TestSpecPipe(unittest.TestCase):
         """Test criteria for preprocessing"""
 
         test_dir = pipe.report_directory
+        assert os.path.exists(test_dir)
 
         # Assert results
         assert len(pipe.sample_data) == len(pipe.spec_exp.rois)
@@ -876,6 +881,7 @@ class TestSpecPipe(unittest.TestCase):
     def criteria_regression_model_report(pipe: SpecPipe) -> None:
         """Test criteria for regression model reports"""
         test_dir = pipe.report_directory
+        assert os.path.exists(test_dir)
 
         # Assert reports
         model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
@@ -931,6 +937,7 @@ class TestSpecPipe(unittest.TestCase):
     def criteria_classification_model_report(pipe: SpecPipe) -> None:
         """Test criteria for classification model reports"""
         test_dir = pipe.report_directory
+        assert os.path.exists(test_dir)
 
         # Assert reports
         model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
@@ -993,22 +1000,23 @@ class TestSpecPipe(unittest.TestCase):
         plt.close("all")
 
         # Test dir
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create regression exp data and pipe
-            pipe = create_test_spec_pipe(test_dir, is_regression=True)
+        test_dir = tempfile.mkdtemp()
 
-            # Preprocessing
-            assert pipe.sample_data == []
-            pipe.preprocessing()
-            time.sleep(0.1)
+        # Create regression exp data and pipe
+        pipe = create_test_spec_pipe(test_dir, is_regression=True)
 
-            TestSpecPipe.criteria_preprocessing_result(pipe)
+        # Preprocessing
+        assert pipe.sample_data == []
+        pipe.preprocessing()
+        time.sleep(0.1)
 
-            # Modeling
-            pipe.model_evaluation()
-            time.sleep(0.1)
+        TestSpecPipe.criteria_preprocessing_result(pipe)
 
-            TestSpecPipe.criteria_regression_model_report(pipe)
+        # Modeling
+        pipe.model_evaluation()
+        time.sleep(0.1)
+
+        TestSpecPipe.criteria_regression_model_report(pipe)
 
         # Clear test report dir
         if os.path.exists(test_dir):
@@ -1027,22 +1035,23 @@ class TestSpecPipe(unittest.TestCase):
         plt.close("all")
 
         # Test dir
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create regression exp data and pipe
-            pipe = create_test_spec_pipe(test_dir, is_regression=False)
+        test_dir = tempfile.mkdtemp()
 
-            # Preprocessing
-            assert pipe.sample_data == []
-            pipe.preprocessing()
-            time.sleep(0.1)
+        # Create regression exp data and pipe
+        pipe = create_test_spec_pipe(test_dir, is_regression=False)
 
-            TestSpecPipe.criteria_preprocessing_result(pipe)
+        # Preprocessing
+        assert pipe.sample_data == []
+        pipe.preprocessing()
+        time.sleep(0.1)
 
-            # Modeling
-            pipe.model_evaluation()
-            time.sleep(0.1)
+        TestSpecPipe.criteria_preprocessing_result(pipe)
 
-            TestSpecPipe.criteria_classification_model_report(pipe)
+        # Modeling
+        pipe.model_evaluation()
+        time.sleep(0.1)
+
+        TestSpecPipe.criteria_classification_model_report(pipe)
 
         # Clear test report dir
         if os.path.exists(test_dir):
@@ -1061,14 +1070,15 @@ class TestSpecPipe(unittest.TestCase):
         plt.close("all")
 
         # Regression
-        with tempfile.TemporaryDirectory() as test_dir:
-            pipe = create_test_spec_pipe(test_dir, is_regression=True)
+        test_dir = tempfile.mkdtemp()
 
-            pipe.run(n_processor=1)
-            time.sleep(0.1)
+        pipe = create_test_spec_pipe(test_dir, is_regression=True)
 
-            TestSpecPipe.criteria_preprocessing_result(pipe)
-            TestSpecPipe.criteria_regression_model_report(pipe)
+        pipe.run(n_processor=1)
+        time.sleep(0.1)
+
+        TestSpecPipe.criteria_preprocessing_result(pipe)
+        TestSpecPipe.criteria_regression_model_report(pipe)
 
         # Clear test report dir
         if os.path.exists(test_dir):
@@ -1077,14 +1087,13 @@ class TestSpecPipe(unittest.TestCase):
         plt.close("all")
 
         # Classification
-        with tempfile.TemporaryDirectory() as test_dir:
-            pipe = create_test_spec_pipe(test_dir, is_regression=False)
+        pipe = create_test_spec_pipe(test_dir, is_regression=False)
 
-            pipe.run(n_processor=1)
-            time.sleep(0.1)
+        pipe.run(n_processor=1)
+        time.sleep(0.1)
 
-            TestSpecPipe.criteria_preprocessing_result(pipe)
-            TestSpecPipe.criteria_classification_model_report(pipe)
+        TestSpecPipe.criteria_preprocessing_result(pipe)
+        TestSpecPipe.criteria_classification_model_report(pipe)
 
         plt.close("all")
 
@@ -1137,47 +1146,48 @@ class TestSpecPipe(unittest.TestCase):
         plt.close("all")
 
         # Test dir
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create regression exp data and pipe
-            pipe = create_test_spec_pipe(test_dir, is_regression=True)
+        test_dir = tempfile.mkdtemp()
 
-            # Test preprocessing with error break
-            os.environ["SPECPIPE_PREPROCESS_RESUME_TEST_NUM"] = "1"
-            pipe._tested = True  # skip test_run
-            with pytest.raises(ValueError, match="Preprocessing resume test raise"):
-                pipe.preprocessing(resume=True)
-                time.sleep(0.1)
+        # Create regression exp data and pipe
+        pipe = create_test_spec_pipe(test_dir, is_regression=True)
 
-            # Assert step result files with break
-            test_dir = pipe.report_directory
-            result_dir = f"{test_dir}/Preprocessing/"
-            step_dir_content = os.listdir(f"{result_dir}/Step_results/")
-            preproc_step_names = [
-                name for name in step_dir_content if "PreprocessingResult_sample_" in name and ".dill" in name
-            ]
-            assert len(preproc_step_names) > 0
-            assert len(preproc_step_names) < len(pipe.sample_data)
-            assert "Error_logs" in step_dir_content
-            assert "Preprocess_progress_logs" in step_dir_content
-            assert len(os.listdir(f"{result_dir}/Step_results/Error_logs")) == 1
-            assert len(os.listdir(f"{result_dir}/Step_results/Preprocess_progress_logs")) == 1
-            result_fn = preproc_step_names[0]
-            result_ctime = os.stat(f"{result_dir}/Step_results/{result_fn}").st_ctime_ns
-
-            # Run rest
-            del os.environ["SPECPIPE_PREPROCESS_RESUME_TEST_NUM"]
+        # Test preprocessing with error break
+        os.environ["SPECPIPE_PREPROCESS_RESUME_TEST_NUM"] = "1"
+        pipe._tested = True  # skip test_run
+        with pytest.raises(ValueError, match="Preprocessing resume test raise"):
             pipe.preprocessing(resume=True)
             time.sleep(0.1)
 
-            # Assert resume results
-            TestSpecPipe.criteria_preprocessing_result(pipe)
-            step_dir_content = os.listdir(f"{result_dir}/Step_results/")
-            assert "Error_logs" in step_dir_content
-            assert "Preprocess_progress_logs" not in step_dir_content
+        # Assert step result files with break
+        test_dir = pipe.report_directory
+        result_dir = f"{test_dir}/Preprocessing/"
+        step_dir_content = os.listdir(f"{result_dir}/Step_results/")
+        preproc_step_names = [
+            name for name in step_dir_content if "PreprocessingResult_sample_" in name and ".dill" in name
+        ]
+        assert len(preproc_step_names) > 0
+        assert len(preproc_step_names) < len(pipe.sample_data)
+        assert "Error_logs" in step_dir_content
+        assert "Preprocess_progress_logs" in step_dir_content
+        assert len(os.listdir(f"{result_dir}/Step_results/Error_logs")) == 1
+        assert len(os.listdir(f"{result_dir}/Step_results/Preprocess_progress_logs")) == 1
+        result_fn = preproc_step_names[0]
+        result_ctime = os.stat(f"{result_dir}/Step_results/{result_fn}").st_ctime_ns
 
-            # Assert no secondary creation of results
-            result_ctime1 = os.stat(f"{result_dir}/Step_results/{result_fn}").st_ctime_ns
-            assert result_ctime1 == result_ctime
+        # Run rest
+        del os.environ["SPECPIPE_PREPROCESS_RESUME_TEST_NUM"]
+        pipe.preprocessing(resume=True)
+        time.sleep(0.1)
+
+        # Assert resume results
+        TestSpecPipe.criteria_preprocessing_result(pipe)
+        step_dir_content = os.listdir(f"{result_dir}/Step_results/")
+        assert "Error_logs" in step_dir_content
+        assert "Preprocess_progress_logs" not in step_dir_content
+
+        # Assert no secondary creation of results
+        result_ctime1 = os.stat(f"{result_dir}/Step_results/{result_fn}").st_ctime_ns
+        assert result_ctime1 == result_ctime
 
         # Clear test report dir
         if os.path.exists(test_dir):
@@ -1196,56 +1206,57 @@ class TestSpecPipe(unittest.TestCase):
         plt.close("all")
 
         # Test dir
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create regression exp data and pipe
-            pipe = create_test_spec_pipe(test_dir, is_regression=True)
+        test_dir = tempfile.mkdtemp()
 
-            pipe.preprocessing()
-            time.sleep(0.1)
+        # Create regression exp data and pipe
+        pipe = create_test_spec_pipe(test_dir, is_regression=True)
 
-            # Test modeling with error break
-            os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"] = "1"
-            pipe._tested = True  # skip test_run
-            with pytest.raises(ValueError, match="Modeling resume test raise"):
-                pipe.model_evaluation(resume=True)
-                time.sleep(0.1)
+        pipe.preprocessing()
+        time.sleep(0.1)
 
-            # Result dir paths
-            test_dir = pipe.report_directory
-            result_dir = f"{test_dir}/Modeling/"
-            model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
-
-            # Test error log
-            assert os.path.exists(result_dir)
-            assert "Error_logs" in os.listdir(result_dir)
-
-            # Test running progress log
-            assert os.path.exists(f"{model_report_dir}/modeling_progress_log.dill")
-
-            # Test finished results
-            assert os.path.exists(model_report_dir)
-            model_reports = os.listdir(model_report_dir)
-            preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
-            model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
-            preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
-            assert len(preprocs_in_modeling) < len(preprocs)
-            assert len(model_reports) < len(pipe.process_chains)
-
-            # Creation time (For testing no secondary creation of reports)
-            result_fn = model_reports[0]
-            result_ctime = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
-
-            # Run rest
-            del os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"]
+        # Test modeling with error break
+        os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"] = "1"
+        pipe._tested = True  # skip test_run
+        with pytest.raises(ValueError, match="Modeling resume test raise"):
             pipe.model_evaluation(resume=True)
             time.sleep(0.1)
 
-            # Assert result
-            TestSpecPipe.criteria_regression_model_report(pipe)
+        # Result dir paths
+        test_dir = pipe.report_directory
+        result_dir = f"{test_dir}/Modeling/"
+        model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
 
-            # Assert no secondary creation of results
-            result_ctime1 = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
-            assert result_ctime1 == result_ctime
+        # Test error log
+        assert os.path.exists(result_dir)
+        assert "Error_logs" in os.listdir(result_dir)
+
+        # Test running progress log
+        assert os.path.exists(f"{model_report_dir}/modeling_progress_log.dill")
+
+        # Test finished results
+        assert os.path.exists(model_report_dir)
+        model_reports = os.listdir(model_report_dir)
+        preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
+        model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
+        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
+        assert len(preprocs_in_modeling) < len(preprocs)
+        assert len(model_reports) < len(pipe.process_chains)
+
+        # Creation time (For testing no secondary creation of reports)
+        result_fn = model_reports[0]
+        result_ctime = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
+
+        # Run rest
+        del os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"]
+        pipe.model_evaluation(resume=True)
+        time.sleep(0.1)
+
+        # Assert result
+        TestSpecPipe.criteria_regression_model_report(pipe)
+
+        # Assert no secondary creation of results
+        result_ctime1 = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
+        assert result_ctime1 == result_ctime
 
         # Clear test report dir
         if os.path.exists(test_dir):
@@ -1264,56 +1275,57 @@ class TestSpecPipe(unittest.TestCase):
         plt.close("all")
 
         # Test dir
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create classification exp data and pipe
-            pipe = create_test_spec_pipe(test_dir, is_regression=False)
+        test_dir = tempfile.mkdtemp()
 
-            pipe.preprocessing()
-            time.sleep(0.1)
+        # Create classification exp data and pipe
+        pipe = create_test_spec_pipe(test_dir, is_regression=False)
 
-            # Test modeling with error break
-            os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"] = "1"
-            pipe._tested = True  # skip test_run
-            with pytest.raises(ValueError, match="Modeling resume test raise"):
-                pipe.model_evaluation(resume=True)
-                time.sleep(0.1)
+        pipe.preprocessing()
+        time.sleep(0.1)
 
-            # Result dir paths
-            test_dir = pipe.report_directory
-            result_dir = f"{test_dir}/Modeling/"
-            model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
-
-            # Test error log
-            assert os.path.exists(result_dir)
-            assert "Error_logs" in os.listdir(result_dir)
-
-            # Test running progress log
-            assert os.path.exists(f"{model_report_dir}/modeling_progress_log.dill")
-
-            # Test finished results
-            assert os.path.exists(model_report_dir)
-            model_reports = os.listdir(model_report_dir)
-            preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
-            model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
-            preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
-            assert len(preprocs_in_modeling) < len(preprocs)
-            assert len(model_reports) < len(pipe.process_chains)
-
-            # Creation time (For testing no secondary creation of reports)
-            result_fn = model_reports[0]
-            result_ctime = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
-
-            # Run rest
-            del os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"]
+        # Test modeling with error break
+        os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"] = "1"
+        pipe._tested = True  # skip test_run
+        with pytest.raises(ValueError, match="Modeling resume test raise"):
             pipe.model_evaluation(resume=True)
             time.sleep(0.1)
 
-            # Assert result
-            TestSpecPipe.criteria_classification_model_report(pipe)
+        # Result dir paths
+        test_dir = pipe.report_directory
+        result_dir = f"{test_dir}/Modeling/"
+        model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
 
-            # Assert no secondary creation of results
-            result_ctime1 = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
-            assert result_ctime1 == result_ctime
+        # Test error log
+        assert os.path.exists(result_dir)
+        assert "Error_logs" in os.listdir(result_dir)
+
+        # Test running progress log
+        assert os.path.exists(f"{model_report_dir}/modeling_progress_log.dill")
+
+        # Test finished results
+        assert os.path.exists(model_report_dir)
+        model_reports = os.listdir(model_report_dir)
+        preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
+        model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
+        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
+        assert len(preprocs_in_modeling) < len(preprocs)
+        assert len(model_reports) < len(pipe.process_chains)
+
+        # Creation time (For testing no secondary creation of reports)
+        result_fn = model_reports[0]
+        result_ctime = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
+
+        # Run rest
+        del os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"]
+        pipe.model_evaluation(resume=True)
+        time.sleep(0.1)
+
+        # Assert result
+        TestSpecPipe.criteria_classification_model_report(pipe)
+
+        # Assert no secondary creation of results
+        result_ctime1 = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
+        assert result_ctime1 == result_ctime
 
         # Clear test report dir
         if os.path.exists(test_dir):
