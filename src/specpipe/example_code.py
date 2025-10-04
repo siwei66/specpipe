@@ -258,7 +258,7 @@ Output report directory
 
 report_directory/
 ├── Modeling/
-│    └── Model_Evaluation_Reports/
+│    └── Model_evaluation_reports/
 │        ├── Data_chain_Preprocessing_#0_Model_(model label 0)/
 │        │   ├── Model_for_application/
 │        │   ├── Model_in_validation/
@@ -284,7 +284,7 @@ Output report directory
 
 report_directory/
 ├── Modeling/
-│    └── Model_Evaluation_Reports/
+│    └── Model_evaluation_reports/
 │        ├── Data_chain_Preprocessing_#0_Model_(model label 0)/
 │        │   ├── Model_for_application/
 │        │   ├── Model_in_validation/
