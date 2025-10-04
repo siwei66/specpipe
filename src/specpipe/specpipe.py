@@ -727,7 +727,7 @@ def _model_evaluator(  # noqa: C901
             )
 
     # Save preprocess chain info for the sample_list
-    model_report_dir = model_result_dir + "Model_Evaluation_Reports/"
+    model_report_dir = model_result_dir + "Model_evaluation_reports/"
     if not os.path.exists(model_report_dir):
         os.makedirs(model_report_dir)
     # Chain file name
@@ -3395,7 +3395,7 @@ class SpecPipe:
             )
 
         # Check running log and subset sample data
-        log_path = model_result_dir + "Model_Evaluation_Reports/" + "modeling_progress_log.dill"
+        log_path = model_result_dir + "Model_evaluation_reports/" + "modeling_progress_log.dill"
         if not resume:
             rest_cd_paths = cd_paths
             # Clear log
