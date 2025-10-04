@@ -1510,6 +1510,5 @@ def lsdir_robust(
             wait_time: float = time_wait_min * (time_wait_coef**retry)
             time.sleep(wait_time)
 
-    # No result
-    result1 = []
-    return result1
+    # Not fetch required number of result
+    raise ValueError(f"Failed to fetch required minimal number of results, items available: {os.listdir(path)}")

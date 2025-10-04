@@ -3601,10 +3601,28 @@ class TestLsdirRobust:
         if os.path.exists(test_dir):
             shutil.rmtree(test_dir)
 
+    @staticmethod
+    def test_minimal_required_num_of_fetch_results() -> None:
+        """Test functionality consistency of the function and os.listdir"""
+        # Create test files
+        test_dir = tempfile.mkdtemp()
+        _ = TestLsdirRobust.create_test_files(test_dir)
+
+        files_lsdir_r = lsdir_robust(test_dir, 5, retry_limit=1)
+        assert files_lsdir_r is not None
+        assert len(list(files_lsdir_r)) == 6
+
+        with pytest.raises(ValueError, match="Failed to fetch required minimal number of results"):
+            files_lsdir_r = lsdir_robust(test_dir, 6, retry_limit=1)
+
+        if os.path.exists(test_dir):
+            shutil.rmtree(test_dir)
+
 
 # %% Test - roi_to_shp
 
 # TestLsdirRobust.test_basic_functionality()
+# TestLsdirRobust.test_minimal_required_num_of_fetch_results()
 
 
 # %% Test main
