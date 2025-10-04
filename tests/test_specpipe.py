@@ -921,7 +921,7 @@ class TestSpecPipe(unittest.TestCase):
         assert os.path.exists(test_dir)
 
         # Assert reports
-        model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
+        model_report_dir = f"{test_dir}/Modeling/Model_evaluation_reports/"
         assert os.path.exists(model_report_dir)
 
         # Report contents
@@ -1012,7 +1012,7 @@ class TestSpecPipe(unittest.TestCase):
         assert os.path.exists(test_dir)
 
         # Assert reports
-        model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
+        model_report_dir = f"{test_dir}/Modeling/Model_evaluation_reports/"
         assert os.path.exists(model_report_dir)
 
         # Report contents
@@ -1336,7 +1336,7 @@ class TestSpecPipe(unittest.TestCase):
         # Result dir paths
         test_dir = pipe.report_directory
         result_dir = f"{test_dir}/Modeling/"
-        model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
+        model_report_dir = f"{test_dir}/Modeling/Model_evaluation_reports/"
 
         # Test error log
         assert os.path.exists(result_dir)
@@ -1406,7 +1406,7 @@ class TestSpecPipe(unittest.TestCase):
         # Result dir paths
         test_dir = pipe.report_directory
         result_dir = f"{test_dir}/Modeling/"
-        model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
+        model_report_dir = f"{test_dir}/Modeling/Model_evaluation_reports/"
 
         # Test error log
         assert os.path.exists(result_dir)
