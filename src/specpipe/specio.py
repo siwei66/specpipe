@@ -1511,4 +1511,7 @@ def lsdir_robust(
             time.sleep(wait_time)
 
     # Not fetch required number of result
-    raise ValueError(f"Failed to fetch required minimal number of results, items available: {os.listdir(path)}")
+    if result is not None:
+        return list(result)
+    else:
+        return []

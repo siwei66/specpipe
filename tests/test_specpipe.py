@@ -925,21 +925,24 @@ class TestSpecPipe(unittest.TestCase):
         assert os.path.exists(model_report_dir)
 
         # Report contents
-        try:
-            model_reports = lsdir_robust(model_report_dir, 4, retry=10, time_wait_max=30)
-            preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
-            model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
-            preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
-            assert len(preprocs_in_modeling) == len(preprocs)
-            assert len(model_reports) == len(pipe.process_chains)
-        except Exception as e:
+        model_reports = lsdir_robust(model_report_dir, 4, retry=10, time_wait_max=30)
+        preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
+        model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
+        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
+
+        # Assert resulting files with path tracking
+        crit_1 = len(preprocs_in_modeling) == len(preprocs)
+        crit_2 = len(model_reports) == len(pipe.process_chains)
+        if not (crit_1 and crit_2):
             all_existed_files = [
                 os.path.join(root, name) for root, dirs, files in os.walk(test_dir) for name in dirs + files
             ]
             raise AssertionError(
                 f"Incomplete output result files from model evaluation, \
-                                 found in the pipeline report dir: {all_existed_files}"
-            ) from e
+                    \nlen(preprocs_in_modeling) == len(preprocs) result: {crit_1}, \
+                    \nlen(model_reports) == len(pipe.process_chains) result: {crit_2}, \
+                    found in the pipeline report dir: {all_existed_files}"
+            )
 
         # Assert model evaluation reports of each chain
         for dirname in model_reports:
@@ -1013,21 +1016,24 @@ class TestSpecPipe(unittest.TestCase):
         assert os.path.exists(model_report_dir)
 
         # Report contents
-        try:
-            model_reports = lsdir_robust(model_report_dir, 4, retry=10, time_wait_max=30)
-            preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
-            model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
-            preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
-            assert len(preprocs_in_modeling) == len(preprocs)
-            assert len(model_reports) == len(pipe.process_chains)
-        except Exception as e:
+        model_reports = lsdir_robust(model_report_dir, 4, retry=10, time_wait_max=30)
+        preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
+        model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
+        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
+
+        # Assert resulting files with path tracking
+        crit_1 = len(preprocs_in_modeling) == len(preprocs)
+        crit_2 = len(model_reports) == len(pipe.process_chains)
+        if not (crit_1 and crit_2):
             all_existed_files = [
                 os.path.join(root, name) for root, dirs, files in os.walk(test_dir) for name in dirs + files
             ]
             raise AssertionError(
                 f"Incomplete output result files from model evaluation, \
-                                 found in the pipeline report dir: {all_existed_files}"
-            ) from e
+                    \nlen(preprocs_in_modeling) == len(preprocs) result: {crit_1}, \
+                    \nlen(model_reports) == len(pipe.process_chains) result: {crit_2}, \
+                    found in the pipeline report dir: {all_existed_files}"
+            )
 
         # Assert model evaluation reports of each chain
         for dirname in model_reports:
