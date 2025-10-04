@@ -398,6 +398,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
 ### 5 Running results
 
 - The pipeline produces following results for every processing chain, including:
+
 • Final and intermediate preprocessing results
 • Data configuration files
 • Validation and application models
