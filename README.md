@@ -406,7 +406,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     • Visualization
     ```
 
-- **The resulting file structure is as follows:**
+- The resulting file structure is as follows:
 
 - For input data:
     ```text
