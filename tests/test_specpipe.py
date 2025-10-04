@@ -879,7 +879,7 @@ class TestSpecPipe(unittest.TestCase):
 
     @staticmethod
     @silent
-    def criteria_preprocessing_result(pipe: SpecPipe) -> None:
+    def criteria_preprocessing_result(pipe: SpecPipe) -> str:
         """Test criteria for preprocessing"""
 
         test_dir = pipe.report_directory
@@ -911,9 +911,11 @@ class TestSpecPipe(unittest.TestCase):
         ]
         assert len(preproc_step_names) == len(pipe.sample_data)
 
+        return "finished"
+
     @staticmethod
     @silent
-    def criteria_regression_model_report(pipe: SpecPipe) -> None:
+    def criteria_regression_model_report(pipe: SpecPipe) -> str:
         """Test criteria for regression model reports"""
         test_dir = pipe.report_directory
         assert os.path.exists(test_dir)
@@ -988,9 +990,11 @@ class TestSpecPipe(unittest.TestCase):
             assert len(val_X_test_files) == n_fold
             assert len(val_y_files) == n_fold
 
+        return "finished"
+
     @staticmethod
     @silent
-    def criteria_classification_model_report(pipe: SpecPipe) -> None:
+    def criteria_classification_model_report(pipe: SpecPipe) -> str:
         """Test criteria for classification model reports"""
         test_dir = pipe.report_directory
         assert os.path.exists(test_dir)
@@ -1061,6 +1065,8 @@ class TestSpecPipe(unittest.TestCase):
             assert len(val_X_test_files) == n_fold
             assert len(val_y_files) == n_fold
 
+        return "finished"
+
     @staticmethod
     @silent
     def test_preprocessing_modeling_regression() -> None:
@@ -1084,16 +1090,16 @@ class TestSpecPipe(unittest.TestCase):
         pipe.preprocessing()
         time.sleep(0.1)
 
-        TestSpecPipe.criteria_preprocessing_result(pipe)
+        finished_1 = TestSpecPipe.criteria_preprocessing_result(pipe)
 
         # Modeling
         pipe.model_evaluation()
         time.sleep(0.1)
 
-        TestSpecPipe.criteria_regression_model_report(pipe)
+        finished_2 = TestSpecPipe.criteria_regression_model_report(pipe)
 
         # Clear test report dir
-        if os.path.exists(test_dir):
+        if os.path.exists(test_dir) and finished_1 == "finished" and finished_2 == "finished":
             shutil.rmtree(test_dir)
 
     @staticmethod
@@ -1119,16 +1125,16 @@ class TestSpecPipe(unittest.TestCase):
         pipe.preprocessing()
         time.sleep(0.1)
 
-        TestSpecPipe.criteria_preprocessing_result(pipe)
+        finished_1 = TestSpecPipe.criteria_preprocessing_result(pipe)
 
         # Modeling
         pipe.model_evaluation()
         time.sleep(0.1)
 
-        TestSpecPipe.criteria_classification_model_report(pipe)
+        finished_2 = TestSpecPipe.criteria_classification_model_report(pipe)
 
         # Clear test report dir
-        if os.path.exists(test_dir):
+        if os.path.exists(test_dir) and finished_1 == "finished" and finished_2 == "finished":
             shutil.rmtree(test_dir)
 
     @staticmethod
@@ -1151,28 +1157,36 @@ class TestSpecPipe(unittest.TestCase):
         pipe.run(n_processor=1)
         time.sleep(0.1)
 
-        TestSpecPipe.criteria_preprocessing_result(pipe)
-        TestSpecPipe.criteria_regression_model_report(pipe)
+        finished_1 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        finished_2 = TestSpecPipe.criteria_regression_model_report(pipe)
+        finished_3 = "not_started"
+        finished_4 = "not_started"
 
         # Clear test report dir
-        if os.path.exists(test_dir):
+        crit_1 = finished_1 == "finished" and finished_2 == "finished"
+        crit_2 = finished_3 == "not_started" and finished_4 == "not_started"
+        if os.path.exists(test_dir) and crit_1 and crit_2:
             shutil.rmtree(test_dir)
+            run_1_cleared: bool = True
 
         plt.close("all")
 
         # Classification
+        assert crit_1
+        assert run_1_cleared
+
         pipe = create_test_spec_pipe(test_dir, is_regression=False)
 
         pipe.run(n_processor=1)
         time.sleep(0.1)
 
-        TestSpecPipe.criteria_preprocessing_result(pipe)
-        TestSpecPipe.criteria_classification_model_report(pipe)
+        finished_3 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        finished_4 = TestSpecPipe.criteria_classification_model_report(pipe)
 
         plt.close("all")
 
         # Clear test report dir
-        if os.path.exists(test_dir):
+        if os.path.exists(test_dir) and finished_3 == "finished" and finished_4 == "finished" and crit_1:
             shutil.rmtree(test_dir)
 
     @staticmethod
@@ -1254,7 +1268,7 @@ class TestSpecPipe(unittest.TestCase):
         time.sleep(0.1)
 
         # Assert resume results
-        TestSpecPipe.criteria_preprocessing_result(pipe)
+        finished = TestSpecPipe.criteria_preprocessing_result(pipe)
         step_dir_content = lsdir_robust(f"{result_dir}/Step_results/")
         assert "Error_logs" in step_dir_content
         assert "Preprocess_progress_logs" not in step_dir_content
@@ -1264,7 +1278,7 @@ class TestSpecPipe(unittest.TestCase):
         assert result_ctime1 == result_ctime
 
         # Clear test report dir
-        if os.path.exists(test_dir):
+        if os.path.exists(test_dir) and finished == "finished":
             shutil.rmtree(test_dir)
 
     @staticmethod
@@ -1327,14 +1341,14 @@ class TestSpecPipe(unittest.TestCase):
         time.sleep(0.1)
 
         # Assert result
-        TestSpecPipe.criteria_regression_model_report(pipe)
+        finished = TestSpecPipe.criteria_regression_model_report(pipe)
 
         # Assert no secondary creation of results
         result_ctime1 = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
         assert result_ctime1 == result_ctime
 
         # Clear test report dir
-        if os.path.exists(test_dir):
+        if os.path.exists(test_dir) and finished == "finished":
             shutil.rmtree(test_dir)
 
     @staticmethod
@@ -1397,14 +1411,14 @@ class TestSpecPipe(unittest.TestCase):
         time.sleep(0.1)
 
         # Assert result
-        TestSpecPipe.criteria_classification_model_report(pipe)
+        finished = TestSpecPipe.criteria_classification_model_report(pipe)
 
         # Assert no secondary creation of results
         result_ctime1 = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
         assert result_ctime1 == result_ctime
 
         # Clear test report dir
-        if os.path.exists(test_dir):
+        if os.path.exists(test_dir) and finished == "finished":
             shutil.rmtree(test_dir)
 
     @staticmethod
