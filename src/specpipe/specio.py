@@ -1467,7 +1467,9 @@ def silent(func: Callable) -> Callable:
 # %% Robust listdir
 
 
-def lsdir_robust(path: str, *, retry_limit: int = 5, time_wait_min: float = 0.5, time_wait_max: float = 20) -> list:
+def lsdir_robust(
+    path: str, fetch_number_gt: int = 0, *, retry_limit: int = 5, time_wait_min: float = 0.5, time_wait_max: float = 20
+) -> list:
     """
     Substitution of listdir with retry for file-related testing using GitHub workflow actions.
     """
@@ -1475,6 +1477,7 @@ def lsdir_robust(path: str, *, retry_limit: int = 5, time_wait_min: float = 0.5,
     retry_limit = max(int(retry_limit), 1)
     time_wait_min = max(time_wait_min, 0.1)
     time_wait_max = max(time_wait_min, 0.2)
+    fetch_number_gt = max(int(fetch_number_gt), 0)
 
     # Fetch loop
     for retry in range(retry_limit):
@@ -1483,7 +1486,7 @@ def lsdir_robust(path: str, *, retry_limit: int = 5, time_wait_min: float = 0.5,
             result = os.listdir(path)
             if result is not None:
                 result1: list = list(result)
-                if len(result1) > 0:
+                if len(result1) > fetch_number_gt:
                     return result1
 
         except OSError:
@@ -1495,7 +1498,7 @@ def lsdir_robust(path: str, *, retry_limit: int = 5, time_wait_min: float = 0.5,
             result = glob.glob(pattern_path)
             if result is not None:
                 result1 = list(result)
-                if len(result1) > 0:
+                if len(result1) > fetch_number_gt:
                     return result1
 
         except OSError:

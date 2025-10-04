@@ -923,9 +923,9 @@ class TestSpecPipe(unittest.TestCase):
         assert os.path.exists(model_report_dir)
 
         # Report contents
-        model_reports = lsdir_robust(model_report_dir)
+        model_reports = lsdir_robust(model_report_dir, 4)
         preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
-        # model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
+        model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
         assert len(preprocs_in_modeling) == len(preprocs)
         assert len(model_reports) == len(pipe.process_chains)
@@ -1000,7 +1000,7 @@ class TestSpecPipe(unittest.TestCase):
         assert os.path.exists(model_report_dir)
 
         # Report contents
-        model_reports = lsdir_robust(model_report_dir)
+        model_reports = lsdir_robust(model_report_dir, 4)
         preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
         model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
@@ -1309,7 +1309,8 @@ class TestSpecPipe(unittest.TestCase):
 
         # Test finished results
         assert os.path.exists(model_report_dir)
-        model_reports = lsdir_robust(model_report_dir)
+        # Test modeling break after one iteration, should have 2 chain txts and 1 result dir (dir item = 3)
+        model_reports = lsdir_robust(model_report_dir, 2)
         preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
         model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
@@ -1378,7 +1379,8 @@ class TestSpecPipe(unittest.TestCase):
 
         # Test finished results
         assert os.path.exists(model_report_dir)
-        model_reports = lsdir_robust(model_report_dir)
+        # Test modeling break after one iteration, should have 2 chain txts and 1 result dir (dir item = 3)
+        model_reports = lsdir_robust(model_report_dir, 2)
         preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
         model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
         preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
