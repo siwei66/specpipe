@@ -1069,7 +1069,7 @@ class TestSpecPipe(unittest.TestCase):
 
     @staticmethod
     @silent
-    def test_preprocessing_modeling_regression() -> None:
+    def test_preprocessing_modeling_regression() -> None:  # noqa: C901
         """test preprocessing and modeling functionality for regression"""
 
         if os.getenv("SPECPIPE_PREPROCESS_RESUME_TEST_NUM") is not None:
@@ -1090,21 +1090,96 @@ class TestSpecPipe(unittest.TestCase):
         pipe.preprocessing()
         time.sleep(0.1)
 
-        finished_1 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        # finished_1 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        _ = TestSpecPipe.criteria_preprocessing_result(pipe)
 
         # Modeling
         pipe.model_evaluation()
         time.sleep(0.1)
 
-        finished_2 = TestSpecPipe.criteria_regression_model_report(pipe)
+        # finished_2 = TestSpecPipe.criteria_regression_model_report(pipe)
+
+        # =============== Roll back - result check not in function ===============
+        # Assert reports
+        model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
+        assert os.path.exists(model_report_dir)
+
+        # Report contents
+        model_reports = lsdir_robust(model_report_dir, 4)
+        preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
+        model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
+        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
+        assert len(preprocs_in_modeling) == len(preprocs)
+        assert len(model_reports) == len(pipe.process_chains)
+
+        # Assert model evaluation reports of each chain
+        for dirname in model_reports:
+            # Reports
+            reports = lsdir_robust(model_report_dir + dirname)
+            assert len(reports) == 8
+            # Output model dirs
+            assert "Model_for_application" in reports
+            assert "Model_in_validation" in reports
+            # Check report files
+            match_performance: int = 0
+            match_influence: int = 0
+            match_residual: int = 0
+            match_validation: int = 0
+            match_scatter: int = 0
+            match_res_plot: int = 0
+            for report in reports:
+                if "Validation_results" in report:
+                    match_validation = 1
+                if "Regression_performance" in report:
+                    match_performance = 1
+                if "Residual_analysis" in report:
+                    match_residual = 1
+                if "Influence_analysis" in report:
+                    match_influence = 1
+                if "Scatter_plot" in report:
+                    match_scatter = 1
+                if "Residual_plot" in report:
+                    match_res_plot = 1
+            assert match_validation == 1
+            assert match_performance == 1
+            assert match_residual == 1
+            assert match_influence == 1
+            assert match_scatter == 1
+            assert match_res_plot == 1
+
+            # Models for application
+            app_model_path = model_report_dir + dirname + "/Model_for_application/"
+            model_files = [n for n in lsdir_robust(app_model_path) if "app_model_" in n and ".dill" in n]
+            assert len(model_files) > 0
+
+            # Models in validation
+            val_model_path = model_report_dir + dirname + "/Model_in_validation/"
+            model_files = [n for n in lsdir_robust(val_model_path) if "val_model_" in n and ".dill" in n]
+            assert len(model_files) > 0
+            n_fold = len(model_files)
+
+            # Data in validation
+            val_X_train_files = [  # noqa: N806
+                n for n in lsdir_robust(val_model_path) if "val_X-train_" in n and ".csv" in n
+            ]
+            val_X_test_files = [  # noqa: N806
+                n for n in lsdir_robust(val_model_path) if "val_X-test_" in n and ".csv" in n
+            ]
+            val_y_files = [n for n in lsdir_robust(val_model_path) if "val_y_" in n and ".csv" in n]
+            assert len(val_X_train_files) == n_fold
+            assert len(val_X_test_files) == n_fold
+            assert len(val_y_files) == n_fold
+
+        # =============== Roll back - result check not in function - end ===============
 
         # Clear test report dir
-        if os.path.exists(test_dir) and finished_1 == "finished" and finished_2 == "finished":
+        # if os.path.exists(test_dir) and finished_1 == "finished" and finished_2 == "finished":
+        if os.path.exists(test_dir):
             shutil.rmtree(test_dir)
 
     @staticmethod
     @silent
-    def test_preprocessing_modeling_classification() -> None:
+    def test_preprocessing_modeling_classification() -> None:  # noqa: C901
         """test preprocessing and modeling functionality for classification"""
 
         if os.getenv("SPECPIPE_PREPROCESS_RESUME_TEST_NUM") is not None:
@@ -1125,21 +1200,92 @@ class TestSpecPipe(unittest.TestCase):
         pipe.preprocessing()
         time.sleep(0.1)
 
-        finished_1 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        # finished_1 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        _ = TestSpecPipe.criteria_preprocessing_result(pipe)
 
         # Modeling
         pipe.model_evaluation()
         time.sleep(0.1)
 
-        finished_2 = TestSpecPipe.criteria_classification_model_report(pipe)
+        # finished_2 = TestSpecPipe.criteria_classification_model_report(pipe)
+
+        # =============== Roll back - result check not in function ===============
+        # Assert reports
+        model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
+        assert os.path.exists(model_report_dir)
+
+        # Report contents
+        model_reports = lsdir_robust(model_report_dir, 4)
+        preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
+        model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
+        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
+        assert len(preprocs_in_modeling) == len(preprocs)
+        assert len(model_reports) == len(pipe.process_chains)
+
+        # Assert model evaluation reports of each chain
+        for dirname in model_reports:
+            # Reports
+            reports = lsdir_robust(model_report_dir + dirname)
+            assert len(reports) == 7
+            # Output model dirs
+            assert "Model_for_application" in reports
+            assert "Model_in_validation" in reports
+            # Check report files
+            match_performance: int = 0
+            match_influence: int = 0
+            match_residual: int = 0
+            match_validation: int = 0
+            match_roc: int = 0
+            for report in reports:
+                if "Validation_results" in report:
+                    match_validation = 1
+                if "Classification_performance" in report:
+                    match_performance = 1
+                if "Residual_analysis" in report:
+                    match_residual = 1
+                if "Influence_analysis" in report:
+                    match_influence = 1
+                if "ROC_curve" in report:
+                    match_roc = 1
+            assert match_validation == 1
+            assert match_performance == 1
+            assert match_residual == 1
+            assert match_influence == 1
+            assert match_roc == 1
+
+            # Models for application
+            app_model_path = model_report_dir + dirname + "/Model_for_application/"
+            model_files = [n for n in lsdir_robust(app_model_path) if "app_model_" in n and ".dill" in n]
+            assert len(model_files) > 0
+
+            # Models in validation
+            val_model_path = model_report_dir + dirname + "/Model_in_validation/"
+            model_files = [n for n in lsdir_robust(val_model_path) if "val_model_" in n and ".dill" in n]
+            assert len(model_files) > 0
+            n_fold = len(model_files)
+
+            # Data in validation
+            val_X_train_files = [  # noqa: N806
+                n for n in lsdir_robust(val_model_path) if "val_X-train_" in n and ".csv" in n
+            ]
+            val_X_test_files = [  # noqa: N806
+                n for n in lsdir_robust(val_model_path) if "val_X-test_" in n and ".csv" in n
+            ]
+            val_y_files = [n for n in lsdir_robust(val_model_path) if "val_y_" in n and ".csv" in n]
+            assert len(val_X_train_files) == n_fold
+            assert len(val_X_test_files) == n_fold
+            assert len(val_y_files) == n_fold
+
+        # =============== Roll back - result check not in function ===============
 
         # Clear test report dir
-        if os.path.exists(test_dir) and finished_1 == "finished" and finished_2 == "finished":
+        # if os.path.exists(test_dir) and finished_1 == "finished" and finished_2 == "finished":
+        if os.path.exists(test_dir):
             shutil.rmtree(test_dir)
 
     @staticmethod
     @silent
-    def test_run_pipe() -> None:
+    def test_run_pipe() -> None:  # noqa: C901
         """test run preprocessing and modeling functionality using SpecPipe.run()"""
 
         if os.getenv("SPECPIPE_PREPROCESS_RESUME_TEST_NUM") is not None:
@@ -1157,36 +1303,182 @@ class TestSpecPipe(unittest.TestCase):
         pipe.run(n_processor=1)
         time.sleep(0.1)
 
-        finished_1 = TestSpecPipe.criteria_preprocessing_result(pipe)
-        finished_2 = TestSpecPipe.criteria_regression_model_report(pipe)
-        finished_3 = "not_started"
-        finished_4 = "not_started"
+        # finished_1 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        # finished_2 = TestSpecPipe.criteria_regression_model_report(pipe)
+        # finished_3 = "not_started"
+        # finished_4 = "not_started"
+
+        # =============== Roll back - result check not in function ===============
+        _ = TestSpecPipe.criteria_preprocessing_result(pipe)
+        # Assert reports
+        model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
+        assert os.path.exists(model_report_dir)
+
+        # Report contents
+        model_reports = lsdir_robust(model_report_dir, 4)
+        preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
+        model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
+        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
+        assert len(preprocs_in_modeling) == len(preprocs)
+        assert len(model_reports) == len(pipe.process_chains)
+
+        # Assert model evaluation reports of each chain
+        for dirname in model_reports:
+            # Reports
+            reports = lsdir_robust(model_report_dir + dirname)
+            assert len(reports) == 8
+            # Output model dirs
+            assert "Model_for_application" in reports
+            assert "Model_in_validation" in reports
+            # Check report files
+            match_performance: int = 0
+            match_influence: int = 0
+            match_residual: int = 0
+            match_validation: int = 0
+            match_scatter: int = 0
+            match_res_plot: int = 0
+            for report in reports:
+                if "Validation_results" in report:
+                    match_validation = 1
+                if "Regression_performance" in report:
+                    match_performance = 1
+                if "Residual_analysis" in report:
+                    match_residual = 1
+                if "Influence_analysis" in report:
+                    match_influence = 1
+                if "Scatter_plot" in report:
+                    match_scatter = 1
+                if "Residual_plot" in report:
+                    match_res_plot = 1
+            assert match_validation == 1
+            assert match_performance == 1
+            assert match_residual == 1
+            assert match_influence == 1
+            assert match_scatter == 1
+            assert match_res_plot == 1
+
+            # Models for application
+            app_model_path = model_report_dir + dirname + "/Model_for_application/"
+            model_files = [n for n in lsdir_robust(app_model_path) if "app_model_" in n and ".dill" in n]
+            assert len(model_files) > 0
+
+            # Models in validation
+            val_model_path = model_report_dir + dirname + "/Model_in_validation/"
+            model_files = [n for n in lsdir_robust(val_model_path) if "val_model_" in n and ".dill" in n]
+            assert len(model_files) > 0
+            n_fold = len(model_files)
+
+            # Data in validation
+            val_X_train_files = [  # noqa: N806
+                n for n in lsdir_robust(val_model_path) if "val_X-train_" in n and ".csv" in n
+            ]
+            val_X_test_files = [  # noqa: N806
+                n for n in lsdir_robust(val_model_path) if "val_X-test_" in n and ".csv" in n
+            ]
+            val_y_files = [n for n in lsdir_robust(val_model_path) if "val_y_" in n and ".csv" in n]
+            assert len(val_X_train_files) == n_fold
+            assert len(val_X_test_files) == n_fold
+            assert len(val_y_files) == n_fold
+
+        # =============== Roll back - result check not in function - end ===============
 
         # Clear test report dir
-        crit_1 = finished_1 == "finished" and finished_2 == "finished"
-        crit_2 = finished_3 == "not_started" and finished_4 == "not_started"
-        if os.path.exists(test_dir) and crit_1 and crit_2:
+        # crit_1 = finished_1 == "finished" and finished_2 == "finished"
+        # crit_2 = finished_3 == "not_started" and finished_4 == "not_started"
+        # if os.path.exists(test_dir) and crit_1 and crit_2:
+        if os.path.exists(test_dir):
             shutil.rmtree(test_dir)
-            run_1_cleared: bool = True
+            # run_1_cleared: bool = True
 
         plt.close("all")
 
         # Classification
-        assert crit_1
-        assert run_1_cleared
+        # assert crit_1
+        # assert run_1_cleared
 
         pipe = create_test_spec_pipe(test_dir, is_regression=False)
 
         pipe.run(n_processor=1)
         time.sleep(0.1)
 
-        finished_3 = TestSpecPipe.criteria_preprocessing_result(pipe)
-        finished_4 = TestSpecPipe.criteria_classification_model_report(pipe)
+        # finished_3 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        # finished_4 = TestSpecPipe.criteria_classification_model_report(pipe)
+
+        # =============== Roll back - result check not in function ===============
+        _ = TestSpecPipe.criteria_preprocessing_result(pipe)
+        # Assert reports
+        model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
+        assert os.path.exists(model_report_dir)
+
+        # Report contents
+        model_reports = lsdir_robust(model_report_dir, 4)
+        preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
+        model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
+        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
+        assert len(preprocs_in_modeling) == len(preprocs)
+        assert len(model_reports) == len(pipe.process_chains)
+
+        # Assert model evaluation reports of each chain
+        for dirname in model_reports:
+            # Reports
+            reports = lsdir_robust(model_report_dir + dirname)
+            assert len(reports) == 7
+            # Output model dirs
+            assert "Model_for_application" in reports
+            assert "Model_in_validation" in reports
+            # Check report files
+            match_performance = 0
+            match_influence = 0
+            match_residual = 0
+            match_validation = 0
+            match_roc = 0
+            for report in reports:
+                if "Validation_results" in report:
+                    match_validation = 1
+                if "Classification_performance" in report:
+                    match_performance = 1
+                if "Residual_analysis" in report:
+                    match_residual = 1
+                if "Influence_analysis" in report:
+                    match_influence = 1
+                if "ROC_curve" in report:
+                    match_roc = 1
+            assert match_validation == 1
+            assert match_performance == 1
+            assert match_residual == 1
+            assert match_influence == 1
+            assert match_roc == 1
+
+            # Models for application
+            app_model_path = model_report_dir + dirname + "/Model_for_application/"
+            model_files = [n for n in lsdir_robust(app_model_path) if "app_model_" in n and ".dill" in n]
+            assert len(model_files) > 0
+
+            # Models in validation
+            val_model_path = model_report_dir + dirname + "/Model_in_validation/"
+            model_files = [n for n in lsdir_robust(val_model_path) if "val_model_" in n and ".dill" in n]
+            assert len(model_files) > 0
+            n_fold = len(model_files)
+
+            # Data in validation
+            val_X_train_files = [  # noqa: N806
+                n for n in lsdir_robust(val_model_path) if "val_X-train_" in n and ".csv" in n
+            ]
+            val_X_test_files = [  # noqa: N806
+                n for n in lsdir_robust(val_model_path) if "val_X-test_" in n and ".csv" in n
+            ]
+            val_y_files = [n for n in lsdir_robust(val_model_path) if "val_y_" in n and ".csv" in n]
+            assert len(val_X_train_files) == n_fold
+            assert len(val_X_test_files) == n_fold
+            assert len(val_y_files) == n_fold
+
+        # =============== Roll back - result check not in function ===============
 
         plt.close("all")
 
         # Clear test report dir
-        if os.path.exists(test_dir) and finished_3 == "finished" and finished_4 == "finished" and crit_1:
+        # if os.path.exists(test_dir) and finished_3 == "finished" and finished_4 == "finished" and crit_1:
+        if os.path.exists(test_dir):
             shutil.rmtree(test_dir)
 
     @staticmethod
@@ -1283,7 +1575,7 @@ class TestSpecPipe(unittest.TestCase):
 
     @staticmethod
     @silent
-    def test_resume_modeling_regression() -> None:
+    def test_resume_modeling_regression() -> None:  # noqa: C901
         """Test resume functionality of 'model_evaluation' of regression models."""
 
         if os.getenv("SPECPIPE_PREPROCESS_RESUME_TEST_NUM") is not None:
@@ -1341,19 +1633,93 @@ class TestSpecPipe(unittest.TestCase):
         time.sleep(0.1)
 
         # Assert result
-        finished = TestSpecPipe.criteria_regression_model_report(pipe)
+        # finished = TestSpecPipe.criteria_regression_model_report(pipe)
+
+        # =============== Roll back - result check not in function ===============
+        # Assert reports
+        model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
+        assert os.path.exists(model_report_dir)
+
+        # Report contents
+        model_reports = lsdir_robust(model_report_dir, 4)
+        preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
+        model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
+        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
+        assert len(preprocs_in_modeling) == len(preprocs)
+        assert len(model_reports) == len(pipe.process_chains)
+
+        # Assert model evaluation reports of each chain
+        for dirname in model_reports:
+            # Reports
+            reports = lsdir_robust(model_report_dir + dirname)
+            assert len(reports) == 8
+            # Output model dirs
+            assert "Model_for_application" in reports
+            assert "Model_in_validation" in reports
+            # Check report files
+            match_performance: int = 0
+            match_influence: int = 0
+            match_residual: int = 0
+            match_validation: int = 0
+            match_scatter: int = 0
+            match_res_plot: int = 0
+            for report in reports:
+                if "Validation_results" in report:
+                    match_validation = 1
+                if "Regression_performance" in report:
+                    match_performance = 1
+                if "Residual_analysis" in report:
+                    match_residual = 1
+                if "Influence_analysis" in report:
+                    match_influence = 1
+                if "Scatter_plot" in report:
+                    match_scatter = 1
+                if "Residual_plot" in report:
+                    match_res_plot = 1
+            assert match_validation == 1
+            assert match_performance == 1
+            assert match_residual == 1
+            assert match_influence == 1
+            assert match_scatter == 1
+            assert match_res_plot == 1
+
+            # Models for application
+            app_model_path = model_report_dir + dirname + "/Model_for_application/"
+            model_files = [n for n in lsdir_robust(app_model_path) if "app_model_" in n and ".dill" in n]
+            assert len(model_files) > 0
+
+            # Models in validation
+            val_model_path = model_report_dir + dirname + "/Model_in_validation/"
+            model_files = [n for n in lsdir_robust(val_model_path) if "val_model_" in n and ".dill" in n]
+            assert len(model_files) > 0
+            n_fold = len(model_files)
+
+            # Data in validation
+            val_X_train_files = [  # noqa: N806
+                n for n in lsdir_robust(val_model_path) if "val_X-train_" in n and ".csv" in n
+            ]
+            val_X_test_files = [  # noqa: N806
+                n for n in lsdir_robust(val_model_path) if "val_X-test_" in n and ".csv" in n
+            ]
+            val_y_files = [n for n in lsdir_robust(val_model_path) if "val_y_" in n and ".csv" in n]
+            assert len(val_X_train_files) == n_fold
+            assert len(val_X_test_files) == n_fold
+            assert len(val_y_files) == n_fold
+
+        # =============== Roll back - result check not in function - end ===============
 
         # Assert no secondary creation of results
         result_ctime1 = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
         assert result_ctime1 == result_ctime
 
         # Clear test report dir
-        if os.path.exists(test_dir) and finished == "finished":
+        # if os.path.exists(test_dir) and finished == "finished":
+        if os.path.exists(test_dir):
             shutil.rmtree(test_dir)
 
     @staticmethod
     @silent
-    def test_resume_modeling_classification() -> None:
+    def test_resume_modeling_classification() -> None:  # noqa: C901
         """Test resume functionality of 'model_evaluation' of classification models."""
 
         if os.getenv("SPECPIPE_PREPROCESS_RESUME_TEST_NUM") is not None:
@@ -1411,14 +1777,84 @@ class TestSpecPipe(unittest.TestCase):
         time.sleep(0.1)
 
         # Assert result
-        finished = TestSpecPipe.criteria_classification_model_report(pipe)
+        # finished = TestSpecPipe.criteria_classification_model_report(pipe)
+
+        # =============== Roll back - result check not in function ===============
+        # Assert reports
+        model_report_dir = f"{test_dir}/Modeling/Model_Evaluation_Reports/"
+        assert os.path.exists(model_report_dir)
+
+        # Report contents
+        model_reports = lsdir_robust(model_report_dir, 4)
+        preprocs_in_modeling = [n for n in model_reports if ".txt" in n]
+        model_reports = [n for n in model_reports if "Data_chain_" in n and "_Model_" in n]
+        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
+        assert len(preprocs_in_modeling) == len(preprocs)
+        assert len(model_reports) == len(pipe.process_chains)
+
+        # Assert model evaluation reports of each chain
+        for dirname in model_reports:
+            # Reports
+            reports = lsdir_robust(model_report_dir + dirname)
+            assert len(reports) == 7
+            # Output model dirs
+            assert "Model_for_application" in reports
+            assert "Model_in_validation" in reports
+            # Check report files
+            match_performance: int = 0
+            match_influence: int = 0
+            match_residual: int = 0
+            match_validation: int = 0
+            match_roc: int = 0
+            for report in reports:
+                if "Validation_results" in report:
+                    match_validation = 1
+                if "Classification_performance" in report:
+                    match_performance = 1
+                if "Residual_analysis" in report:
+                    match_residual = 1
+                if "Influence_analysis" in report:
+                    match_influence = 1
+                if "ROC_curve" in report:
+                    match_roc = 1
+            assert match_validation == 1
+            assert match_performance == 1
+            assert match_residual == 1
+            assert match_influence == 1
+            assert match_roc == 1
+
+            # Models for application
+            app_model_path = model_report_dir + dirname + "/Model_for_application/"
+            model_files = [n for n in lsdir_robust(app_model_path) if "app_model_" in n and ".dill" in n]
+            assert len(model_files) > 0
+
+            # Models in validation
+            val_model_path = model_report_dir + dirname + "/Model_in_validation/"
+            model_files = [n for n in lsdir_robust(val_model_path) if "val_model_" in n and ".dill" in n]
+            assert len(model_files) > 0
+            n_fold = len(model_files)
+
+            # Data in validation
+            val_X_train_files = [  # noqa: N806
+                n for n in lsdir_robust(val_model_path) if "val_X-train_" in n and ".csv" in n
+            ]
+            val_X_test_files = [  # noqa: N806
+                n for n in lsdir_robust(val_model_path) if "val_X-test_" in n and ".csv" in n
+            ]
+            val_y_files = [n for n in lsdir_robust(val_model_path) if "val_y_" in n and ".csv" in n]
+            assert len(val_X_train_files) == n_fold
+            assert len(val_X_test_files) == n_fold
+            assert len(val_y_files) == n_fold
+
+        # =============== Roll back - result check not in function ===============
 
         # Assert no secondary creation of results
         result_ctime1 = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
         assert result_ctime1 == result_ctime
 
         # Clear test report dir
-        if os.path.exists(test_dir) and finished == "finished":
+        # if os.path.exists(test_dir) and finished == "finished":
+        if os.path.exists(test_dir):
             shutil.rmtree(test_dir)
 
     @staticmethod
