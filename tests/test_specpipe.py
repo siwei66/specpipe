@@ -936,8 +936,10 @@ class TestSpecPipe(unittest.TestCase):
             all_existed_files = [
                 os.path.join(root, name) for root, dirs, files in os.walk(test_dir) for name in dirs + files
             ]
-            raise AssertionError(f"Incomplete output result files from model evaluation, \
-                                 found in the pipeline report dir: {all_existed_files}") from e
+            raise AssertionError(
+                f"Incomplete output result files from model evaluation, \
+                                 found in the pipeline report dir: {all_existed_files}"
+            ) from e
 
         # Assert model evaluation reports of each chain
         for dirname in model_reports:
@@ -1022,8 +1024,10 @@ class TestSpecPipe(unittest.TestCase):
             all_existed_files = [
                 os.path.join(root, name) for root, dirs, files in os.walk(test_dir) for name in dirs + files
             ]
-            raise AssertionError(f"Incomplete output result files from model evaluation, \
-                                 found in the pipeline report dir: {all_existed_files}") from e
+            raise AssertionError(
+                f"Incomplete output result files from model evaluation, \
+                                 found in the pipeline report dir: {all_existed_files}"
+            ) from e
 
         # Assert model evaluation reports of each chain
         for dirname in model_reports:

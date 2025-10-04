@@ -3608,12 +3608,12 @@ class TestLsdirRobust:
         test_dir = tempfile.mkdtemp()
         _ = TestLsdirRobust.create_test_files(test_dir)
 
-        files_lsdir_r = lsdir_robust(test_dir, 5, retry_limit=1)
+        files_lsdir_r = lsdir_robust(test_dir, 5, retry=1)
         assert files_lsdir_r is not None
         assert len(list(files_lsdir_r)) == 6
 
         with pytest.raises(ValueError, match="Failed to fetch required minimal number of results"):
-            files_lsdir_r = lsdir_robust(test_dir, 6, retry_limit=1)
+            files_lsdir_r = lsdir_robust(test_dir, 6, retry=1)
 
         if os.path.exists(test_dir):
             shutil.rmtree(test_dir)

@@ -1468,19 +1468,19 @@ def silent(func: Callable) -> Callable:
 
 
 def lsdir_robust(
-    path: str, fetch_number_gt: int = 0, *, retry_limit: int = 5, time_wait_min: float = 0.5, time_wait_max: float = 20
+    path: str, fetch_number_gt: int = 0, *, retry: int = 5, time_wait_min: float = 0.5, time_wait_max: float = 20
 ) -> list:
     """
     Substitution of listdir with retry for file-related testing using GitHub workflow actions.
     """
     # Validate configs
-    retry_limit = max(int(retry_limit), 1)
+    retry = max(int(retry), 1)
     time_wait_min = max(time_wait_min, 0.1)
     time_wait_max = max(time_wait_min, 0.2)
     fetch_number_gt = max(int(fetch_number_gt), 0)
 
     # Fetch loop
-    for retry in range(retry_limit):
+    for run_i in range(retry):
         # OS listdir method
         try:
             result = os.listdir(path)
@@ -1504,10 +1504,10 @@ def lsdir_robust(
         except OSError:
             pass
 
-        if retry < (retry_limit - 1):
+        if run_i < (retry - 1):
             # Wait time
-            time_wait_coef: float = (time_wait_max / time_wait_min) ** (1 / max(1, retry_limit - 1))
-            wait_time: float = time_wait_min * (time_wait_coef**retry)
+            time_wait_coef: float = (time_wait_max / time_wait_min) ** (1 / max(1, retry - 1))
+            wait_time: float = time_wait_min * (time_wait_coef**run_i)
             time.sleep(wait_time)
 
     # Not fetch required number of result
