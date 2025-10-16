@@ -953,10 +953,8 @@ class SpecPipe:
             elif len(spec_exp.rois_sample) == 0:
                 raise ValueError("Neither sample ROI nor standalone spectrum is found in given SpecExp")
             for g in spec_exp.groups:
-                group_images = spec_exp.ls_images(group_name=g, return_dataframe=True, print_result=False)
-                group_rois = spec_exp.ls_rois(
-                    group_name=g, roi_type="sample", return_dataframe=True, print_result=False
-                )
+                group_images = spec_exp.ls_images(group=g, return_dataframe=True, print_result=False)
+                group_rois = spec_exp.ls_rois(group=g, roi_type="sample", return_dataframe=True, print_result=False)
                 if len(group_images) == 0:
                     raise ValueError(f"Neither image nor standalone spectrum is found in group: '{g}'")
                 elif len(group_rois) == 0:
@@ -972,7 +970,7 @@ class SpecPipe:
                 if (
                     len(
                         spec_exp.ls_standalone_specs(
-                            group_name=g,
+                            group=g,
                             use_type="sample",
                             print_result=False,
                             return_dataframe=True,
@@ -3277,6 +3275,8 @@ class SpecPipe:
                     ignore_index=True,
                     axis=1,
                 )
+                # Recover colnames
+                df_chain_res.columns = ["Preprocessing_chain"] + coln_chain_res
                 # Save table to CSV
                 res_path_csv = preprocess_result_dir + chain_name1 + ".csv"
                 df_to_csv(df_chain_res, res_path_csv, index=False, return_path=False)

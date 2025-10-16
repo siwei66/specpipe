@@ -47,7 +47,7 @@ exp.rm_group("group_2")
 
 # 2.3. Raster image management
 # Add raster images
-exp.add_images(group_name="group_1", image_name="example", image_directory=data_dir)
+exp.add_images_by_name(image_name="example", image_directory=data_dir, group="group_1")
 
 # Check added images
 exp.ls_images()
@@ -55,13 +55,13 @@ exp.ls_images()
 
 # 2.4. Region of interest (ROI) management
 # Load image ROIs using suffix to image names
-exp.add_rois_by_suffix("group_1", "_roi.xml", data_dir)
+exp.add_rois_by_suffix("_roi.xml", data_dir, "group_1")
 
 # Remove ROIs by name
 exp.rm_rois(roi_name="ROI_10")
 
 # Load ROIs to a image using ROI files by paths
-exp.add_rois_by_file("group_1", [f"{data_dir}/example_roi.xml"], image_name="example.tif")
+exp.add_rois_by_file([f"{data_dir}/example_roi.xml"], image_name="example.tif", group="group_1")
 
 # Check added ROIs
 exp.ls_rois()
@@ -104,29 +104,29 @@ exp.ls_targets()
 # 3. Design testing pipeline
 """
 The processing functions are wrapped according to different 'data levels'.
-A classic data levels in spectral image processing is: 
+A classic data levels in spectral image processing is:
 ##    raster image data -> ROI spectra -> ROI statistics -> traits to model
 
 The data levels in SpecPipe is:
-    Images: 
+    Images:
     0 - 'image', input image path and output processed image path.
-    
-    Image pixel spectra: 
+
+    Image pixel spectra:
     1 - 'pixel_spec', 1D spectrum of image pixel
     2 - 'pixel_specs_array', 2D spectra array of image pixels
     3 - 'pixel_specs_tensor', 2D spectra tensor of image pixels
     4 - 'pixel_hyperspecs_tensor', 2D hyperspectra tensor of image pixels (optimized tiling for hyperspectral images)
     (See 'rasterop.pixel_apply')
-    
+
     Image ROIs
     5 - 'image_roi', get image ROI data, commonly get a unsorted list of ROI spectra
     6 - 'roispecs', ROI spectra in array
     7 - 'spec1d', arbitray 1D data extracted from roispecs or 1D spectra data from spectrascopy
-    
+
     Models
     8 - 'model', model evaluation with standard reports in files, only as output level.
 
-A process method is wrapped according to its data level, 
+A process method is wrapped according to its data level,
 Parallel processes with same data levels and application sequences are arranged using full-factorial approach by default.
 """
 

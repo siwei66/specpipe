@@ -204,14 +204,14 @@ class TestSpecPipe(unittest.TestCase):
             # Add img - no ROI
             img_path = test_dir + "/test_img.tif"
             create_test_raster(raster_path=img_path, width=50, height=50, bands=4)
-            test_exp.add_images("test_group", ["test_img.tif"], test_dir)
+            test_exp.add_images_by_name(image_name=["test_img.tif"], image_directory=test_dir, group="test_group")
             with pytest.raises(ValueError, match="Neither sample ROI nor standalone spectrum is found"):
                 SpecPipe(test_exp)
 
             # Add ROI - no targets
             roi_path = test_dir + "/test_roi.xml"
             create_test_roi_xml(roi_path, roi_count=10)
-            test_exp.add_rois_by_file("test_group", [roi_path], "test_img.tif")
+            test_exp.add_rois_by_file(group="test_group", path_list=[roi_path], image_name="test_img.tif")
             with pytest.raises(ValueError, match="No sample target value is found"):
                 SpecPipe(test_exp)
 
@@ -241,7 +241,7 @@ class TestSpecPipe(unittest.TestCase):
                 SpecPipe(test_exp)
 
             # Add img - incomplete single group without ROI
-            test_exp.add_images("test_group2", ["test_img.tif"], test_dir)
+            test_exp.add_images_by_name(image_name=["test_img.tif"], image_directory=test_dir, group="test_group2")
             with pytest.raises(
                 ValueError,
                 match="Neither image sample ROI nor standalone spectrum is found in group: 'test_group2'",
@@ -249,7 +249,7 @@ class TestSpecPipe(unittest.TestCase):
                 SpecPipe(test_exp)
 
             # Add standalone spec - hybrid exp error
-            test_exp.add_standalone_specs("test_group", [[1, 2, 3, 4], [5, 6, 7, 8]])
+            test_exp.add_standalone_specs(group="test_group", spec_data=[[1, 2, 3, 4], [5, 6, 7, 8]])
             with pytest.raises(
                 ValueError,
                 match="Hybrid samples",
@@ -272,7 +272,7 @@ class TestSpecPipe(unittest.TestCase):
         with tempfile.TemporaryDirectory() as test_dir:
             test_exp = SpecExp(test_dir)
             test_exp.add_groups(["test_group"])
-            test_exp.add_standalone_specs("test_group", [[1, 2, 3, 4], [5, 6, 7, 8]])
+            test_exp.add_standalone_specs(group="test_group", spec_data=[[1, 2, 3, 4], [5, 6, 7, 8]])
             test_exp.add_groups(["test_group2"])
             with pytest.raises(ValueError, match="No spectrum is found in group: 'test_group2'"):
                 SpecPipe(test_exp)

@@ -98,10 +98,10 @@ The instance stores and organizes the data loading configurations of an experime
 
 - Add raster images:
     ```python
-    exp.add_images(
-        group_name = 'group_1', 
-        image_name = 'example', 
-        image_directory = data_dir
+    exp.add_images_by_name(
+        image_name = 'example',
+        image_directory = data_dir,
+        group = 'group_1'
         )
     ```
 
@@ -115,7 +115,7 @@ The instance stores and organizes the data loading configurations of an experime
 
 - Load image ROIs using suffix to image names:
     ```python
-    exp.add_rois_by_suffix('group_1', '_roi.xml', data_dir)
+    exp.add_rois_by_suffix("_roi.xml", data_dir, "group_1")
     ```
 
 - Remove ROIs by name:
@@ -125,7 +125,7 @@ The instance stores and organizes the data loading configurations of an experime
 
 - Load ROIs to a image using ROI files by paths:
     ```python
-    exp.add_rois_by_file('group_1', [f"{data_dir}/example_roi.xml"], image_name='example.tif')
+    exp.add_rois_by_file([f"{data_dir}/example_roi.xml"], image_name="example.tif", group="group_1")
     ```
 
 - Check added ROIs:
