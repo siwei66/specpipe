@@ -5,20 +5,20 @@ Example data generator for SpecPipe
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
-# OS Files
+# OS
 import os
 
 # Typing
 from typing import Optional, Union
 
-# Testing third
+# Basic data processing
 import numpy as np
 import pandas as pd
 
 # Rasters
 import rasterio
 
-# Self
+# Local
 from .specexp import SpecExp
 from .specio import roi_to_envi_xml, silent, simple_type_validator
 

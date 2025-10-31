@@ -5,33 +5,38 @@ Model evaluation module for SpecPipe - model wrapers and comprehensive model eva
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
-# Basics
-import copy
-import math
+# OS
 import os
-
-# For local test - delete after use
-import warnings
-from datetime import datetime
 from pathlib import Path
+
+# Warning
+import warnings
 
 # Typing
 from typing import Annotated, Any, Literal, Optional, Union, overload
 
-# Model to file
-import dill
+# Time
+from datetime import datetime
 
-# Visualization
-import matplotlib.pyplot as plt
+# Basic data
+import copy
 import numpy as np
 import pandas as pd
 import torch
+
+# Math
+import math
 from scipy.spatial.distance import mahalanobis
 from scipy.stats import entropy
+
+# Modeling
+from sklearn.model_selection import KFold, LeaveOneOut, StratifiedKFold, train_test_split
+from sklearn.preprocessing import OneHotEncoder
 
 # Model evaluation
 from sklearn.metrics import (
     accuracy_score,
+    roc_auc_score,
     auc,
     confusion_matrix,
     f1_score,
@@ -43,15 +48,16 @@ from sklearn.metrics import (
     roc_curve,
 )
 
-# Data
-from sklearn.model_selection import KFold, LeaveOneOut, StratifiedKFold, train_test_split
+# Visualization
+import matplotlib.pyplot as plt
 
-# Modeling
-from sklearn.preprocessing import OneHotEncoder
+# Model to file
+import dill
 
-# Self
+# Local
 from .roistats import round_digit
 from .specio import arraylike_validator, simple_type_validator
+
 
 # %% Validate data types - for regression and classification distinguishing
 
@@ -934,6 +940,7 @@ class ModelEva:
         # Get data
         y_true = self._y_true_eva
         y_pred = self._y_pred_eva
+        y_true_proba = self._y_true_proba_eva
         y_pred_proba = self._y_pred_proba_eva
 
         # Validate data
@@ -1007,6 +1014,7 @@ class ModelEva:
 
         # Calculate overall accuracy, micro- and macro-average metrics
         accuracy_micro = accuracy_score(y_true, y_pred)
+        auc_micro = roc_auc_score(y_true_proba, y_pred_proba, average='micro')
         micro_precision = precision_score(y_true, y_pred, average="micro", zero_division=np.nan)
         micro_recall = recall_score(y_true, y_pred, average="micro", zero_division=np.nan)
         micro_f1 = f1_score(y_true, y_pred, average="micro", zero_division=np.nan)
@@ -1021,11 +1029,12 @@ class ModelEva:
                 "Recall": [micro_recall],
                 "F1_Score": [micro_f1],
                 "Accuracy": [accuracy_micro],
-                "AUC": ["-"],
+                "AUC": [auc_micro],
             }
         )
         accuracy_macro = metrics_df["Accuracy"].mean()
-        auc_macro = metrics_df["AUC"].mean()
+        auc_macro = roc_auc_score(y_true_proba, y_pred_proba, average='macro')
+        # auc_macro = metrics_df["AUC"].mean()
         macro_precision = precision_score(y_true, y_pred, average="macro", zero_division=np.nan)
         macro_recall = recall_score(y_true, y_pred, average="macro", zero_division=np.nan)
         macro_f1 = f1_score(y_true, y_pred, average="macro", zero_division=np.nan)

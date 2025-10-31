@@ -5,27 +5,30 @@ High-performance raster image operation toolset for SpecPipe
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
-# Basics
+# OS
 import os
 
-# For local test - delete after use
+# Interface
+from tqdm import tqdm
+
 # Typing
 from typing import Callable, Optional, Union, overload
 
+# Basic data
 import numpy as np
+
+# Raster
 import rasterio
+from rasterio.mask import mask
+from rasterio.windows import Window
+from shapely.geometry import Polygon
 
 # GPU acceleration
 import torch
 
-# Raster
-from rasterio.mask import mask
-from rasterio.windows import Window
-from shapely.geometry import Polygon
-from tqdm import tqdm
-
-# Self
+# Local
 from .specio import simple_type_validator
+
 
 # %% Crop ROI
 

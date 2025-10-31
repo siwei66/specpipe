@@ -8,7 +8,6 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 # ruff: noqa: I001
 # OS
 import os
-import time
 
 # Initialize LOKY_MAX_CPU_COUNT if it does not exist before imports to prevent corresponding warning
 os.environ.setdefault('LOKY_MAX_CPU_COUNT', '1')
@@ -20,32 +19,33 @@ import shutil  # noqa: E402
 import tempfile  # noqa: E402
 import unittest  # noqa: E402
 
-# Plots
-import matplotlib.pyplot as plt  # noqa: E402
+# Time
+import time
 
-# Testing third
+# Basic data
 import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
 import pytest  # noqa: E402
 import torch  # noqa: E402
 
-# Modeling
+# Models
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor  # noqa: E402
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor  # noqa: E402
+
+# Visualization
+import matplotlib.pyplot as plt  # noqa: E402
 
 # Multiprocessing
 from pathos.helpers import cpu_count  # noqa: E402
 
-# Self
-# Applied package functions for test
+# Local
 from specpipe.example_data import create_test_raster, create_test_roi_xml, create_test_spec_exp  # noqa: E402
 from specpipe.roistats import Stats2d, roi_mean, roispec  # noqa: E402
 from specpipe.specexp import SpecExp  # noqa: E402
 from specpipe.specio import silent, lsdir_robust  # noqa: E402
 
-# Funcs to test
+# Functions to test
 from specpipe.specpipe import SpecPipe, _dl_val  # noqa: E402
-
-# ruff: noqa: I001
 
 # Confirm proper LOKY_MAX_CPU_COUNT
 loky_max_cpu_count = str(cpu_count())
@@ -646,6 +646,17 @@ class TestSpecPipe(unittest.TestCase):
             assert np.all(pcs_dfs[0] == pcs_dfs1[0])
             assert np.all(pcs_dfs[1] == pcs_dfs1[1])
 
+            # ls_custom_chains and ls_chains
+            df_chains = pipe.ls_chains(print_label=False)
+            assert df_chains.shape[0] == 2
+            assert (df_chains.to_numpy() == pipe.ls_process_chains(print_label=False).to_numpy()).all()
+            df_custom_chains = pipe.ls_custom_chains(print_label=False)
+            assert df_custom_chains is None
+            pcs_dfs2 = pcs_dfs[0].iloc[:-1, :]
+            pipe.custom_chains_from_df(pcs_dfs2)
+            assert pipe.ls_custom_chains(print_label=False).shape[0] == 1
+            assert (pipe.ls_chains().to_numpy() == pipe.ls_custom_chains().to_numpy()).all()
+
         # Clear test report dir
         if os.path.exists(test_dir):
             shutil.rmtree(test_dir)
@@ -671,6 +682,35 @@ class TestSpecPipe(unittest.TestCase):
             assert pipe.custom_chains == []
             pipe.custom_chains_from_df(pcs_df)
             assert (np.array(pipe.custom_chains) == pcs_df.to_numpy()).all()
+
+        # Clear test report dir
+        if os.path.exists(test_dir):
+            shutil.rmtree(test_dir)
+
+    @staticmethod
+    @silent
+    def test_save_load_config() -> None:  # noqa: C901
+        """Test save and load pipeline configurations"""
+        regressor = RandomForestRegressor(n_estimators=10)
+        with tempfile.TemporaryDirectory() as test_dir:
+            # Create test spec exp
+            test_exp = create_test_spec_exp(test_dir)
+            pipe = SpecPipe(test_exp)
+
+            # Add process
+            pipe.add_process(0, 0, 0, original_img)
+            pipe.add_process(5, 7, 0, roi_mean)
+            pipe.add_process(7, 8, 0, regressor)
+
+            assert len(pipe.process_chains) == 1
+
+            pipe.save_pipe_config()
+
+            pipe.add_process(7, 8, 0, regressor)
+            assert len(pipe.process_chains) == 2
+
+            pipe.load_pipe_config()
+            assert len(pipe.process_chains) == 1
 
         # Clear test report dir
         if os.path.exists(test_dir):
@@ -879,7 +919,7 @@ class TestSpecPipe(unittest.TestCase):
 
     @staticmethod
     @silent
-    def criteria_preprocessing_result(pipe: SpecPipe) -> str:
+    def criteria_preprocessing_result(pipe: SpecPipe) -> str:  # noqa: C901
         """Test criteria for preprocessing"""
 
         test_dir = pipe.report_directory
@@ -911,11 +951,33 @@ class TestSpecPipe(unittest.TestCase):
         ]
         assert len(preproc_step_names) == len(pipe.sample_data)
 
+        # Summary files
+        path_X_mean = test_dir + "Preprocessing/" + "PreprocessingChainResult_chain_ind_0_X_mean.csv"  # noqa: N806
+        path_X_std = test_dir + "Preprocessing/" + "PreprocessingChainResult_chain_ind_0_X_std.csv"  # noqa: N806
+        path_X_skew = test_dir + "Preprocessing/" + "PreprocessingChainResult_chain_ind_0_X_skewness.csv"  # noqa: N806
+        path_X_kurt = test_dir + "Preprocessing/" + "PreprocessingChainResult_chain_ind_0_X_kurtosis.csv"  # noqa: N806
+        path_X_min = test_dir + "Preprocessing/" + "PreprocessingChainResult_chain_ind_0_X_min.csv"  # noqa: N806
+        path_X_median = test_dir + "Preprocessing/" + "PreprocessingChainResult_chain_ind_0_X_median.csv"  # noqa: N806
+        path_X_max = test_dir + "Preprocessing/" + "PreprocessingChainResult_chain_ind_0_X_max.csv"  # noqa: N806
+        path_y_stats = test_dir + "Preprocessing/" + "PreprocessingChainResult_chain_ind_0_y_stats.csv"
+        path_y1_stats = test_dir + "Modeling/" + "sample_targets_stats.csv"
+
+        # Resulting files
+        assert os.path.exists(path_X_mean)
+        assert os.path.exists(path_X_std)
+        assert os.path.exists(path_X_skew)
+        assert os.path.exists(path_X_kurt)
+        assert os.path.exists(path_X_min)
+        assert os.path.exists(path_X_median)
+        assert os.path.exists(path_X_max)
+        assert os.path.exists(path_y_stats)
+        assert os.path.exists(path_y1_stats)
+
         return "finished"
 
     @staticmethod
     @silent
-    def criteria_regression_model_report(pipe: SpecPipe) -> str:
+    def criteria_regression_model_report(pipe: SpecPipe) -> str:  # noqa: C901
         """Test criteria for regression model reports"""
         test_dir = pipe.report_directory
         assert os.path.exists(test_dir)
@@ -1002,11 +1064,26 @@ class TestSpecPipe(unittest.TestCase):
             assert len(val_X_test_files) == n_fold
             assert len(val_y_files) == n_fold
 
+        # Summary files
+        rdir = f"{test_dir}Modeling/Model_evaluation_reports/"
+        step_perf_sum_path = f"{rdir}Performance_summary.csv"
+        assert os.path.exists(step_perf_sum_path)
+        # Step marginal performance
+        df_chains = pipe.ls_chains(print_label=False)
+        for step in df_chains.columns:
+            step_perf_path = f"{test_dir}Modeling/Model_evaluation_reports/Marginal_R2_stats_{str(step).lower()}.csv"
+            if len(list(df_chains[step].unique())) > 1:
+                assert os.path.exists(step_perf_path)
+                step_perf_stats = pd.read_csv(step_perf_path)
+                assert not ((step_perf_stats.iloc[1:, 1:] == 0) | (step_perf_stats.iloc[1:, 1:].isna())).all().all()
+            else:
+                assert not os.path.exists(step_perf_path)
+
         return "finished"
 
     @staticmethod
     @silent
-    def criteria_classification_model_report(pipe: SpecPipe) -> str:
+    def criteria_classification_model_report(pipe: SpecPipe) -> str:  # noqa: C901
         """Test criteria for classification model reports"""
         test_dir = pipe.report_directory
         assert os.path.exists(test_dir)
@@ -1088,6 +1165,28 @@ class TestSpecPipe(unittest.TestCase):
             assert len(val_X_train_files) == n_fold
             assert len(val_X_test_files) == n_fold
             assert len(val_y_files) == n_fold
+
+        # Summary files
+        rdir = f"{test_dir}Modeling/Model_evaluation_reports/"
+        step_mac_sum_path = f"{rdir}Macro_avg_performance_summary.csv"
+        step_mic_sum_path = f"{rdir}Micro_avg_performance_summary.csv"
+        assert os.path.exists(step_mac_sum_path)
+        assert os.path.exists(step_mic_sum_path)
+        # Step marginal performance
+        df_chains1 = pipe.ls_chains(print_label=False)
+        for step in df_chains1.columns:
+            step_macro_path = f"{rdir}Marginal_macro_avg_AUC_stats_{str(step).lower()}.csv"
+            step_micro_path = f"{rdir}Marginal_micro_avg_AUC_stats_{str(step).lower()}.csv"
+            if len(list(df_chains1[step].unique())) > 1:
+                assert os.path.exists(step_macro_path)
+                assert os.path.exists(step_micro_path)
+                step_macro_stats = pd.read_csv(step_macro_path)
+                step_micro_stats = pd.read_csv(step_micro_path)
+                assert not ((step_macro_stats.iloc[1:, 1:] == 0) | (step_macro_stats.iloc[1:, 1:].isna())).all().all()
+                assert not ((step_micro_stats.iloc[1:, 1:] == 0) | (step_micro_stats.iloc[1:, 1:].isna())).all().all()
+            else:
+                assert not os.path.exists(step_macro_path)
+                assert not os.path.exists(step_micro_path)
 
         return "finished"
 
@@ -1268,7 +1367,7 @@ class TestSpecPipe(unittest.TestCase):
         pipe._tested = True  # skip test_run
         with pytest.raises(ValueError, match="Preprocessing resume test raise"):
             pipe.preprocessing(resume=True)
-            time.sleep(0.1)
+            # time.sleep(0.1)
 
         # Assert step result files with break
         test_dir = pipe.report_directory
@@ -1452,8 +1551,8 @@ class TestSpecPipe(unittest.TestCase):
             pipe = create_test_spec_pipe(test_dir)
 
             # Assert alias
-            assert pipe.ls_process_chains == pipe.ls_chains
             assert pipe.ls_process_chains == pipe.process_chains_to_df
+            assert pipe.ls_custom_chains == pipe.custom_chains_to_df
 
 
 # %% Tests - SpecPipe
@@ -1474,6 +1573,8 @@ class TestSpecPipe(unittest.TestCase):
 
 # TestSpecPipe.test_process_chains_to_df()
 # TestSpecPipe.test_custom_chains_from_df()
+
+# TestSpecPipe.test_save_load_config()
 
 # TestSpecPipe.test_test_run_regression()
 # TestSpecPipe.test_test_run_classification()

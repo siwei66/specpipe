@@ -5,33 +5,33 @@ SpecExp - Data management module for spectral experiments
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
-# Basics
+# OS
 import os
-
-# For local test - delete after use
-import warnings
-from datetime import datetime
 from pathlib import Path
+import dill
+
+# Warning
+import warnings
 
 # Typing
 from typing import Annotated, Any, Callable, Literal, Optional, Union, overload
 
+# Time
+from datetime import datetime
+
+# Basic data
 import numpy as np
-
-# Calculation
 import pandas as pd
-from pydantic import AfterValidator, validate_call
 
-# Self
+# Local
 from .specio import (
     arraylike_validator,
     dataframe_validator,
-    dump_vars,
     envi_roi_coords,
-    load_vars,
     names_filter,
     search_file,
     shp_roi_coords,
+    simple_type_validator,
 )
 
 # %% Spectral Experiment Class - SpecExp
@@ -66,7 +66,7 @@ class SpecExp:
             Raster image for sample spectral data.
             Type and data structure same as 'images'.
 
-        - raster_masks
+        - images_mask
             Raster image serving as masks.
             Type and data structure same as 'images'.
 
@@ -101,11 +101,11 @@ class SpecExp:
             Standalone spectral data serving as training samples.
 
     ** Sample labels **
-        - sample_labels : list[tuple[str,str]], [(0 fixed sample index, 1 custom labels)]
+        - sample_labels : list[tuple[str,str,str]], [(0 fixed sample index, 1 custom labels, 2 groups)]
             Custom sample labels.
 
     ** Sample target values **
-        - sample_targets : list[tuple[str,str,Union[str,bool,int,float]]], [(0 fixed sample id, 1 custom labels, 2 Target values)]
+        - sample_targets : list[tuple[str,str,Union[str,bool,int,float],str]], [(0 fixed sample id, 1 custom labels, 2 target values, 3 groups)]
             Target values of samples for modeling.
 
 
@@ -195,7 +195,7 @@ class SpecExp:
 
     """  # noqa: E501
 
-    @validate_call
+    @simple_type_validator
     def __init__(self, report_directory: str, log_loading: bool = True) -> None:
         # log_loading
         self._log_loading: bool = log_loading
@@ -215,7 +215,7 @@ class SpecExp:
         # [0 id, 1 group, 2 image_name, 3 mask_of, 4 image_path]
         self._images: list[tuple[str, str, str, str, str]] = []
         self._images_data: list[tuple[str, str, str, str, str]] = []
-        self._raster_masks: list[tuple[str, str, str, str, str]] = []
+        self._images_mask: list[tuple[str, str, str, str, str]] = []
 
         # ROI I/O - file-loaded ROIs & console-added ROIs
         # [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path]  # noqa: E501
@@ -243,12 +243,12 @@ class SpecExp:
         self._standalone_specs_sample: list[tuple[str, str, str, str, list[Union[float, int]]]] = []
 
         # Sample labels
-        # [0 fixed sample id, 1 user assinged labels]
-        self._sample_labels: list[tuple[str, str]] = []
+        # [0 fixed sample id, 1 user assinged labels, 2 sample belonging group]
+        self._sample_labels: list[tuple[str, str, str]] = []
 
         # Sample targets
-        # [0 fixed sample id, 1 user assinged labels, 2 Target values]
-        self._sample_targets: list[tuple[str, str, Union[str, bool, int, float]]] = []
+        # [0 fixed sample id, 1 user assinged labels, 2 target values, 3 sample belonging group]
+        self._sample_targets: list[tuple[str, str, Union[str, bool, int, float], str]] = []
 
         # Creating time
         self._create_time = datetime.now().strftime("created_at_%Y-%m-%d_%H-%M-%S")
@@ -268,22 +268,22 @@ class SpecExp:
         self._report_directory = value
 
     @property
-    def sample_labels(self) -> list[tuple[str, str]]:
+    def sample_labels(self) -> list[tuple[str, str, str]]:
         return self._sample_labels
 
     @sample_labels.setter
-    def sample_labels(self, value: list[tuple[str, str]]) -> None:
+    def sample_labels(self, value: list[tuple[str, str, str]]) -> None:
         # Validate shape
         arraylike_validator(ndim=2)(value)
         value_df = pd.DataFrame(value)
-        value_df.columns = ["ID", "label"]
+        value_df.columns = ["Sample_ID", "Label", "Group"]
         value_df = value_df.astype(str)
         if len(self._sample_labels) == 0:
             raise ValueError("Cannot set sample labels: No samples exist.\nPlease add samples first.")
         else:
-            value_df = dataframe_validator(shape=(len(self._sample_labels), 2))(value_df)
+            value_df = dataframe_validator(shape=(len(self._sample_labels), 3))(value_df)
         # Validate labels
-        lb_list = list(value_df["label"])
+        lb_list = list(value_df["Label"])
         lbset = set(lb_list)
         lbset.discard("-")
         lb_list_valid = [v for v in lb_list if v != "-"]
@@ -291,46 +291,62 @@ class SpecExp:
             duplicates = [v for v in lb_list if lb_list.count(v) > 1]
             raise ValueError(f"Sample labels must be unique, got duplicated label(s) : {duplicates}")
         # Validate IDs
-        idv_list = list(value_df["ID"])
+        idv_list = list(value_df["Sample_ID"])
         ids_list = [lbt[0] for lbt in self._sample_labels]
         idv = set(idv_list)
         ids = set(ids_list)
         if idv == ids:
-            new_lbs = [(sid, value_df["label"][value_df["ID"] == sid].values[0]) for sid in ids_list]
+            new_lbs = [
+                (sid, value_df["Label"][value_df["Sample_ID"] == sid].values[0], self._sample_id_to_group([sid])[0])
+                for sid in ids_list
+            ]
         else:
             raise ValueError(
                 f"Given sample labels and existed sample labels do not match\n\n\
                     Got sample labels:\n{idv_list},\n\nexisted sample labels:\n{ids_list}"
             )
         self._sample_labels = new_lbs
+        # Update labels in sample_targets
+        sample_targets = []
+        for lbt in new_lbs:
+            sid = lbt[0]
+            lbi = lbt[1]
+            sgroup = lbt[2]
+            target, sgroup1 = [tgt[2:4] for tgt in self.sample_targets if tgt[0] == sid][0]
+            # Validate group consistency
+            assert sgroup == sgroup1
+            sample_targets.append((sid, lbi, target, sgroup))
+        self._sample_targets = sample_targets
 
     @property
-    def sample_targets(self) -> list[tuple[str, str, Union[str, bool, int, float]]]:
+    def sample_targets(self) -> list[tuple[str, str, Union[str, bool, int, float], str]]:
         return self._sample_targets
 
     @sample_targets.setter
-    def sample_targets(self, value: Union[pd.DataFrame, list[tuple[str, str, Union[str, bool, int, float]]]]) -> None:
+    def sample_targets(
+        self, value: Union[pd.DataFrame, np.ndarray, list[tuple[str, str, Union[str, bool, int, float], str]]]
+    ) -> None:
         # Validate retrieved
         if type(value) is pd.DataFrame:
-            if (value.columns == ["Sample_ID", "Sample_label", "Target_value"]).all() & (
+            if (value.columns == ["Sample_ID", "Label", "Target_value", "Group"]).all() & (
                 list(value["Sample_ID"]) == [lbt[0] for lbt in self._sample_labels]
             ):
-                value = value.iloc[:, 1:]
+                value = value.iloc[:, :]
         # Validate shape
         value_arr = arraylike_validator(ndim=2)(value)
         del value
         value_df = pd.DataFrame(value_arr)
         del value_arr
-        value_df.columns = ["label", "value"]
-        value_df["label"] = value_df["label"].astype(str)
+        value_df.columns = ["Sample_ID", "Label", "Target_value", "Group"]
+        value_df["Label"] = value_df["Label"].astype(str)
         if len(self._sample_labels) == 0:
             raise ValueError("Cannot set target values: No samples exist.\nPlease add samples first.")
         if len(self._sample_targets) == 0:
-            value_df = dataframe_validator(shape=(len(self._sample_labels), 2))(value_df)
+            value_df = dataframe_validator(shape=(len(self._sample_labels), 4))(value_df)
         else:
-            value_df = dataframe_validator(shape=(len(self._sample_targets), 2))(value_df)
+            value_df = dataframe_validator(shape=(len(self._sample_targets), 4))(value_df)
         # Validate labels
-        labelv_list = list(value_df["label"])
+        labelv_list = list(value_df["Label"])
         labels_list = [st[1] for st in self._sample_labels]
         labelv = set(labelv_list)
         labels = set(labels_list)
@@ -344,11 +360,12 @@ class SpecExp:
                     \n{labelv_list}\nThe target values are matched by order of samples.\n"
                 warnings.warn(warn_msg, UserWarning, stacklevel=2)
             # Sample values
-            # [0 fixed sample id, 1 user assinged labels, 2 Target values]
-            sample_targets = [lt + (t,) for lt, t in zip(self._sample_labels, value_df["value"])]
+            # [0 fixed sample id, 1 user assinged labels, 2 target values, 3 sample belonging group]
+            sample_targets = [lt[0:2] + (t,) + lt[2:] for lt, t in zip(self._sample_labels, value_df["Target_value"])]
         elif labelv == labels:
             sample_targets = [
-                lt + (value_df["value"][value_df["label"] == lt[1]].values[0],) for lt in self._sample_labels
+                lt[0:2] + (value_df["Target_value"][value_df["Label"] == lt[1]].values[0],) + lt[2:]
+                for lt in self._sample_labels
             ]
         else:
             raise ValueError(
@@ -405,13 +422,13 @@ class SpecExp:
         )
 
     @property
-    def raster_masks(self) -> list[tuple[str, str, str, str, str]]:
-        return self._raster_masks
+    def images_mask(self) -> list[tuple[str, str, str, str, str]]:
+        return self._images_mask
 
-    @raster_masks.setter
-    def raster_masks(self, value: list[tuple[str, str, str, str, str]]) -> None:
+    @images_mask.setter
+    def images_mask(self, value: list[tuple[str, str, str, str, str]]) -> None:
         raise ValueError(
-            "raster_masks cannot be modified directly, \
+            "images_mask cannot be modified directly, \
                 use method 'add_images_by_name', 'add_images_by_path' and 'rm_images' instead"
         )
 
@@ -507,7 +524,7 @@ class SpecExp:
     # Add experiment groups by list of group names
     # Format of associated attribute:
     # self._groups: [0 group]
-    @validate_call
+    @simple_type_validator
     def add_groups(self, group_name_list: list[str]) -> None:
         """
         Add experiment groups by list of group names.
@@ -533,7 +550,7 @@ class SpecExp:
     # self._images: [0 id, 1 group, 2 image_name, 3 mask_of, 4 image_path]
     # self._rois_from_file: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path]  # noqa: E501
     # self._rois_from_coords: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
-    @validate_call
+    @simple_type_validator
     def rm_group(self, group_name: str) -> None:  # noqa: C901
         """
         Remove a group from experiment by name, simultaneously removing associated image paths, ROI files, and added ROIs.
@@ -597,20 +614,22 @@ class SpecExp:
 
         # Update ROIs
         self._update_roi()
+        # Update sample labels & targets
+        self._update_sample_labels_targets()
 
     ## Image management ====================
 
-    # Update self._images using self._images_data and self._raster_masks
+    # Update self._images using self._images_data and self._images_mask
     def _update_image(self) -> None:
-        self._images = self._images_data + self._raster_masks
+        self._images = self._images_data + self._images_mask
 
-    # Reverse update self._images_data and self._raster_masks using self._images
+    # Reverse update self._images_data and self._images_mask using self._images
     def _update_image_rev(self) -> None:
         self._images_data = [imgt for imgt in self._images if imgt[3] == ""]
-        self._raster_masks = [imgt for imgt in self._images if imgt[3] != ""]
+        self._images_mask = [imgt for imgt in self._images if imgt[3] != ""]
 
     # Image list to dataframe
-    @validate_call
+    @simple_type_validator
     def _df_img(
         self,
         image_item_list: list[tuple[str, str, str, str, str]],
@@ -630,7 +649,7 @@ class SpecExp:
     # Format of associated attribute:
     # self._groups: [0 group]
     # self._images: [0 id, 1 group, 2 image_name, 3 mask_of, 4 image_path]
-    @validate_call
+    @simple_type_validator
     def _add_image_paths(self, group_name: str, mask_of: str, image_path_list: list[str]) -> None:
         """
         Add image items to attribute self._images
@@ -693,7 +712,7 @@ class SpecExp:
     # Add raster image paths to an experiment group
     # Format of associated attribute:
     # self._groups: [0 group]
-    @validate_call
+    @simple_type_validator
     def _add_images(  # noqa: C901
         self,
         image_name: Union[str, list[str], None] = None,
@@ -816,7 +835,7 @@ class SpecExp:
         else:
             raise ValueError("Neither name_pattern nor image_full_path is provided")
 
-    @validate_call
+    @simple_type_validator
     def add_images_by_name(  # noqa: C901
         self,
         image_name: Union[str, list[str], None] = None,
@@ -830,8 +849,9 @@ class SpecExp:
         Parameters
         ----------
         image_name : str, optional
-            Image filename(s) or glob pattern(s) for images in the directory. For multiple items, use a list. Example: ["a_*.bil", "b_*.tif"].
-            Warning: Duplicate image names within a group and with the identical use type will cause the existing record to be overwritten.
+            Image name(s) or pattern(s) of image names in the given directory. For multiple patterns or names, please provide them in a list.
+            Unix-like filename pattern is supported for image names.
+            Image names must be unique within each group for the same type, or the existed duplicated record will be overwritten.
             The default is ''.
 
         image_directory : str, optional
@@ -851,7 +871,7 @@ class SpecExp:
             mask_of=mask_of,
         )
 
-    @validate_call
+    @simple_type_validator
     def add_images_by_path(  # noqa: C901
         self,
         path: Union[str, list[str], None] = None,
@@ -864,11 +884,11 @@ class SpecExp:
         Parameters
         ----------
         path : Union[str, list[str], None], optional
-            Absolute path(s) of image file(s). For multiple items, please use list.
-            The default is [].
+            absolute path or list of absolute paths of the image files. The default is [].
+            The implemention of image_full_path is preferred if image_name and image_directory are simultaneously provided.
 
         group : str
-            Group of the added raster images.
+            group of the added raster images.
 
         mask_of : bool
             If the given image is a binary raster mask of a spectral image, specify the name of the target image it corresponds to.
@@ -883,7 +903,7 @@ class SpecExp:
     # Get image items by image [0 name list, 1 group]
     # Format of associated attribute:
     # self._images: [0 id, 1 group, 2 image_name, 3 mask_of, 4 image_path]
-    @validate_call
+    @simple_type_validator
     def _get_images(
         self,
         image_name: Union[str, list[str], None] = None,
@@ -957,13 +977,13 @@ class SpecExp:
         return_dataframe: Literal[True] = True,
     ) -> Annotated[
         pd.DataFrame,
-        AfterValidator(dataframe_validator({"ID": str, "Group": str, "Image": str, "Type": str, "Path": str})),
+        dataframe_validator({"ID": str, "Group": str, "Image": str, "Type": str, "Path": str}),
     ]: ...
 
     # Get image items by image [0 name list, 1 group]
     # Format of associated attribute:
     # self._images: [0 id, 1 group, 2 image_name, 3 mask_of, 4 image_path]
-    @validate_call
+    @simple_type_validator
     def ls_images(
         self,
         image_name: Union[str, list[str], None] = None,
@@ -975,7 +995,7 @@ class SpecExp:
     ) -> Optional[
         Annotated[
             pd.DataFrame,
-            AfterValidator(dataframe_validator({"ID": str, "Group": str, "Image": str, "Type": str, "Path": str})),
+            dataframe_validator({"ID": str, "Group": str, "Image": str, "Type": str, "Path": str}),
         ]
     ]:
         """
@@ -1027,7 +1047,7 @@ class SpecExp:
     # self._images: [0 id, 1 group, 2 image_name, 3 mask_of, 4 image_path]
     # self._rois_from_file: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path]  # noqa: E501
     # self._rois_from_coords: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
-    @validate_call
+    @simple_type_validator
     def rm_images(  # noqa: C901
         self,
         image_name: Union[str, list[str], None] = None,
@@ -1146,11 +1166,13 @@ class SpecExp:
         self._update_image_rev()
         # Update ROIs
         self._update_roi()
+        # Update sample labels & targets
+        self._update_sample_labels_targets()
 
     ## ROI Management ====================
 
     # ROI list to dataframe - roif
-    @validate_call
+    @simple_type_validator
     def _rois_from_file_to_df(
         self,
         roi_item_list: list[
@@ -1184,7 +1206,7 @@ class SpecExp:
             return None
 
     # ROI list to dataframe - roic
-    @validate_call
+    @simple_type_validator
     def _df_roic(
         self,
         roi_c_item_list: list[tuple[str, str, str, str, str, list[list[tuple[Union[int, float], Union[int, float]]]]]],
@@ -1204,7 +1226,7 @@ class SpecExp:
             return None
 
     # ROI file parser
-    @validate_call
+    @simple_type_validator
     def _roi_parser(
         self, roi_file_path_list: list[str], group_name: str, image_name: str, roi_type: str
     ) -> tuple[list, list, list]:
@@ -1220,6 +1242,16 @@ class SpecExp:
         new_rois = []
         fail_list = []
         fail_err_list = []
+
+        # Validate image existence in the specified group
+        existed_images = [imgt for imgt in self.images if (imgt[2] == image_name and imgt[1] == group_name)]
+        if len(existed_images) < 1:
+            raise ValueError(f"No image with name '{image_name}' added in given group '{group_name}'.")
+        if len(existed_images) > 1:
+            raise ValueError(
+                f"Duplicated image with name '{image_name}' found in given group '{group_name}': \
+                             {existed_images}. Image name must be unique in a group."
+            )
 
         # Parsing ROI files
         for roi_path in roi_file_path_list:
@@ -1288,7 +1320,7 @@ class SpecExp:
 
     # Receive ROI in self._rois_from_file from parsed ROI items
     # self._rois_from_file: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path]  # noqa: E501
-    @validate_call
+    @simple_type_validator
     def _roi_receiver(self, new_roi_list: list, failed_filename_list: list, failed_error_list: list) -> None:
         """
         Add ROIs from parsed lists to self._rois_from_file.
@@ -1358,7 +1390,7 @@ class SpecExp:
     # Function : Each image as a sample, generate multipolygon ROIs of all valid regions of the image using a mask value
     # Or each untouched independent valid area in a raster image as a sample, set by 'segment' parameter.
     # self._rois_from_coords: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
-    # @validate_call
+    # @simple_type_validator
     # def add_rois_auto(
     #         self,
     #         group_name: str,
@@ -1376,7 +1408,7 @@ class SpecExp:
     # self._images: [0 id, 1 group, 2 image_name, 3 mask_of, 4 image_path]
     # self._rois_from_file: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path]  # noqa: E501
     # self._rois_from_coords: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
-    @validate_call
+    @simple_type_validator
     def add_rois_by_suffix(  # noqa: C901
         self,
         roi_filename_suffix: str = "",
@@ -1518,6 +1550,8 @@ class SpecExp:
 
         # Update ROIs
         self._update_roi()
+        # Update sample labels & targets
+        self._update_sample_labels_targets()
 
     # Add ROI file paths to an image by full ROI file paths
     # Format of associated attribute:
@@ -1525,7 +1559,7 @@ class SpecExp:
     # self._images: [0 id, 1 group, 2 image_name, 3 mask_of, 4 image_path]
     # self._rois_from_file: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path]  # noqa: E501
     # self._rois_from_coords: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
-    @validate_call
+    @simple_type_validator
     def add_rois_by_file(  # noqa: C901
         self,
         path_list: list[str],
@@ -1670,14 +1704,16 @@ class SpecExp:
 
         # Update ROIs
         self._update_roi()
+        # Update sample labels & targets
+        self._update_sample_labels_targets()
 
     # Add a ROI to an image by ROI name and vertices of ROI polygons
     # Format of associated attribute:
     # self._groups: [0 group]
     # self._images: [0 id, 1 group, 2 image_name, 3 mask_of, 4 image_path]
     # self._rois_from_coords: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
-    @validate_call
-    def add_roi_by_coords(
+    @simple_type_validator
+    def add_roi_by_coords(  # noqa: C901
         self,
         roi_name: str,
         coord_lists: list[list[tuple[Union[int, float], Union[int, float]]]],
@@ -1727,6 +1763,16 @@ class SpecExp:
         if image_name not in image_name_list:
             raise ValueError(f"raster image name '{image_name}' is not found")
 
+        # Validate image existence in the specified group
+        existed_images = [imgt for imgt in self.images if (imgt[2] == image_name and imgt[1] == group_name)]
+        if len(existed_images) < 1:
+            raise ValueError(f"No image with name '{image_name}' added in given group '{group_name}'.")
+        if len(existed_images) > 1:
+            raise ValueError(
+                f"Duplicated image with name '{image_name}' found in given group '{group_name}': \
+                             {existed_images}. Image name must be unique in a group."
+            )
+
         # ROI type
         if as_mask:
             roi_type = "mask"
@@ -1773,6 +1819,8 @@ class SpecExp:
 
         # Update ROIs
         self._update_roi()
+        # Update sample labels & targets
+        self._update_sample_labels_targets()
 
     # self._rois updater
     # Format of associated attribute:
@@ -1805,28 +1853,17 @@ class SpecExp:
         self._rois_sample = rois_sample
         self._rois_mask = rois_mask
 
-        # Get all sample labels
-        new_ids = [roit[0] for roit in self._rois_sample]
-        old_ids = [lt[0] for lt in self._sample_labels]
-        # Add new label
-        new_labels = []
-        for nid in new_ids:
-            if nid in old_ids:
-                label = [lt[1] for lt in self._sample_labels if lt[0] == nid]
-            else:
-                label = ["-"]
-            new_labels.append((nid, label[0]))
-        # Update labels - keep old labeled data unchange
-        self._sample_labels = new_labels
         # Add back standalone sample labels
         self._update_sample_sspecs()
+        # Update sample labels & targets
+        self._update_sample_labels_targets()
 
     # Get ROI items by [0 ROI name list, 1 group, 2 image_name, 3 names of source ROI file]
     # Format of associated attribute:
     # self._rois_from_file: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path]  # noqa: E501
     # self._rois_from_coords: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
     # self._rois: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
-    @validate_call
+    @simple_type_validator
     def _get_rois(  # noqa: C901
         self,
         roi_name_list: Optional[list[str]] = None,
@@ -1951,34 +1988,30 @@ class SpecExp:
     ) -> Union[
         Annotated[
             pd.DataFrame,
-            AfterValidator(
-                dataframe_validator(
-                    {
-                        "ID": str,
-                        "Group": str,
-                        "Image": str,
-                        "ROI_name": str,
-                        "ROI_type": str,
-                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                    }
-                )
+            dataframe_validator(
+                {
+                    "ID": str,
+                    "Group": str,
+                    "Image": str,
+                    "ROI_name": str,
+                    "ROI_type": str,
+                    "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                }
             ),
         ],
         Annotated[
             pd.DataFrame,
-            AfterValidator(
-                dataframe_validator(
-                    {
-                        "ID": str,
-                        "Group": str,
-                        "Image": str,
-                        "ROI_name": str,
-                        "ROI_type": str,
-                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                        "ROI_source_file": str,
-                        "ROI_file_path": str,
-                    }
-                )
+            dataframe_validator(
+                {
+                    "ID": str,
+                    "Group": str,
+                    "Image": str,
+                    "ROI_name": str,
+                    "ROI_type": str,
+                    "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                    "ROI_source_file": str,
+                    "ROI_file_path": str,
+                }
             ),
         ],
     ]: ...
@@ -1988,7 +2021,7 @@ class SpecExp:
     # self._rois_from_file: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path]  # noqa: E501
     # self._rois_from_coords: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
     # self._rois: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
-    @validate_call
+    @simple_type_validator
     def ls_rois(  # noqa: C901
         self,
         roi_name_list: Optional[list[str]] = None,
@@ -2004,34 +2037,30 @@ class SpecExp:
         Union[
             Annotated[
                 pd.DataFrame,
-                AfterValidator(
-                    dataframe_validator(
-                        {
-                            "ID": str,
-                            "Group": str,
-                            "Image": str,
-                            "ROI_name": str,
-                            "ROI_type": str,
-                            "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                        }
-                    )
+                dataframe_validator(
+                    {
+                        "ID": str,
+                        "Group": str,
+                        "Image": str,
+                        "ROI_name": str,
+                        "ROI_type": str,
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                    }
                 ),
             ],
             Annotated[
                 pd.DataFrame,
-                AfterValidator(
-                    dataframe_validator(
-                        {
-                            "ID": str,
-                            "Group": str,
-                            "Image": str,
-                            "ROI_name": str,
-                            "ROI_type": str,
-                            "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                            "ROI_source_file": str,
-                            "ROI_file_path": str,
-                        }
-                    )
+                dataframe_validator(
+                    {
+                        "ID": str,
+                        "Group": str,
+                        "Image": str,
+                        "ROI_name": str,
+                        "ROI_type": str,
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                        "ROI_source_file": str,
+                        "ROI_file_path": str,
+                    }
                 ),
             ],
         ]
@@ -2159,24 +2188,22 @@ class SpecExp:
         return_dataframe: Literal[True] = True,
     ) -> Annotated[
         pd.DataFrame,
-        AfterValidator(
-            dataframe_validator(
-                {
-                    "ID": str,
-                    "Group": str,
-                    "Image": str,
-                    "ROI_name": str,
-                    "ROI_type": str,
-                    "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                    "ROI_source_file": str,
-                    "ROI_file_path": str,
-                }
-            )
+        dataframe_validator(
+            {
+                "ID": str,
+                "Group": str,
+                "Image": str,
+                "ROI_name": str,
+                "ROI_type": str,
+                "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                "ROI_source_file": str,
+                "ROI_file_path": str,
+            }
         ),
     ]: ...
 
     # List file-added rois
-    @validate_call
+    @simple_type_validator
     def ls_rois_from_file(
         self,
         roi_name_list: Optional[list[str]] = None,
@@ -2190,19 +2217,17 @@ class SpecExp:
     ) -> Optional[
         Annotated[
             pd.DataFrame,
-            AfterValidator(
-                dataframe_validator(
-                    {
-                        "ID": str,
-                        "Group": str,
-                        "Image": str,
-                        "ROI_name": str,
-                        "ROI_type": str,
-                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                        "ROI_source_file": str,
-                        "ROI_file_path": str,
-                    }
-                )
+            dataframe_validator(
+                {
+                    "ID": str,
+                    "Group": str,
+                    "Image": str,
+                    "ROI_name": str,
+                    "ROI_type": str,
+                    "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                    "ROI_source_file": str,
+                    "ROI_file_path": str,
+                }
             ),
         ]
     ]:
@@ -2262,22 +2287,20 @@ class SpecExp:
         return_dataframe: Literal[True] = True,
     ) -> Annotated[
         pd.DataFrame,
-        AfterValidator(
-            dataframe_validator(
-                {
-                    "ID": str,
-                    "Group": str,
-                    "Image": str,
-                    "ROI_name": str,
-                    "ROI_type": str,
-                    "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                }
-            )
+        dataframe_validator(
+            {
+                "ID": str,
+                "Group": str,
+                "Image": str,
+                "ROI_name": str,
+                "ROI_type": str,
+                "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+            }
         ),
     ]: ...
 
     # List console-added rois
-    @validate_call
+    @simple_type_validator
     def ls_rois_from_coords(
         self,
         roi_name_list: Optional[list[str]] = None,
@@ -2291,17 +2314,15 @@ class SpecExp:
     ) -> Optional[
         Annotated[
             pd.DataFrame,
-            AfterValidator(
-                dataframe_validator(
-                    {
-                        "ID": str,
-                        "Group": str,
-                        "Image": str,
-                        "ROI_name": str,
-                        "ROI_type": str,
-                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                    }
-                )
+            dataframe_validator(
+                {
+                    "ID": str,
+                    "Group": str,
+                    "Image": str,
+                    "ROI_name": str,
+                    "ROI_type": str,
+                    "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                }
             ),
         ]
     ]:
@@ -2363,40 +2384,36 @@ class SpecExp:
     ) -> Union[
         Annotated[
             pd.DataFrame,
-            AfterValidator(
-                dataframe_validator(
-                    {
-                        "ID": str,
-                        "Group": str,
-                        "Image": str,
-                        "ROI_name": str,
-                        "ROI_type": str,
-                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                    }
-                )
+            dataframe_validator(
+                {
+                    "ID": str,
+                    "Group": str,
+                    "Image": str,
+                    "ROI_name": str,
+                    "ROI_type": str,
+                    "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                }
             ),
         ],
         Annotated[
             pd.DataFrame,
-            AfterValidator(
-                dataframe_validator(
-                    {
-                        "ID": str,
-                        "Group": str,
-                        "Image": str,
-                        "ROI_name": str,
-                        "ROI_type": str,
-                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                        "ROI_source_file": str,
-                        "ROI_file_path": str,
-                    }
-                )
+            dataframe_validator(
+                {
+                    "ID": str,
+                    "Group": str,
+                    "Image": str,
+                    "ROI_name": str,
+                    "ROI_type": str,
+                    "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                    "ROI_source_file": str,
+                    "ROI_file_path": str,
+                }
             ),
         ],
     ]: ...
 
     # List sample rois
-    @validate_call
+    @simple_type_validator
     def ls_rois_sample(
         self,
         roi_name_list: Optional[list[str]] = None,
@@ -2412,34 +2429,30 @@ class SpecExp:
         Union[
             Annotated[
                 pd.DataFrame,
-                AfterValidator(
-                    dataframe_validator(
-                        {
-                            "ID": str,
-                            "Group": str,
-                            "Image": str,
-                            "ROI_name": str,
-                            "ROI_type": str,
-                            "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                        }
-                    )
+                dataframe_validator(
+                    {
+                        "ID": str,
+                        "Group": str,
+                        "Image": str,
+                        "ROI_name": str,
+                        "ROI_type": str,
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                    }
                 ),
             ],
             Annotated[
                 pd.DataFrame,
-                AfterValidator(
-                    dataframe_validator(
-                        {
-                            "ID": str,
-                            "Group": str,
-                            "Image": str,
-                            "ROI_name": str,
-                            "ROI_type": str,
-                            "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                            "ROI_source_file": str,
-                            "ROI_file_path": str,
-                        }
-                    )
+                dataframe_validator(
+                    {
+                        "ID": str,
+                        "Group": str,
+                        "Image": str,
+                        "ROI_name": str,
+                        "ROI_type": str,
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                        "ROI_source_file": str,
+                        "ROI_file_path": str,
+                    }
                 ),
             ],
         ]
@@ -2501,40 +2514,36 @@ class SpecExp:
     ) -> Union[
         Annotated[
             pd.DataFrame,
-            AfterValidator(
-                dataframe_validator(
-                    {
-                        "ID": str,
-                        "Group": str,
-                        "Image": str,
-                        "ROI_name": str,
-                        "ROI_type": str,
-                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                    }
-                )
+            dataframe_validator(
+                {
+                    "ID": str,
+                    "Group": str,
+                    "Image": str,
+                    "ROI_name": str,
+                    "ROI_type": str,
+                    "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                }
             ),
         ],
         Annotated[
             pd.DataFrame,
-            AfterValidator(
-                dataframe_validator(
-                    {
-                        "ID": str,
-                        "Group": str,
-                        "Image": str,
-                        "ROI_name": str,
-                        "ROI_type": str,
-                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                        "ROI_source_file": str,
-                        "ROI_file_path": str,
-                    }
-                )
+            dataframe_validator(
+                {
+                    "ID": str,
+                    "Group": str,
+                    "Image": str,
+                    "ROI_name": str,
+                    "ROI_type": str,
+                    "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                    "ROI_source_file": str,
+                    "ROI_file_path": str,
+                }
             ),
         ],
     ]: ...
 
     # List mask rois
-    @validate_call
+    @simple_type_validator
     def ls_rois_mask(
         self,
         roi_name_list: Optional[list[str]] = None,
@@ -2550,34 +2559,30 @@ class SpecExp:
         Union[
             Annotated[
                 pd.DataFrame,
-                AfterValidator(
-                    dataframe_validator(
-                        {
-                            "ID": str,
-                            "Group": str,
-                            "Image": str,
-                            "ROI_name": str,
-                            "ROI_type": str,
-                            "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                        }
-                    )
+                dataframe_validator(
+                    {
+                        "ID": str,
+                        "Group": str,
+                        "Image": str,
+                        "ROI_name": str,
+                        "ROI_type": str,
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                    }
                 ),
             ],
             Annotated[
                 pd.DataFrame,
-                AfterValidator(
-                    dataframe_validator(
-                        {
-                            "ID": str,
-                            "Group": str,
-                            "Image": str,
-                            "ROI_name": str,
-                            "ROI_type": str,
-                            "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
-                            "ROI_source_file": str,
-                            "ROI_file_path": str,
-                        }
-                    )
+                dataframe_validator(
+                    {
+                        "ID": str,
+                        "Group": str,
+                        "Image": str,
+                        "ROI_name": str,
+                        "ROI_type": str,
+                        "Coordinates": list[list[tuple[Union[int, float], Union[int, float]]]],
+                        "ROI_source_file": str,
+                        "ROI_file_path": str,
+                    }
                 ),
             ],
         ]
@@ -2613,7 +2618,7 @@ class SpecExp:
     # Format of associated attribute:
     # self._rois: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
     # self._rois_from_file: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path]  # noqa: E501
-    @validate_call
+    @simple_type_validator
     def _rm_rois_x(  # noqa: C901
         self,
         rm_target: str = "file",
@@ -2727,7 +2732,7 @@ class SpecExp:
     # self._rois_from_file: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path]  # noqa: E501
     # self._rois_from_coords: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
     # self._rois: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
-    @validate_call
+    @simple_type_validator
     def rm_rois(
         self,
         roi_name: str = "",
@@ -2792,13 +2797,16 @@ class SpecExp:
             roi_file_path=roi_source_file_path,
         )
 
+        # Update sample labels & targets
+        self._update_sample_labels_targets()
+
     ## Standalone 1D spectrum samples
     @overload
     def add_standalone_specs(
         self,
         spec_data: Union[
             list[list[Union[int, float]]],
-            Annotated[Any, AfterValidator(arraylike_validator(ndim=2, as_type="float"))],
+            Annotated[Any, arraylike_validator(ndim=2, as_type="float")],
         ],
         group: str = "",
         use_type: str = "sample",
@@ -2814,7 +2822,7 @@ class SpecExp:
         self,
         spec_data: Union[
             list[list[Union[int, float]]],
-            Annotated[Any, AfterValidator(arraylike_validator(ndim=2, as_type="float"))],
+            Annotated[Any, arraylike_validator(ndim=2, as_type="float")],
         ],
         group: str = "",
         use_type: str = "sample",
@@ -2828,12 +2836,12 @@ class SpecExp:
     # Add standalone spectrum samples
     # Format of associated attribute:
     # [0 id, 1 group, 2 use_type, 3 sample_name, 4 spectral_data_list]
-    @validate_call
+    @simple_type_validator
     def add_standalone_specs(  # noqa: C901
         self,
         spec_data: Union[
             list[list[Union[int, float]]],
-            Annotated[Any, AfterValidator(arraylike_validator(ndim=2, as_type="float"))],
+            Annotated[Any, arraylike_validator(ndim=2, as_type="float")],
         ],
         group: str = "",
         use_type: str = "sample",
@@ -2973,6 +2981,8 @@ class SpecExp:
         # Update standalone spectrum items
         self._standalone_specs = not_updated_sspecs + added_sspecs
         self._update_sample_sspecs()
+        # Update sample labels & targets
+        self._update_sample_labels_targets()
 
         # Print report
         df_updated = pd.DataFrame(updated_sspecs, columns=["ID", "Group", "Use_type", "Sample_name", "Spectral_data"])
@@ -2996,6 +3006,9 @@ class SpecExp:
         else:
             return None
 
+        # Update sample labels & targets
+        self._update_sample_labels_targets()
+
         # Updated saved file
         self._update_sspecs_file(silent_run, save_backup)
 
@@ -3005,18 +3018,12 @@ class SpecExp:
     # Update sample standalone spectra and sample labels
     # Format of associated attribute:
     # [0 id, 1 group, 2 use_type, 3 sample_name, 4 spectral_data_list]
-    # self._sample_labels: [0 fixed sample id, 1 user assinged labels]
+    # self._sample_labels: [0 fixed sample id, 1 user assinged labels, 2 sample belonging group]
     def _update_sample_sspecs(self) -> None:
         self._standalone_specs_sample = self._get_sspecs(use_type="sample")[0]
-        existed_lbs_id = [lbt[0] for lbt in self._sample_labels]
-        sample_lbs = self._sample_labels
-        for ssp in self._standalone_specs_sample:
-            if ssp[0] not in existed_lbs_id:
-                sample_lbs.append((ssp[0], "-"))
-        self._sample_labels = sample_lbs
 
     # Update sspecs file in report dir
-    @validate_call
+    @simple_type_validator
     def _update_sspecs_file(self, silent_run: bool = False, save_backup: bool = True) -> None:
         # Validate output directory
         wpath = self._report_directory + "Standalone_spectral_data/"
@@ -3055,11 +3062,12 @@ class SpecExp:
     # Add standalone spectrum samples
     # Format of associated attribute:
     # [0 id, 1 group, 2 use_type, 3 sample_name, 4 spectral_data_list]
-    @validate_call
+    @simple_type_validator
     def load_standalone_specs(self, csv_file_path: Optional[str] = None) -> None:  # noqa: C901
         """
         Load or reload standalone spectra from CSV file.
-        The column names should be ['ID', 'Group', 'Use_type', 'Sample_name', 'Band_1', 'Band_2',...], and the ID and Sample_name values must be unique.
+        Expected columns: ['ID', 'Group', 'Use_type', 'Sample_name', 'Band_1', 'Band_2',...]
+        The ID and Sample_name values must be unique.
 
         Parameters
         ----------
@@ -3125,6 +3133,8 @@ class SpecExp:
                 return_updates=True,
             )
             self._update_sample_sspecs()
+            # Update sample labels & targets
+            self._update_sample_labels_targets()
             # Save updated item for report
             updated = pd.concat([updated, updates["Updated_items"]], ignore_index=True)
             added = pd.concat([added, updates["Added_items"]], ignore_index=True)
@@ -3144,13 +3154,16 @@ class SpecExp:
         if (len(updated) == 0) & (len(added) == 0):
             print("No spectra found in the given CSV file")
 
+        # Update sample labels & targets
+        self._update_sample_labels_targets()
+
     # Alias
     load_specs = load_standalone_specs
 
     # Get standalone spectra
     # Format of associated attribute:
     # [0 id, 1 group, 2 use_type, 3 sample_name, 4 spectral_data_list]
-    @validate_call
+    @simple_type_validator
     def _get_sspecs(  # noqa: C901
         self,
         group_name: str = "",
@@ -3230,7 +3243,7 @@ class SpecExp:
     # List standalone spectra
     # Format of associated attribute:
     # [0 id, 1 group, 2 use_type, 3 sample_name, 4 spectral_data_list]
-    @validate_call
+    @simple_type_validator
     def ls_standalone_specs(
         self,
         sample_name: str = "",
@@ -3303,7 +3316,7 @@ class SpecExp:
     # Remove standalone spectra
     # Format of associated attribute:
     # [0 id, 1 group, 2 use_type, 3 sample_name, 4 spectral_data_list]
-    @validate_call
+    @simple_type_validator
     def rm_standalone_specs(
         self,
         sample_name: str = "",
@@ -3351,6 +3364,8 @@ class SpecExp:
                 # Update data
                 self._standalone_specs = unmatched
                 self._update_sample_sspecs()
+                # Update sample labels & targets
+                self._update_sample_labels_targets()
                 # Print report
                 if not silent_run:
                     df_matched = pd.DataFrame(
@@ -3362,11 +3377,16 @@ class SpecExp:
             else:
                 self._standalone_specs = []
                 self._update_sample_sspecs()
+                # Update sample labels & targets
+                self._update_sample_labels_targets()
                 if not silent_run:
                     print("All standalone spectra are removed")
         else:
             if not silent_run:
                 print("\nNo matched standalone spectrum item found. No standalone spectra are removed")
+
+        # Update sample labels & targets
+        self._update_sample_labels_targets()
 
         # Updated saved file
         self._update_sspecs_file(silent_run=True)
@@ -3374,10 +3394,43 @@ class SpecExp:
     rm_specs = rm_standalone_specs
 
     ## Sample label management ====================
+    # TODO: Helper: Sample label - group identifier
+    @simple_type_validator
+    def _sample_id_to_group(self, sample_ids: list[str]) -> list[str]:
+        """
+        Find sample groups by sample IDs.
+        """
+        # For image ROI as sample
+        if len(self.rois_sample) > 0 and len(self.standalone_specs_sample) == 0:
+            sid_group_arr = np.array([roit[0:2] for roit in self.rois_sample])
+        # For standalone spectra spectrum as sample
+        elif len(self.rois_sample) == 0 and len(self.standalone_specs_sample) > 0:
+            sid_group_arr = np.array([roit[0:2] for roit in self.standalone_specs_sample])
+        elif len(self.rois_sample) == 0 and len(self.standalone_specs_sample) == 0:
+            raise ValueError(
+                "No sample is added. \
+                    At least one of sample ROI and sample standalone spectra must be added."
+            )
+        else:
+            sid_group_arr = np.array(
+                [roit[0:2] for roit in self.rois_sample] + [roit[0:2] for roit in self.standalone_specs_sample]
+            )
+        # Find sample belonging group by sample IDs
+        sample_id_groups: list[str] = []
+        for sid in sample_ids:
+            id_group = sid_group_arr[sid_group_arr[:, 0] == sid]
+            if id_group.shape == (1, 2):
+                group_i = str(id_group[0, 1])
+                sample_id_groups.append(group_i)
+            elif id_group.shape[0] < 1:
+                raise ValueError(f"Invalid sample ID: {sid}")
+            else:
+                raise ValueError(f"Sample ID duplication: {sid}. \nDuplicated item: \n{id_group}\n")
+        return sample_id_groups
 
     # Save labels dataframe to csv file
-    # self._sample_labels: [0 fixed sample id, 1 user assinged labels]
-    @validate_call
+    # self._sample_labels: [0 fixed sample id, 1 user assinged labels, 2 sample belonging group]
+    @simple_type_validator
     def sample_labels_to_csv(self, path: str = "") -> None:
         """
         Save labels to csv file.
@@ -3407,10 +3460,11 @@ class SpecExp:
             raise ValueError(f"Output directory is invalid: {dir_path}")
 
         # Labels as df
-        labels = pd.DataFrame(self._sample_labels, columns=["Sample_ID", "Label"])
+        df_lb = pd.DataFrame(self._sample_labels, columns=["Sample_ID", "Label", "Group"])
+        df_lb = df_lb.astype("object")
 
         # Save to file
-        labels.to_csv(save_path, index=False)
+        df_lb.to_csv(save_path, index=False)
 
     # Alias
     labels_to_csv = sample_labels_to_csv
@@ -3419,17 +3473,17 @@ class SpecExp:
     @overload
     def ls_sample_labels(
         self, return_dataframe: Literal[True] = True
-    ) -> Annotated[pd.DataFrame, AfterValidator(dataframe_validator({"Sample_ID": str, "Label": str}))]: ...
+    ) -> Annotated[pd.DataFrame, dataframe_validator({"Sample_ID": str, "Label": str, "Group": str})]: ...
 
     @overload
     def ls_sample_labels(self, return_dataframe: Literal[False] = False) -> None: ...
 
     # Retrieve labels as dataframe
-    # self._sample_labels: [0 fixed sample id, 1 user assinged labels]
-    @validate_call
+    # self._sample_labels: [0 fixed sample id, 1 user assinged labels, 2 sample belonging group]
+    @simple_type_validator
     def ls_sample_labels(
         self, return_dataframe: bool = True
-    ) -> Optional[Annotated[pd.DataFrame, AfterValidator(dataframe_validator({"Sample_ID": str, "Label": str}))]]:
+    ) -> Optional[Annotated[pd.DataFrame, dataframe_validator({"Sample_ID": str, "Label": str, "Group": str})]]:
         """
         Retrieve sample labels as dataframe.
 
@@ -3438,7 +3492,7 @@ class SpecExp:
         return_dataframe : bool
             Whether dataframe is returned. The default is True.
         """
-        df_lb = pd.DataFrame(self._sample_labels, columns=["Sample_ID", "Label"])
+        df_lb = pd.DataFrame(self._sample_labels, columns=["Sample_ID", "Label", "Group"])
         df_lb = df_lb.astype("object")
         # Return results
         if return_dataframe:
@@ -3452,19 +3506,17 @@ class SpecExp:
     ls_labels = ls_sample_labels
 
     # Read sample labels from a dataframe
-    # self._sample_labels: [0 fixed sample id, 1 user assinged labels]
-    @validate_call
-    def sample_labels_from_df(
-        self, labels_dataframe: Annotated[Any, AfterValidator(dataframe_validator(ncol=2))]
-    ) -> None:
+    # self._sample_labels: [0 fixed sample id, 1 user assinged labels, 2 sample belonging group]
+    @simple_type_validator
+    def sample_labels_from_df(self, labels_dataframe: Annotated[Any, dataframe_validator(ncol=3)]) -> None:
         """
         Read sample labels from a dataframe.
 
         Parameters
         ----------
-        labels_dataframe : Annotated[pd.DataFrame, {'Sample_ID': str, 'Label': int}]
-            Dataframe of sample labels. The labels must be unique.
-            Current labels dataframe can be retrieved using SpecExp.ls_sample_labels().
+        labels_dataframe : pd.DataFrame
+            Dataframe of sample labels. Expected columns: ["Sample_ID", "Label", "Group"]. The labels must be unique.
+            The initial/current label dataframe can be retrieved using SpecExp.ls_sample_labels().
         """
         # Update labels - formatting with property formatting function
         self.sample_labels = labels_dataframe
@@ -3473,16 +3525,17 @@ class SpecExp:
     labels_from_df = sample_labels_from_df
 
     # Load labels from csv
-    # self._sample_labels: [0 fixed sample id, 1 user assinged labels]
-    @validate_call
+    # self._sample_labels: [0 fixed sample id, 1 user assinged labels, 2 sample belonging group]
+    @simple_type_validator
     def sample_labels_from_csv(self, label_csv_path: str = "") -> None:
         """
-        Load labels from saved csv file. Labels can be edited in csv and reloaded.
+        Load labels from saved CSV file.
+        The initial/current label CSV file can be retrieved using SpecExp.sample_labels_to_csv().
 
         Parameters
         ----------
         label_csv_path : str
-            path of modified label csv file.
+            Path of modified label CSV file. Expected columns: ["Sample_ID", "Label", "Group"].
             If not given, the labels is saved as 'Sample_labels.csv' in the report directory.
 
         Raises
@@ -3518,68 +3571,9 @@ class SpecExp:
     # Alias
     labels_from_csv = sample_labels_from_csv
 
-    # Read target values from csv file
-    # [0 fixed sample id, 1 user assinged labels, 2 Target values]
-    @validate_call
-    def sample_targets_from_csv(
-        self,
-        path: str = "",
-        target_dtype: Union[type, str, None] = None,
-        include_header: bool = True,
-    ) -> None:
-        """
-        Read target values from a CSV file.
-
-        Samples must be added before calling this method, and the CSV file must contain exactly two columns:
-
-            - First column: Sample labels.
-                The sample labels must be consistent with the existed labels.
-                When sample labels are not provided, the target values are matched by order (not recommended due to potential misalignment).
-
-            - Second column: Target values for the corresponding samples.
-
-        Parameters
-        ----------
-        path : str
-            CSV file path. The default is '{report_directory}/sample_target_values.csv'.
-
-        target_dtype : Union[type,str,None], optional
-            Data type of target values.
-            If None, pandas default type inference is used (see 'pandas.read_csv' documentation for details). The default is None.
-
-        include_header : bool, optional
-            If True, the first row of the CSV file is treated as headers. The default is True.
-        """  # noqa: E501
-        # Default path
-        if len(path) == 0:
-            path = self.report_directory + "sample_target_values.csv"
-
-        # Default dtype
-        if target_dtype is None:
-            dtp = {0: str, 1: str}
-        else:
-            dtp = {0: str, 1: str, 2: target_dtype}  # type: ignore[dict-item]
-            # Conditioned typing
-
-        # Read df
-        if include_header:
-            dft = pd.read_csv(path, dtype=dtp)
-        else:
-            dft = pd.read_csv(path, dtype=dtp, header=None)
-        dft.fillna("-", inplace=True)
-        id_label_cols = dft.columns[:-1]
-        dft[id_label_cols] = dft[id_label_cols].astype("object")
-        # Old: dft.iloc[:, :-1] = dft.iloc[:, :-1].astype("object")
-
-        # Update targets - formatting with property formatting function
-        self.sample_targets = dft
-
-    # Alias
-    targets_from_csv = sample_targets_from_csv
-
     # Save existed or example of sample targets to csv
-    # [0 fixed sample id, 1 user assinged labels, 2 Target values]
-    @validate_call
+    # [0 fixed sample id, 1 user assinged labels, 2 target values, 3 sample belonging group]
+    @simple_type_validator
     def sample_targets_to_csv(self, path: str = "", include_header: bool = True) -> None:
         """
         Write target values to a CSV file. If sample target values are not specified, the target value column will contain blank values.
@@ -3601,11 +3595,11 @@ class SpecExp:
 
         # Convert sample_targets to dataframe
         if len(self.sample_targets) > 0:
-            dft = pd.DataFrame(self.sample_targets, columns=["Sample_ID", "Sample_label", "Target_value"])
+            dft = pd.DataFrame(self.sample_targets, columns=["Sample_ID", "Label", "Target_value", "Group"])
         else:
             dft = pd.DataFrame(
-                [(lbt[1], "") for lbt in self.sample_labels],
-                columns=["Sample_ID", "Sample_label", "Target_value"],
+                [lbt[:2] + ("",) + lbt[2:] for lbt in self.sample_labels],
+                columns=["Sample_ID", "Label", "Target_value", "Group"],
             )
 
         # Write to csv
@@ -3625,9 +3619,9 @@ class SpecExp:
     def ls_sample_targets(self, return_dataframe: Literal[False] = False) -> None: ...
 
     # Retrieve existed or example of sample targets as df
-    # [0 fixed sample id, 1 user assinged labels, 2 Target values]
+    # [0 fixed sample id, 1 user assinged labels, 2 target values, 3 sample belonging group]
     # Type: list[tuple[str,str,Union[str,bool,int,float]]]
-    @validate_call
+    @simple_type_validator
     def ls_sample_targets(self, return_dataframe: bool = True) -> Optional[pd.DataFrame]:
         """
         Retrieve sample target values as dataframe.
@@ -3638,11 +3632,12 @@ class SpecExp:
             If true, the dataframe is returned, or the dataframe is printed. The default is True.
         """
         if len(self.sample_targets) > 0:
-            dft = pd.DataFrame(self.sample_targets, columns=["Sample_ID", "Sample_label", "Target_value"])
+            dft = pd.DataFrame(self.sample_targets, columns=["Sample_ID", "Label", "Target_value", "Group"])
         else:
-            tvs = [(st[0], st[1], np.nan) for st in self.sample_labels]
-            dft = pd.DataFrame(tvs, columns=["Sample_ID", "Sample_label", "Target_value"])
-        dft.iloc[:, :-1] = dft.iloc[:, :-1].astype("object")
+            tvs = [(st[0], st[1], np.nan, self._sample_id_to_group([st[0]])[0]) for st in self.sample_labels]
+            dft = pd.DataFrame(tvs, columns=["Sample_ID", "Label", "Target_value", "Group"])
+        dft.iloc[:, :2] = dft.iloc[:, :2].astype("object")
+        dft.iloc[:, 3] = dft.iloc[:, 3].astype("object")
         # Return results
         if return_dataframe:
             return dft
@@ -3655,18 +3650,17 @@ class SpecExp:
     ls_targets = ls_sample_targets
 
     # Read sample target values from dataframe
-    # self._sample_labels: [0 fixed sample id, 1 user assinged labels]
-    @validate_call
-    def sample_targets_from_df(
-        self, target_value_dataframe: Annotated[Any, AfterValidator(dataframe_validator())]
-    ) -> None:
+    # self._sample_labels: [0 fixed sample id, 1 user assinged labels, 2 sample belonging group]
+    @simple_type_validator
+    def sample_targets_from_df(self, target_value_dataframe: Annotated[Any, dataframe_validator()]) -> None:
         """
         Load sample target values from a dataframe.
+        The initial/current target dataframe can be retrieved using SpecExp.ls_sample_targets().
 
         Parameters
         ----------
-        target_value_dataframe : Annotated[pd.DataFrame, {'Sample_label' : str, 'Target_value' : int}]
-            Dataframe of sample target values. The values are matched by sample labels, or by order when labels are not available.
+        target_value_dataframe : pd.DataFrame
+            Dataframe of sample target values. Expected columns: ["Sample_ID", "Label", "Target_value", "Group"].
             The current target value dataframe can be retrieved using SpecExp.ls_sample_targets().
         """  # noqa: E501
         # Update targets - formatting with property formatting function
@@ -3675,11 +3669,102 @@ class SpecExp:
     # Alias
     targets_from_df = sample_targets_from_df
 
+    # Read target values from csv file
+    # [0 fixed sample id, 1 user assinged labels, 2 target values, 3 sample belonging group]
+    @simple_type_validator
+    def sample_targets_from_csv(
+        self,
+        path: str = "",
+        target_dtype: Union[type, str, None] = None,
+        include_header: bool = True,
+    ) -> None:
+        """
+        Read target values from a CSV file.
+        The initial/current target CSV file can be retrieved using SpecExp.sample_targets_to_csv().
+
+        Parameters
+        ----------
+        path : str
+            CSV file path. Expected columns: ["Sample_ID", "Label", "Target_value", "Group"].
+            The default is '<SpecExp.report_directory>/sample_target_values.csv'.
+
+        target_dtype : Union[type,str,None], optional
+            Data type of target values.
+            If None, pandas default type inference is used (see 'pandas.read_csv' documentation for details). The default is None.
+
+        include_header : bool, optional
+            If True, the first row of the CSV file is treated as headers. The default is True.
+        """  # noqa: E501
+        # Default path
+        if len(path) == 0:
+            path = self.report_directory + "sample_target_values.csv"
+
+        # Default dtype
+        if target_dtype is None:
+            dtp = {0: str, 1: str, 3: str}
+        else:
+            dtp = {0: str, 1: str, 2: target_dtype, 3: str}  # type: ignore[dict-item]
+            # Conditioned typing
+
+        # Read df
+        if include_header:
+            dft = pd.read_csv(path, dtype=dtp)
+        else:
+            dft = pd.read_csv(path, dtype=dtp, header=None)
+        dft.fillna("-", inplace=True)
+        str_cols = list(dft.columns[:2]) + list(dft.columns[3:])
+        dft[str_cols] = dft[str_cols].astype("object")
+
+        # Update targets - formatting with property formatting function
+        self.sample_targets = dft
+
+    # Alias
+    targets_from_csv = sample_targets_from_csv
+
+    # TODO: update_sample_labels_targets
+    # self._sample_labels: [0 fixed sample id, 1 user assinged labels, 2 sample belonging group]
+    # self._sample_targets: [0 fixed sample id, 1 user assinged labels, 2 target values, 3 sample belonging group]
+    def _update_sample_labels_targets(self) -> None:
+        # Get all sample labels
+        new_ids: list[str] = [roit[0] for roit in self.rois_sample] + [
+            spect[0] for spect in self.standalone_specs_sample
+        ]
+
+        # Add new labels - new label default to sample ID
+        old_ids: list[str] = [lt[0] for lt in self._sample_labels]
+        new_labels: list = []
+        for nid in new_ids:
+            if nid in old_ids:
+                label: tuple[str, str, str] = [lt for lt in self._sample_labels if lt[0] == nid][0]
+                label = (nid, label[1], self._sample_id_to_group([nid])[0])
+            else:
+                group: str = self._sample_id_to_group([nid])[0]
+                label = (nid, nid, group)
+            new_labels.append(label)
+        # Update labels - keep old labeled data unchange
+        self._sample_labels = new_labels
+
+        # Add new targets - new label default to sample ID
+        old_ids = [lt[0] for lt in self._sample_targets]
+        new_targets: list = []
+        for nid in new_ids:
+            if nid in old_ids:
+                target: tuple[str, str, Any, str] = [tt for tt in self._sample_targets if tt[0] == nid][0]
+                labl: str = [lt[1] for lt in self._sample_labels if lt[0] == nid][0]
+                target = (nid, labl, target[2], self._sample_id_to_group([nid])[0])
+            else:
+                labl = [lt[1] for lt in self._sample_labels if lt[0] == nid][0]
+                group = self._sample_id_to_group([nid])[0]
+                target = (nid, labl, None, group)
+            new_targets.append(target)
+        # Update targets - keep old labeled data unchange
+        self._sample_targets = new_targets
+
     ## Save data configurations to file and reload ====================
 
     # Auto-save with copy before each run of testing
     # Save data configurations to file
-    @validate_call
+    @simple_type_validator
     def save_data_config(self, copy: bool = True) -> None:
         """
         Save current configuration to file in the root of report directory.
@@ -3689,27 +3774,6 @@ class SpecExp:
         copy : bool, optional
             If set True, a copy will be created simultaneously. The default is True.
         """
-        # Construct saving dict of data config
-        var_dict = {
-            # Group attribute
-            "groups": self._groups,
-            # Image attributes
-            "images": self._images,
-            "images_data": self._images_data,
-            "raster_masks": self._raster_masks,
-            # ROI attributes
-            "rois_from_file": self._rois_from_file,
-            "rois_from_coords": self._rois_from_coords,
-            "rois": self._rois,
-            "rois_sample": self._rois_sample,
-            "rois_mask": self._rois_mask,
-            # Standalone spectra
-            "standalone_specs": self._standalone_specs,
-            # Sample labels and target values
-            "labels": self._sample_labels,
-            "sample_targets": self._sample_targets,
-        }
-
         # Current time for saving
         cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -3720,38 +3784,39 @@ class SpecExp:
 
         # Dump data
         dump_path0 = dump_dir + f"SpecExp_data_configuration_{self.create_time}.dill"
-        dump_vars(dump_path0, var_dict)
+        with open(dump_path0, 'wb') as f:
+            dill.dump(self, f)
 
         # Dump copy
         if copy:
+            # Validate copy path
             dump_path1 = dump_dir + f"SpecExp_data_configuration_{self.create_time}_copy_at_{cts}.dill"
             dump_path1_sp = os.path.splitext(dump_path1)
             ci = 0
             while os.path.exists(dump_path1):
-                if ci == 0:
-                    cs = ""
-                else:
-                    cs = str(ci)
+                ci = ci + 1
+                cs = "_" + str(ci)
                 dump_path1 = dump_path1_sp[0] + cs + dump_path1_sp[1]
                 if ci > 99:
-                    (
+                    raise ValueError(
                         "Too many file copies are being created for ExpSpec configuration data, \
                             copy file creation rate limited to 100 per second."
                     )
-                    break
-            dump_vars(dump_path1, var_dict)
+            # Dump
+            with open(dump_path1, 'wb') as f:
+                dill.dump(self, f)
 
             # Print output path
-            print("\nThe data configuration data saved to: \n", dump_path0)
+            print("\nSpecExp configurations saved to: \n", dump_path0)
 
     # Alias
     save_config = save_data_config
 
     # Load data configurations from saved file
-    @validate_call
+    @simple_type_validator
     def load_data_config(self, config_file_path: str = "") -> None:
         """
-        Load configurations from saved .dill file.
+        Load SpecExp configurations from dill file.
 
         Parameters
         ----------
@@ -3760,7 +3825,7 @@ class SpecExp:
             The path can be absolute path of the dill file or its relative path to report directory.
             If not given, the path will be '(SpecExp.report_directory)/SpecExp_configuration/SpecExp_data_configuration_(SpecExp.create_time).dill'
         """  # noqa: E501
-        # Load file path
+        # Load path
         if config_file_path == "":
             dump_path0 = (
                 self.report_directory + "SpecExp_configuration/" + f"SpecExp_data_configuration_{self.create_time}.dill"
@@ -3770,27 +3835,10 @@ class SpecExp:
         else:
             dump_path0 = config_file_path
 
-        # Load to var dict
-        var_dict = load_vars(dump_path0)
-
-        # Read data
-        # Group attribute
-        self._groups = var_dict["groups"]
-        # Image attributes
-        self._images = var_dict["images"]
-        self._images_data = var_dict["images_data"]
-        self._raster_masks = var_dict["raster_masks"]
-        # ROI attributes
-        self._rois_from_file = var_dict["rois_from_file"]
-        self._rois_from_coords = var_dict["rois_from_coords"]
-        self._rois = var_dict["rois"]
-        self._rois_sample = var_dict["rois_sample"]
-        self._rois_mask = var_dict["rois_mask"]
-        # Standalone spectra
-        self._standalone_specs = var_dict["standalone_specs"]
-        # Sample labels and target values
-        self._sample_labels = var_dict["labels"]
-        self._sample_targets = var_dict["sample_targets"]
+        # Load to instance
+        with open(dump_path0, 'rb') as f:
+            loaded_instance = dill.load(f)
+        self.__dict__.update(loaded_instance.__dict__)
 
     # Alias
     load_config = load_data_config

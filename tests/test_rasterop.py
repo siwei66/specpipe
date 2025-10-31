@@ -7,29 +7,28 @@ The following source code was created with AI assistance and has been human revi
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
+# OS
+import os
+import tempfile
+
 # Test
 import pytest
 import unittest
 
-# OS Files
-import os
-import tempfile
-
 # Typing
 from typing import Union
 
-# Testing third
+# Basic data
 import numpy as np
 import torch
 
-# Rasters
+# Raster
 import rasterio
 
-# Self
-# Applied package functions for test
+# Local
 from specpipe.example_data import create_test_raster
 
-# Funcs to test
+# Functions to test
 from specpipe.rasterop import (
     auto_fp,
     croproi,
@@ -46,6 +45,7 @@ try:
     HAS_CUDA = torch.cuda.is_available()
 except ImportError:
     HAS_CUDA = False
+
 
 # %% test functions : croproi
 

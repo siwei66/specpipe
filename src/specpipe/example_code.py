@@ -239,74 +239,91 @@ pipe.run()
 # pipe.run(resume=True)
 
 # Input data file structure
-"""
+_ = """
 Input data directory
 
-data_directory/
-├── SpecExp_configuration/
-│    ├── Loading_history/
-│    │   ├── Loaded_images.csv
-│    │   └── Loaded_ROIs.csv
-│    └── SpecExp_data_configuration.dill
-├── Your_rasters.tif
-└── Your_ROIs.xml
+    data_directory/
+    ├── SpecExp_configuration/
+    │    ├── Loading_history/
+    │    │   ├── Loaded_images.csv
+    │    │   └── Loaded_ROIs.csv
+    │    └── SpecExp_data_configuration.dill
+    ├── Your_rasters.tif
+    └── Your_ROIs.xml
 """
 
 # Output report file structure for regression task
-"""
+_ = """
 Output report directory
 
-report_directory/
-├── Modeling/
-│    └── Model_evaluation_reports/
-│        ├── Data_chain_Preprocessing_#0_Model_(model label 0)/
-│        │   ├── Model_for_application/
-│        │   ├── Model_in_validation/
-│        │   ├── Regression_performance.csv
-│        │   ├── Validation_results.csv
-│        │   ├── Residual_analysis.csv
-│        │   ├── Influence_analysis.csv
-│        │   ├── Scatter_plot.png
-│        │   └── Residual_plot.png
-│        ├── Data_chain_Preprocessing_#0_Model_(model label 1)/
-│        ├── Data_chain_Preprocessing_#1_Model_(model label 0)/
-│        ├── Data_chain_Preprocessing_#1_Model_(model label 1)/
-│        ├──  Preprocessing_#0.txt
-│        └──  Preprocessing_#1.txt
-├── Pre_execution_test_data/
-├── Preprocessing/
-└── test_run/
+    report_directory/
+    ├── Modeling/
+    │    ├── sample_targets.csv
+    │    ├── sample_targets_stats.csv
+    │    └── Model_evaluation_reports/
+    │        ├── Data_chain_Preprocessing_#0_Model_(model label 0)/
+    │        │   ├── Model_for_application/
+    │        │   ├── Model_in_validation/
+    │        │   ├── Regression_performance.csv
+    │        │   ├── Validation_results.csv
+    │        │   ├── Residual_analysis.csv
+    │        │   ├── Influence_analysis.csv
+    │        │   ├── Scatter_plot.png
+    │        │   └── Residual_plot.png
+    │        ├── Data_chain_Preprocessing_#0_Model_(model label 1)/
+    │        ├── Data_chain_Preprocessing_#1_Model_(model label 0)/
+    │        ├── Data_chain_Preprocessing_#1_Model_(model label 1)/
+    │        ├── Performance_summary.csv
+    │        ├── Marginal_R2_stats_(process step).csv
+    │        ├── Preprocessing_#0.txt
+    │        ├── Preprocessing_#0.txt
+    │        └── Preprocessing_#1.txt
+    ├── Pre_execution_test_data/
+    ├── Preprocessing/
+    │    ├── Step_results/
+    │    ├── PreprocessingChainResult_chain_0.csv
+    │    ├── PreprocessingChainResult_chain_0_X_(stats metrics).csv
+    │    └── PreprocessingChainResult_chain_1.csv
+    ├── SpecPipe_configuration/
+    └── test_run/
 """
 
 # Output report file structure for classification task
-"""
+_ = """
 Output report directory
 
-report_directory/
-├── Modeling/
-│    └── Model_evaluation_reports/
-│        ├── Data_chain_Preprocessing_#0_Model_(model label 0)/
-│        │   ├── Model_for_application/
-│        │   ├── Model_in_validation/
-│        │   ├── Classification_performance.csv
-│        │   ├── Validation_results.csv
-│        │   ├── Residual_analysis.csv
-│        │   ├── Influence_analysis.csv
-│        │   └── ROC_curve.png
-│        ├── Data_chain_Preprocessing_#0_Model_(model label 1)/
-│        ├── Data_chain_Preprocessing_#1_Model_(model label 0)/
-│        ├── Data_chain_Preprocessing_#1_Model_(model label 1)/
-│        ├──  Preprocessing_#0.txt
-│        └──  Preprocessing_#1.txt
-├── Pre_execution_test_data/
-├── Preprocessing/
-│    ├── Step_results/
-│    ├── PreprocessingChainResult_chain_0.csv
-│    └── PreprocessingChainResult_chain_1.csv
-└── test_run/
+    report_directory/
+    ├── Modeling/
+    │    └── Model_evaluation_reports/
+    │        ├── Data_chain_Preprocessing_#0_Model_(model label 0)/
+    │        │   ├── Model_for_application/
+    │        │   ├── Model_in_validation/
+    │        │   ├── Classification_performance.csv
+    │        │   ├── Validation_results.csv
+    │        │   ├── Residual_analysis.csv
+    │        │   ├── Influence_analysis.csv
+    │        │   └── ROC_curve.png
+    │        ├── Data_chain_Preprocessing_#0_Model_(model label 1)/
+    │        ├── Data_chain_Preprocessing_#1_Model_(model label 0)/
+    │        ├── Data_chain_Preprocessing_#1_Model_(model label 1)/
+    │        ├── Macro_avg_performance_summary.csv
+    │        ├── Micro_avg_performance_summary.csv
+    │        ├── Marginal_macro_avg_AUC_stats_(process step).csv
+    │        ├── Marginal_micro_avg_AUC_stats_(process step).csv
+    │        ├── Preprocessing_#0.txt
+    │        └── Preprocessing_#1.txt
+    ├── Pre_execution_test_data/
+    ├── Preprocessing/
+    │    ├── Step_results/
+    │    ├── PreprocessingChainResult_chain_0.csv
+    │    ├── PreprocessingChainResult_chain_0_X_(stats metrics).csv
+    │    └── PreprocessingChainResult_chain_1.csv
+    ├── SpecPipe_configuration/
+    └── test_run/
 """
 
 # Clear the temporary directory after use
-import shutil
 
-shutil.rmtree(data_dir)
+# import shutil
+
+# shutil.rmtree(data_dir)

@@ -5,38 +5,45 @@ SpecPipe - Pipeline management and implemention module for spectral image proces
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
-# Basics
-import copy
-import json
+# OS
 import os
 import shutil
 
-# For local test - delete after use
-import warnings
-from datetime import datetime
+# Interface
+from tqdm import tqdm
 
-# import dill
-from functools import partial
+# Warning
+import warnings
 
 # Typing
 from typing import Annotated, Any, Callable, Literal, Optional, Union, overload
 
-# Plots
-import matplotlib.pyplot as plt
-import numpy as np
+# Time
+import time
+from datetime import datetime
 
-# Calculation
+# Functions
+from functools import partial
+
+# Basic data
+import copy
+import json
+import numpy as np
 import pandas as pd
 
 # Raster
 import rasterio
+from rasterio.windows import Window
+
+# Visualization
+import matplotlib.pyplot as plt
 
 # Multiprocessing
+import dill
 from pathos.multiprocessing import ProcessingPool, cpu_count
-from rasterio.windows import Window
-from tqdm import tqdm
 
-# Self
+# Local
+from .groupstats import sample_group_stats, performance_marginal_stats
 from .modeleva import ModelEva
 from .rasterop import croproi, pixel_apply
 from .roistats import ROISpec, minbbox
@@ -907,13 +914,26 @@ class SpecPipe:
     - rm_model :
         Remove added models by model_id, model_label and model method (object).
 
-    - process_chains_to_df (Alias: ls_process_chains, ls_chains)
-        List process chains in a dataframe. Return the dataframe and / or print the dataframe of the process chains show in process label.
-        If multiple candidate methods are added for a given position in the application sequence, a full-factorial experimental design is employed by default to construct and evaluate all possible method chains.
+    - process_chains_to_df (Alias: ls_process_chains) :
+        List process chains in a dataframe. Returns the default full factorial process chains.
+        Output is a dataframe, where each row represents a processing chain with process IDs.
 
-    - custom_chains_from_df
+    - custom_chains_from_df :
         Customize processing chains and update chains using chain dataframe.
         Once custom chains are created, SpecPipe will prioritize their execution, bypassing the original full-factorial chains.
+
+    - custom_chains_to_df (Alias: ls_custom_chains) :
+        List custom chains in a dataframe.
+
+    - ls_chains :
+        List the process chains in the pipeline execution.
+        Returns custom chains if configured, otherwise returns default full factorial chains.
+
+    - save_pipe_config :
+        Save current pipeline configurations to files in the root of report directory.
+
+    - load_pipe_config :
+        Load SpecPipe configurations from dill file.
 
     - test_run :
         Run the pipeline of all processing chains using simplified test data. This method is executed automatically prior to each formal run.
@@ -981,8 +1001,15 @@ class SpecPipe:
                     raise ValueError(f"No spectrum is found in group: '{g}'")
 
         # Validate sample target values
-        if len(spec_exp.sample_targets) == 0:
+        sample_target_values = [spt[2] for spt in spec_exp.sample_targets]
+        if len(spec_exp.sample_targets) == 0 or sample_target_values == [None] * len(sample_target_values):
             raise ValueError("No sample target value is found in given SpecExp")
+        for stt in spec_exp.sample_targets:
+            if stt[2] is None or stt[2] == np.nan:
+                raise ValueError(
+                    "Sample target value with ID '{stt[0]}', label '{stt[1]}' and group '{stt[3]}'\
+                    is missing. Got sample target value: {stt[2]}"
+                )
 
         # SpecExp
         # SpecExp._groups: [0 group]
@@ -992,7 +1019,7 @@ class SpecPipe:
 
         # Sample target values
         # [0 fixed sample id, 1 user assinged labels, 2 Target values]
-        self._sample_targets: list[tuple[str, str, Union[str, bool, int, float]]] = spec_exp.sample_targets
+        self._sample_targets: list[tuple[str, str, Union[str, bool, int, float], str]] = spec_exp.sample_targets
 
         # Report directory
         self._report_directory: str = self.spec_exp._report_directory
@@ -1095,11 +1122,11 @@ class SpecPipe:
 
     ## Read only or immuatable properties
     @property
-    def sample_targets(self) -> list[tuple[str, str, Union[str, bool, int, float]]]:
+    def sample_targets(self) -> list[tuple[str, str, Union[str, bool, int, float], str]]:
         return self._sample_targets
 
     @sample_targets.setter
-    def sample_targets(self, value: list[tuple[str, str, Union[str, bool, int, float]]]) -> None:
+    def sample_targets(self, value: list[tuple[str, str, Union[str, bool, int, float], str]]) -> None:
         raise ValueError("sample_targets cannot be modified in SpecPipe, please update using 'SpecExp' instead")
 
     @property
@@ -2117,15 +2144,31 @@ class SpecPipe:
         else:
             # Get report dir
             report_dir = self.report_directory
-            # Validate model label
+
+            # Validate model labels
+            existed_model_labels = [proc[1] for proc in self.process if proc[3] == 'model' and proc[1] != ''] + [
+                proc[5].model_label for proc in self.process if proc[3] == 'model'
+            ]
             if model_label is None:
-                model_label = method.__class__.__name__
+                # Validate for duplication
+                model_name = method.__class__.__name__
+                name_k = 0
+                while model_name in existed_model_labels:
+                    name_k = name_k + 1
+                    model_name = method.__class__.__name__ + f"_{name_k}"
+                model_label = model_name
             else:
+                # Validate for duplication
+                name_k = 0
+                while model_label in existed_model_labels:
+                    name_k = name_k + 1
+                    model_label = method.__class__.__name__ + f"_{name_k}"
                 process_label = model_label
+
             # Validate is_regression
             if is_regression is None:
                 try:
-                    self.sample_targets[0][-1] + 1  # type: ignore[operator]
+                    self.sample_targets[0][2] + 1  # type: ignore[operator]
                     # Behavior-based type check after serialization, safe approach for serialization
                     is_regression = True
                 except Exception:
@@ -2294,7 +2337,12 @@ class SpecPipe:
         self, print_label: bool = True, return_label: bool = False
     ) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame], None]:
         """
-        List process chains. A dataframe of process IDs is returned, each row represents a processing chain.
+        List process chains.
+
+        Returns the default full factorial process chains.
+        For custom chains, use 'ls_custom_chains'.
+
+        Output is a dataframe, where each row represents a processing chain with process IDs.
 
         Parameters
         ----------
@@ -2319,14 +2367,110 @@ class SpecPipe:
                         print(df_chains_label)
                 if return_label:
                     return df_chains, df_chains_label
-            return df_chains
+                else:
+                    return df_chains
+            else:
+                return df_chains
         else:
             print("No process chain found")
             return None
 
     # Alias
     process_chains_to_df = ls_process_chains
-    ls_chains = ls_process_chains
+
+    # Save pipeline configurations
+    @simple_type_validator
+    def save_pipe_config(self, copy: bool = False, save_spec_exp_config: bool = True) -> None:
+        """
+        Save current pipeline configurations to files in the root of report directory.
+
+        Parameters
+        ----------
+        copy : bool, optional
+            Whether to create a backup copy of configuration files. The default is True.
+        save_spec_exp_config : bool, optional
+            Whether to save data configurations of SpecExp. The default is True.
+        """
+        # Create save dir
+        report_dir = self.report_directory + "SpecPipe_configuration/"
+        if not os.path.exists(report_dir):
+            os.makedirs(report_dir)
+
+        # Get configs
+        df_process = self.ls_process(print_result=False, return_result=True)
+        df_full_chains, df_full_chains_label = self.ls_process_chains(print_label=False, return_label=True)
+        df_exec_chains, df_exec_chains_label = self.ls_chains(print_label=False, return_label=True)
+
+        # Save configs
+        df_process.to_csv(report_dir + "SpecPipe_added_process.csv", index=False)
+        df_full_chains.to_csv(report_dir + "SpecPipe_full_factorial_chains_in_ID.csv", index=False)
+        df_full_chains_label.to_csv(report_dir + "SpecPipe_full_factorial_chains_in_label.csv", index=False)
+        df_exec_chains.to_csv(report_dir + "SpecPipe_exec_chains_in_ID.csv", index=False)
+        df_exec_chains_label.to_csv(report_dir + "SpecPipe_exec_chains_in_label.csv", index=False)
+
+        # Save SpecPipe
+        with open(f"{report_dir}SpecPipe_pipeline_configuration_{self.create_time}.dill", 'wb') as f:
+            dill.dump(self, f)
+
+        # Save copies
+        if copy:
+            # Prevent duplication
+            time.sleep(1.0)
+            # Dump copy
+            cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            df_process.to_csv(report_dir + f"SpecPipe_added_process_{cts}.csv", index=False)
+            df_full_chains.to_csv(report_dir + f"SpecPipe_full_factorial_chains_in_ID_{cts}.csv", index=False)
+            df_full_chains_label.to_csv(report_dir + f"SpecPipe_full_factorial_chains_in_label_{cts}.csv", index=False)
+            df_exec_chains.to_csv(report_dir + f"SpecPipe_exec_chains_in_ID_{cts}.csv", index=False)
+            df_exec_chains_label.to_csv(report_dir + f"SpecPipe_exec_chains_in_label_{cts}.csv", index=False)
+            with open(report_dir + f"SpecPipe_pipeline_configuration_{self.create_time}_copy_at_{cts}.dill", 'wb') as f:
+                dill.dump(self, f)
+
+        # Save SpecExp
+        if save_spec_exp_config:
+            self.spec_exp.save_data_config(copy=copy)
+
+        # Print output path
+        print(
+            f"\nSpecPipe configurations saved to: \
+              {report_dir}SpecPipe_pipeline_configuration_{self.create_time}.dill\n"
+        )
+
+    # Alias
+    save_config = save_pipe_config
+
+    # Load pipeline configurations
+    @simple_type_validator
+    def load_pipe_config(self, config_file_path: str = "") -> None:
+        """
+        Load SpecPipe configurations from dill file.
+
+        Parameters
+        ----------
+        config_file_path : str, optional
+            Configuration file path of 'SpecExp_data_configuration_(creating-time).dill'.
+            The path can be absolute path of the dill file or its relative path to report directory.
+            If not given, the path will be '(SpecExp.report_directory)/SpecExp_configuration/SpecExp_data_configuration_(SpecExp.create_time).dill'
+        """  # noqa: E501
+        # Load path
+        if config_file_path == "":
+            dump_path0 = (
+                self.report_directory
+                + "SpecPipe_configuration/"
+                + f"SpecPipe_pipeline_configuration_{self.create_time}.dill"
+            )
+        elif ("/" not in config_file_path) & ("\\" not in config_file_path):
+            dump_path0 = self.report_directory + "SpecPipe_configuration/" + config_file_path
+        else:
+            dump_path0 = config_file_path
+
+        # Load to instance
+        with open(dump_path0, 'rb') as f:
+            loaded_instance = dill.load(f)
+        self.__dict__.update(loaded_instance.__dict__)
+
+    # Alias
+    load_config = load_pipe_config
 
     # Read process chains from dataframe
     # @validate_call
@@ -2368,6 +2512,74 @@ class SpecPipe:
 
         # Update
         self._custom_chains = cchain
+
+    # List custom process chains
+    @simple_type_validator
+    def ls_custom_chains(
+        self, print_label: bool = True, return_label: bool = False
+    ) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame], None]:
+        """
+        List custom process chains.
+
+        Output is a dataframe, where each row represents a processing chain with process IDs.
+
+        Parameters
+        ----------
+        print_label : bool, optional
+            If True, prints chains using chain label. The default is True.
+        return_label : bool, optional
+            If True, return additional dataframe of process labels. The default is False.
+        """
+        if len(self._custom_chains) > 0:
+            df_chains = pd.DataFrame(
+                self._custom_chains,
+                columns=["Step_" + str(i) for i in range(len(self._custom_chains[0]))],
+            )
+            if return_label or print_label:
+                df_chains_label = copy.deepcopy(df_chains)
+                ref_table = self._process_id_label_ref()
+                for i in range(df_chains.shape[0]):
+                    for j in range(df_chains.shape[1]):
+                        df_chains_label.iloc[i, j] = self._process_id_to_label(df_chains.iloc[i, j], ref_table)
+                if print_label:
+                    with pd.option_context("display.max_rows", None, "display.max_columns", None):
+                        print(df_chains_label)
+                if return_label:
+                    return df_chains, df_chains_label
+                else:
+                    return df_chains
+            else:
+                return df_chains
+        else:
+            print("No custom chain configured")
+            return None
+
+    # Alias
+    custom_chains_to_df = ls_custom_chains
+
+    # List default chains
+    @simple_type_validator
+    def ls_chains(
+        self, print_label: bool = True, return_label: bool = False
+    ) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame], None]:
+        """
+        List the process chains in the pipeline execution.
+        Returns custom chains if configured, otherwise returns default full factorial chains.
+
+        Output is a dataframe, where each row represents a processing chain with process IDs.
+
+        Parameters
+        ----------
+        print_label : bool, optional
+            If True, prints chains using chain label. The default is True.
+        return_label : bool, optional
+            If True, return additional dataframe of process labels. The default is False.
+        """
+        if len(self._custom_chains) > 0:
+            result = self.ls_custom_chains(print_label, return_label)
+        else:
+            result = self.ls_process_chains(print_label, return_label)
+        return result
 
     # Get matched and unmatched process items
     # Format of associated attribute:
@@ -2982,6 +3194,8 @@ class SpecPipe:
         resume: bool = False,
         to_csv: bool = True,
         show_progress: bool = True,
+        save_config: bool = True,
+        summary: bool = True,
     ) -> None:
         """
         Implement preprocessing steps of all processing chains on the entire dataset and output modeling-ready sample_list data to files.
@@ -3015,16 +3229,25 @@ class SpecPipe:
 
         show_progress : bool, optional
             Show processing progress. The default is True.
+
+        save_config : bool, optional
+            Save SpecPipe configurations. The default is True.
+
+        summary : bool, optional
+            Whether to summarize preprocessed data and target value. The default is True.
         """  # noqa: E501
         # Prompt "if __name__ == '__main__':" protection for windows multiprocessing
         if n_processor > 1:
             if os.name == "nt":
-                warnings.warn(
-                    "Windows users must run multiprocessing within block \n\nif __name__ == '__main__': \n\n\
-                    Please make sure all of your main codes in the script are placed within this block.",
-                    UserWarning,
-                    stacklevel=2,
+                warn_msg = (
+                    "\nWindows users must run multiprocessing within block \n\nif __name__ == '__main__':"
+                    + "Please make sure all of your main codes in the script are placed within this block."
                 )
+                warnings.warn(warn_msg, UserWarning, stacklevel=2)
+
+        # Save configurations
+        if save_config:
+            self.save_pipe_config(copy=True)
 
         # Added chain testing
         if not self.tested:
@@ -3046,6 +3269,18 @@ class SpecPipe:
         # Clear step result data after sample list construction after finishing sample_list construction
         if not keep_chain_results:
             self._cl_step_result(result_directory=result_directory)
+
+        # Print result dir
+        if len(result_directory) > 0:
+            result_dir = str(result_directory)
+        else:
+            result_dir = self.report_directory
+        self._save_sample_targets(result_dir)
+        print(f"\n\nPipeline preprocessing complete, result stored in:\n{result_dir}")
+
+        # Group stats for preprocessing
+        if summary:
+            _ = sample_group_stats(self.report_directory)
 
     @simple_type_validator
     def _preprocessor(  # noqa: C901
@@ -3313,6 +3548,8 @@ class SpecPipe:
         resume: bool = False,
         report_directory: str = "",
         show_progress: bool = True,
+        save_config: bool = True,
+        summary: bool = True,
     ) -> None:
         """
         Evaluating added models on sample data from all preprocessing chains.
@@ -3336,6 +3573,14 @@ class SpecPipe:
 
         show_progress : bool, optional
             Show processing progress. The default is True.
+
+        save_config : bool, optional
+            Save SpecPipe configurations. The default is True.
+
+        summary : bool, optional
+            Whether to summarize performance metrics and marginal performance metrics.
+            The marginal performances of different processes at each step are compared using Mann-Whitney U test.
+            The default is True.
         """  # noqa: E501
 
         # Prompt "if __name__ == '__main__':" protection for windows multiprocessing
@@ -3347,6 +3592,10 @@ class SpecPipe:
                     UserWarning,
                     stacklevel=2,
                 )
+
+        # Save configurations
+        if save_config:
+            self.save_pipe_config(copy=True)
 
         # Close existing pyplot to save memory
         plt.close("all")
@@ -3498,6 +3747,18 @@ class SpecPipe:
         # Clear log
         self._clear_model_log(log_path)
 
+        # Print result dir and save corresponding targets
+        if len(result_directory) > 0:
+            result_dir = str(result_directory)
+        else:
+            result_dir = self.report_directory
+        self._save_sample_targets(result_dir)
+        print(f"\n\nPipeline model evaluation complete, result stored in:\n{result_dir}")
+
+        # Performance summary and marginal performance stats
+        if summary:
+            _ = performance_marginal_stats(self.report_directory)
+
     @staticmethod
     def _clear_model_log(log_path: str) -> None:
         # Clear log when finished
@@ -3508,6 +3769,17 @@ class SpecPipe:
                 raise PermissionError(f"\nNo permission to clear existed running log : \n'{log_path}'.\n") from e
             except Exception as e:
                 raise ValueError(f"\nError in clearing existed running log : \n{e}\n") from e
+
+    def _save_sample_targets(self, result_dir: str) -> None:
+        # Save dir
+        save_dir = f"{result_dir}/Modeling/".replace("//", "/")
+        # Validate save dir
+        if os.path.exists(save_dir):
+            self.spec_exp.sample_targets_to_csv(save_dir + "sample_targets.csv")
+        else:
+            os.makedirs(save_dir)
+            self.spec_exp.sample_targets_to_csv(save_dir + "sample_targets.csv")
+            # raise ValueError(f"Invalid modeling result directory: {save_dir}")
 
     @simple_type_validator
     def run(
@@ -3521,6 +3793,8 @@ class SpecPipe:
         resume: bool = False,
         sample_data_to_csv: bool = True,
         show_progress: bool = True,
+        save_config: bool = True,
+        summary: bool = True,
     ) -> None:
         """
         Run pipeline of given processes on SpecExp instance (corresponding manager of spectral experiment data).
@@ -3559,6 +3833,14 @@ class SpecPipe:
 
         show_progress : bool, optional
             Show processing progress. The default is True.
+
+        save_config : bool, optional
+            Save SpecPipe configurations. The default is True.
+
+        summary : bool, optional
+            Whether to summarize the preprocessed data, performance metrics and marginal performance metrics.
+            The marginal performances of different processes at each step are compared using Mann-Whitney U test.
+            The default is True.
         """  # noqa: E501
 
         # Validate processor
@@ -3578,6 +3860,10 @@ class SpecPipe:
                     stacklevel=2,
                 )
 
+        # Save configurations
+        if save_config:
+            self.save_pipe_config(copy=True)
+
         # Test process
         print("\n========= Test added chains =========\n")
         self.test_run()
@@ -3594,6 +3880,8 @@ class SpecPipe:
             resume=resume,
             to_csv=sample_data_to_csv,
             show_progress=show_progress,
+            save_config=False,
+            summary=summary,
         )
 
         # Model evaluation
@@ -3609,6 +3897,16 @@ class SpecPipe:
                 resume=resume,
                 report_directory=result_directory,
                 show_progress=show_progress,
+                save_config=False,
+                summary=summary,
             )
         else:
             print("\nNo model added, pipeline complete with preprocessing results.\n")
+
+        # Print result dir and save corresponding targets
+        if len(result_directory) > 0:
+            result_dir = str(result_directory)
+        else:
+            result_dir = self.report_directory
+        self._save_sample_targets(result_dir)
+        print(f"\n\nPipeline running complete, result stored in:\n{result_dir}")

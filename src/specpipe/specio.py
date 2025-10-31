@@ -5,24 +5,20 @@ Spectra data I/O-related utilities for SpecPipe
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
-# Basics
-import fnmatch
-import time
-
-# File operations
-import glob
-import inspect
-
-# OS output
-import io
+# OS
 import os
-import re
-import warnings
+import glob
+import fnmatch
+import dill
+
+# I/O
+import io
 from contextlib import redirect_stdout
-from datetime import datetime
+
+# Warning
+import warnings
 
 # Typing
-from functools import wraps
 from typing import (
     Annotated,
     Any,
@@ -34,27 +30,33 @@ from typing import (
     get_origin,
     get_type_hints,
     overload,
+    Protocol,
+    runtime_checkable,
 )
+from pydantic import AfterValidator, validate_call
 
-# Python variable r/w
-import dill
-import geopandas as gpd
+# Time
+import time
+from datetime import datetime
 
-# import zstandard as zstd
-# Calculation
+# Functions
+import inspect
+from functools import wraps
+
+# Basic data
 import numpy as np
-
-# import numpy.typing as npt
 import pandas as pd
 import torch
 
-# XML parsing
-from bs4 import BeautifulSoup
-from pydantic import AfterValidator, validate_call
+# Geo
+import geopandas as gpd
+from shapely.geometry import MultiPolygon, Polygon
 from pyproj import CRS
 
-# Geoshape
-from shapely.geometry import MultiPolygon, Polygon
+# XML parsing
+import re
+from bs4 import BeautifulSoup
+
 
 # %% simple_type_validator - Basic validator with serilization compatibility
 
@@ -1515,3 +1517,22 @@ def lsdir_robust(
         return list(result)
     else:
         return []
+
+
+# %% Numeric type validator
+
+
+# Read number protocol
+class RealNumberMeta(type(Protocol)):  # type: ignore[misc]
+    def __instancecheck__(cls, instance: Any) -> bool:
+        # Exclude numpy arrays
+        if hasattr(instance, '__len__'):
+            return False
+        # Include RealNumber
+        return hasattr(instance, '__mul__') and hasattr(instance, '__lt__')
+
+
+@runtime_checkable
+class RealNumber(Protocol, metaclass=RealNumberMeta):
+    def __mul__(self, v: Any) -> Any: ...
+    def __lt__(self, v: Any) -> bool: ...

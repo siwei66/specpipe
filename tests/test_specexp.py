@@ -7,23 +7,27 @@ The following source code was created with AI assistance and has been human revi
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
+# OS
 import os
 import shutil
-
 import tempfile
-import unittest
 
-import pandas as pd
-import pytest
-
+# Typing
 from typing import Union
 
-# Self
-# Funcs to test
+# Test
+import pytest
+import unittest
+
+# Data basics
+import pandas as pd
+
+# Local
+from specpipe.specio import silent
+
+# Functions to test
 from specpipe.specexp import SpecExp
 
-# Applied package functions for test
-from specpipe.specio import silent
 
 # %% Helper functions for testing
 
@@ -92,23 +96,31 @@ def create_test_directory_structure(base_dir: str) -> tuple[str, str]:
 class TestSpecExp(unittest.TestCase):
     """Test class for SpecExp functionality"""
 
-    def setUp(self) -> None:
+    test_dir: str
+    report_dir: str
+    images_dir: str
+    rois_dir: str
+    spec_exp: SpecExp
+
+    @classmethod
+    def setUpClass(cls) -> None:
         """Setup method that runs before each test"""
         # Create a temporary directory for testing
-        self.test_dir = (str(tempfile.mkdtemp()).replace("\\", "/") + "/").replace("//", "/")
-        self.report_dir = (str(os.path.join(self.test_dir, "reports")).replace("\\", "/") + "/").replace("//", "/")
-        os.makedirs(self.report_dir, exist_ok=True)
+        cls.test_dir = (str(tempfile.mkdtemp()).replace("\\", "/") + "/").replace("//", "/")
+        cls.report_dir = (str(os.path.join(cls.test_dir, "reports")).replace("\\", "/") + "/").replace("//", "/")
+        os.makedirs(cls.report_dir, exist_ok=True)
 
         # Create test data directories
-        self.images_dir, self.rois_dir = create_test_directory_structure(self.test_dir)
+        cls.images_dir, cls.rois_dir = create_test_directory_structure(cls.test_dir)
 
         # Initialize SpecExp instance
-        self.spec_exp = SpecExp(report_directory=self.report_dir, log_loading=False)
+        cls.spec_exp = SpecExp(report_directory=cls.report_dir, log_loading=False)
 
-    def tearDown(self) -> None:
+    @classmethod
+    def tearDownClass(cls) -> None:
         """Cleanup after each test method"""
-        if hasattr(self, "test_dir") and os.path.exists(self.test_dir):
-            shutil.rmtree(self.test_dir)
+        if hasattr(cls, "test_dir") and os.path.exists(cls.test_dir):
+            shutil.rmtree(cls.test_dir)
 
     def spec_exp_init(self) -> None:
         """Initialize SpecExp"""
@@ -500,7 +512,9 @@ class TestSpecExp(unittest.TestCase):
         assert len(labels) > 0
 
         # Test setting sample labels from dataframe
-        new_labels = pd.DataFrame({"Sample_ID": labels["Sample_ID"], "Label": ["label1"] * len(labels)})
+        new_labels = pd.DataFrame(
+            {"Sample_ID": labels["Sample_ID"], "Label": ["label1"] * len(labels), "Group": ["test_group"] * len(labels)}
+        )
         self.spec_exp.sample_labels_from_df(new_labels)
 
         # Test exporting to CSV
@@ -545,8 +559,9 @@ class TestSpecExp(unittest.TestCase):
         new_targets = pd.DataFrame(
             {
                 "Sample_ID": targets["Sample_ID"],
-                "Sample_label": targets["Sample_label"],
+                "Label": targets["Label"],
                 "Target_value": [1.0] * len(targets),
+                "Group": ["test_group"] * len(targets),
             }
         )
         self.spec_exp.sample_targets_from_df(new_targets)
@@ -580,10 +595,11 @@ class TestSpecExp(unittest.TestCase):
 
         # Save configuration
         self.spec_exp.save_data_config(copy=False)
+        self.spec_exp.load_data_config()
 
         # Create a new instance and load configuration
         new_spec_exp = SpecExp(report_directory=self.report_dir, log_loading=False)
-        new_spec_exp.load_data_config()
+        new_spec_exp.load_data_config(f"SpecExp_data_configuration_{self.spec_exp.create_time}.dill")
 
         # Check if data was loaded correctly
         assert len(new_spec_exp.groups) == 1

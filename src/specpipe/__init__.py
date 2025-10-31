@@ -4,7 +4,7 @@ SpecPipe - A file-based pipeline for efficient batch processing and modeling of 
 """
 
 # Package meta
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 __author__ = "Siwei Luo"
 __license__ = "MIT"
 

@@ -6,34 +6,35 @@ The following source code was created with AI assistance and has been human revi
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
-# Test
-import unittest
-import pytest
 
-# OS Files
+# OS
 import os
 import shutil
 import tempfile
-import warnings
 from pathlib import Path
+import dill
+
+# Warning
+import warnings
+
+# Test
+import pytest
+import unittest
 
 # Typing
 from typing import Annotated, Any, Callable, Optional, Union
+from pydantic import BaseModel
 
-import dill
-
-# Geo tools
-import geopandas as gpd
-
-# Testing third
+# Basic data
 import numpy as np
 import pandas as pd
 import torch
-from pydantic import BaseModel
+
+# Geo
+import geopandas as gpd
 from shapely.geometry import MultiPolygon, Polygon
 
-# Self
-# Funcs to test
+# Functions to test
 from specpipe.specio import (
     _pd_dtype_cond,
     arraylike_validator,
@@ -52,6 +53,7 @@ from specpipe.specio import (
     simple_type_validator,
     lsdir_robust,
 )
+
 
 # %% test functions : simple_type_validator
 

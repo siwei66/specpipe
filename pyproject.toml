@@ -4,14 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "specpipe"
-version = "0.1.1"
+version = "0.2.0"
 description = "A file-based pipeline for efficient batch processing and modeling of hyperspectral images."
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
     {name = "Siwei Luo", email = "siwei1102@outlook.de"}
 ]
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = [
     "hyperspectral-imaging",
     "spectral-image-processing",
@@ -22,7 +23,6 @@ keywords = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Topic :: Scientific/Engineering :: Bio-Informatics",

@@ -5,26 +5,25 @@ Tests for modeling and model evaluation module (ModelEva)
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
-# Test
-# OS Files
+# OS
 import os
 import shutil
-
-# For local test - delete after use
 import tempfile
+
+# Test
+import pytest
 import unittest
 
-# Testing third
+# Basic data
 import numpy as np
 import pandas as pd
-import pytest
 
-# Modeling
+# Models
 from sklearn.linear_model import LinearRegression, LogisticRegression
 
-# Self
-# Funcs to test
+# Functions to test
 from specpipe.modeleva import ModelEva
+
 
 # %% Helper functions for ModelEva testing
 

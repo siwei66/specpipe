@@ -7,31 +7,32 @@ The following source code was created with AI assistance and has been human revi
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
-# OS Files
+# OS
 import os
 import tempfile
 
 # Test
+import pytest
 import unittest
 
 # Typing
 from typing import Any, Union
 
-# Testing third
-import math
+# Basic data
 import numpy as np
 import pandas as pd
-import pytest
 import torch
 
-# Rasters
+# Math
+import math
+
+# Raster
 from rasterio import RasterioIOError
 
-# Self
-# Applied package functions for test
+# Local
 from specpipe.example_data import create_test_raster
 
-# Funcs to test
+# Functions to test
 from specpipe.roistats import (
     ROISpec,
     Stats2d,
@@ -53,6 +54,7 @@ from specpipe.roistats import (
     smopt,
     spectral_angle,
 )
+
 
 # %% test functions : ROISpec
 
@@ -1920,10 +1922,10 @@ class TestStats2d:
         assert np.allclose(result1, result2)
 
     @staticmethod
-    def test_static_minimal() -> None:
-        """Test Stats2d.minimal static method"""
+    def test_static_minimum() -> None:
+        """Test Stats2d.minimum static method"""
         arr = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
-        result = Stats2d.minimal(arr, axis=0)
+        result = Stats2d.minimum(arr, axis=0)
         expected = np.nanmin(arr, axis=0)
 
         assert np.allclose(result, expected)
@@ -1938,10 +1940,10 @@ class TestStats2d:
         assert np.allclose(result, expected)
 
     @staticmethod
-    def test_static_maximal() -> None:
-        """Test Stats2d.maximal static method"""
+    def test_static_maximum() -> None:
+        """Test Stats2d.maximum static method"""
         arr = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
-        result = Stats2d.maximal(arr, axis=0)
+        result = Stats2d.maximum(arr, axis=0)
         expected = np.nanmax(arr, axis=0)
 
         assert np.allclose(result, expected)
@@ -2095,9 +2097,9 @@ class TestStats2d:
 # TestStats2d.test_static_var()
 # TestStats2d.test_static_skew()
 # TestStats2d.test_static_kurt()
-# TestStats2d.test_static_minimal()
+# TestStats2d.test_static_minimum()
 # TestStats2d.test_static_median()
-# TestStats2d.test_static_maximal()
+# TestStats2d.test_static_maximum()
 # TestStats2d.test_init_default()
 # TestStats2d.test_init_with_measure_and_axis()
 # TestStats2d.test_values_property_callable_measure()

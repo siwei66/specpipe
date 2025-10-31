@@ -424,12 +424,14 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ```text
     report_directory/
     ├── Modeling/
-    │    └── Model_Evaluation_Reports/
+    │    ├── sample_targets.csv
+    │    ├── sample_targets_stats.csv
+    │    └── Model_evaluation_reports/
     │        ├── Data_chain_Preprocessing_#0_Model_(model label 0)/
     │        │   ├── Model_for_application/
     │        │   ├── Model_in_validation/
-    │        │   ├── Validation_results.csv
     │        │   ├── Regression_performance.csv
+    │        │   ├── Validation_results.csv
     │        │   ├── Residual_analysis.csv
     │        │   ├── Influence_analysis.csv
     │        │   ├── Scatter_plot.png
@@ -437,13 +439,18 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     │        ├── Data_chain_Preprocessing_#0_Model_(model label 1)/
     │        ├── Data_chain_Preprocessing_#1_Model_(model label 0)/
     │        ├── Data_chain_Preprocessing_#1_Model_(model label 1)/
-    │        ├──  Preprocessing_#0.txt
-    │        └──  Preprocessing_#1.txt
+    │        ├── Performance_summary.csv
+    │        ├── Marginal_R2_stats_(process step).csv
+    │        ├── Preprocessing_#0.txt
+    │        ├── Preprocessing_#0.txt
+    │        └── Preprocessing_#1.txt
     ├── Pre_execution_test_data/
     ├── Preprocessing/
     │    ├── Step_results/
     │    ├── PreprocessingChainResult_chain_0.csv
+    │    ├── PreprocessingChainResult_chain_0_X_(stats metrics).csv
     │    └── PreprocessingChainResult_chain_1.csv
+    ├── SpecPipe_configuration/
     └── test_run/
     ```
 
@@ -451,25 +458,31 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ```text
     report_directory/
     ├── Modeling/
-    │    └── Model_Evaluation_Reports/
+    │    └── Model_evaluation_reports/
     │        ├── Data_chain_Preprocessing_#0_Model_(model label 0)/
     │        │   ├── Model_for_application/
     │        │   ├── Model_in_validation/
-    │        │   ├── Validation_results.csv
     │        │   ├── Classification_performance.csv
+    │        │   ├── Validation_results.csv
     │        │   ├── Residual_analysis.csv
     │        │   ├── Influence_analysis.csv
     │        │   └── ROC_curve.png
     │        ├── Data_chain_Preprocessing_#0_Model_(model label 1)/
     │        ├── Data_chain_Preprocessing_#1_Model_(model label 0)/
     │        ├── Data_chain_Preprocessing_#1_Model_(model label 1)/
-    │        ├──  Preprocessing_#0.txt
-    │        └──  Preprocessing_#1.txt
+    │        ├── Macro_avg_performance_summary.csv
+    │        ├── Micro_avg_performance_summary.csv
+    │        ├── Marginal_macro_avg_AUC_stats_(process step).csv
+    │        ├── Marginal_micro_avg_AUC_stats_(process step).csv
+    │        ├── Preprocessing_#0.txt
+    │        └── Preprocessing_#1.txt
     ├── Pre_execution_test_data/
     ├── Preprocessing/
     │    ├── Step_results/
     │    ├── PreprocessingChainResult_chain_0.csv
+    │    ├── PreprocessingChainResult_chain_0_X_(stats metrics).csv
     │    └── PreprocessingChainResult_chain_1.csv
+    ├── SpecPipe_configuration/
     └── test_run/
     ```
 

@@ -5,27 +5,28 @@ Basic ROI descriptive statistics functions
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
-# Basics
-# Calculation
-import math
-
-# For local test - delete after use
+# Warning
 import warnings
 
 # Typing
-from typing import Annotated, Any, Callable, Optional, Protocol, Union, overload, runtime_checkable
+from typing import Annotated, Any, Callable, Optional, Union, overload
 
+# Basic data
 import numpy as np
 import pandas as pd
-
-# Raster operation
-import rasterio
 import torch
+
+# Math
+import math
+
+# Raster
+import rasterio
 from rasterio.mask import mask
 from shapely.geometry import Polygon, box
 
-# Self
-from .specio import arraylike_validator, simple_type_validator
+# Local
+from .specio import arraylike_validator, simple_type_validator, RealNumber
+
 
 # %% Image and ROI functions
 
@@ -598,7 +599,7 @@ class Stats2d:
     Statistical measure calculator for a 2D data array with each row or column as a sample.
 
     For paralell processing, please use the following static methods:
-        - mean / std / skew / kurt / minimal / median / maximal
+        - mean / std / skew / kurt / minimum / median / maximum
     Or use functionn moment2d for arbitrary moments instead.
 
     Attributes
@@ -610,6 +611,35 @@ class Stats2d:
         - Custom measure function should accept 2D array as its only argment, where each row represents a sample.
         - Multiple measures can be specified in a list or tuple.
         If not given, all aforementioned common measures are computed by default.
+
+    Methods
+    -------
+    - stats2d(data_array_2d):
+        Computes a set of statistical measures for the provided 2D array and returns the results as a dictionary.
+
+    - values(data_array_2d):
+        Computes the values of a single specified statistical measure for the provided 2D array.
+
+    - mean(data_array_2d):
+        Computes the arithmetic mean of given 2D array.
+
+    - std(data_array_2d):
+        Computes the standard deviation of given 2D array.
+
+    - skew(data_array_2d):
+        Computes the skewness of given 2D array.
+
+    - kurt(data_array_2d):
+        Computes the kurtosis of given 2D array.
+
+    - minimum(data_array_2d):
+        Computes the minimum value of given 2D array.
+
+    - median(data_array_2d):
+        Computes the median of given 2D array.
+
+    - maximum(data_array_2d):
+        Computes the maximum value of given 2D array.
     """  # noqa: E501
 
     @simple_type_validator
@@ -665,9 +695,9 @@ class Stats2d:
 
     @staticmethod
     @simple_type_validator
-    def minimal(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
+    def minimum(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
         """
-        Min values of a 2D data array with each row or column as a sample. See stats2d.
+        Minimum values of a 2D data array with each row or column as a sample. See stats2d.
         """
         result: np.ndarray = np.array(np.nanmin(data_array_2d, axis=axis))
         return result
@@ -683,9 +713,9 @@ class Stats2d:
 
     @staticmethod
     @simple_type_validator
-    def maximal(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
+    def maximum(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
         """
-        Max values of a 2D data array with each row or column as a sample. See stats2d.
+        Maximum values of a 2D data array with each row or column as a sample. See stats2d.
         """
         result: np.ndarray = np.array(np.nanmax(data_array_2d, axis=axis))
         return result
@@ -967,21 +997,6 @@ def arr_spectral_angles(
 
 
 # %% Round to significant numbers
-
-
-class RealNumberMeta(type(Protocol)):  # type: ignore[misc]
-    def __instancecheck__(cls, instance: Any) -> bool:
-        # Exclude numpy arrays
-        if hasattr(instance, '__len__'):
-            return False
-        # Include RealNumber
-        return hasattr(instance, '__mul__') and hasattr(instance, '__lt__')
-
-
-@runtime_checkable
-class RealNumber(Protocol, metaclass=RealNumberMeta):
-    def __mul__(self, v: Any) -> Any: ...
-    def __lt__(self, v: Any) -> bool: ...
 
 
 def num_sig_digit(v: RealNumber, sig_digit: int, mode: str = "round") -> float:
