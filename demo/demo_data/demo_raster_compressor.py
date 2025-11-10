@@ -13,7 +13,7 @@ from rasterio.transform import from_bounds
 #%% Band sampler
 
 
-def band_sampler(src_rast_path: str, dst_rast_path: str, band_index_subset: int) -> None:
+def band_sampler(src_rast_path: str, dst_rast_path: str, band_index_subset: list[int]) -> None:
     """Uniform sampling of bands and subset the original image"""
     with rasterio.open(src_rast_path) as src:
 
@@ -34,7 +34,7 @@ def band_sampler(src_rast_path: str, dst_rast_path: str, band_index_subset: int)
 
         # Update meta
         new_transform = from_bounds(left, bottom, right, top, width, height)
-        new_meta = copy.deepcopy(src.meta)
+        new_meta: dict[str, object] = copy.deepcopy(src.meta)
         new_meta.update({
             'count': len(band_index_subset),
             'transform': new_transform,

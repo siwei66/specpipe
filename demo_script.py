@@ -24,7 +24,7 @@ data_dir = demo_dir + "demo_data/"
 os.makedirs(data_dir)
 
 # Download real-world demo raster image and ROI files
-# Demo data URL: https://raw.githubusercontent.com/siwei66/specpipe/demo/demo_data/
+# Demo data URL: https://github.com/siwei66/specpipe/tree/master/demo/demo_data/
 from specpipe import download_demo_data
 
 download_demo_data(data_dir)

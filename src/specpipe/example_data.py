@@ -246,7 +246,7 @@ create_example_spec_exp = create_test_spec_exp
 @simple_type_validator
 def download_demo_data(
     data_dir: str = os.getcwd(),
-    demo_dir_url: str = 'https://raw.githubusercontent.com/siwei66/specpipe/demo/demo_data/',
+    demo_dir_url: str = 'https://raw.githubusercontent.com/siwei66/specpipe/master/demo/demo_data/',
     files: tuple = ('demo_1.xml', 'demo_2.xml', 'demo_3.xml', 'demo_4.xml', 'demo_5.xml', 'demo.tiff'),
     retry_limit: int = 5,
 ) -> None:
@@ -280,11 +280,11 @@ def download_demo_data(
                 if i >= retry_limit:
                     print(
                         f"\nDownload '{file}' failed, please download it manually from:\
-                          https://github.com/siwei66/specpipe/demo/demo_data/"
+                          https://github.com/siwei66/specpipe/tree/master/demo/demo_data/"
                     )
-        if set(downloaded) != set(files):
-            raise Exception(
-                "Download is not completed, plaese download the files manually from: \
-                            https://github.com/siwei66/specpipe/demo/demo_data/"
-            )
+    if set(downloaded) != set(files):
+        raise Exception(
+            "Download is not completed, plaese download the files manually from: \
+                https://github.com/siwei66/specpipe/tree/master/demo/demo_data/"
+        )
     return None

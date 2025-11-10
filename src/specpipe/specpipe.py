@@ -433,7 +433,7 @@ class SpecPipe:
 
     # SpecExp-related initializer / updater
     @simple_type_validator
-    def _spec_exp_updater(self, spec_exp: SpecExp):
+    def _spec_exp_updater(self, spec_exp: SpecExp) -> None:
         # Backup current spec_exp
         spec_exp_old = copy.deepcopy(self.spec_exp)
         # Update data and test
@@ -444,8 +444,8 @@ class SpecPipe:
         try:
             self._spec_exp = spec_exp
             self._sample_targets = spec_exp.sample_targets
-            self._is_regression: bool = self._check_target_numeric(self.spec_exp)
-            self._report_directory: str = self.spec_exp._report_directory
+            self._is_regression = self._check_target_numeric(spec_exp)
+            self._report_directory = spec_exp._report_directory
             self._pretest_data_init()
             if len(self.process_chains) > 0:
                 self.test_run(dump_result=False)
@@ -453,8 +453,8 @@ class SpecPipe:
             # Roll back when fail in test
             self._spec_exp = spec_exp_old
             self._sample_targets = spec_exp_old.sample_targets
-            self._is_regression: bool = self._check_target_numeric(self.spec_exp_old)
-            self._report_directory: str = self._spec_exp._report_directory
+            self._is_regression = self._check_target_numeric(spec_exp_old)
+            self._report_directory = spec_exp_old._report_directory
             self._pretest_data_init()
             raise ValueError("Given SpecExp failed in test_run, spec_exp configuration rolls back.") from e
 

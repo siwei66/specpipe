@@ -205,7 +205,7 @@ def chain_sample_group_stats(  # noqa: C901
             ylabel, ycount = np.unique(gdata.iloc[:, 2], return_counts=True)
             ycount_row = list(ycount)
             # Y stats - fill target category counts of the current group
-            df_ystats['Group'][ig + 1] = str(g)
+            df_ystats.at[df_ystats.index[ig + 1], 'Group'] = str(g)
             for lb_i, lb in enumerate(ylabel):
                 df_ystats.at[df_ystats.index[ig + 1], lb] = ycount[lb_i]
             # X stats

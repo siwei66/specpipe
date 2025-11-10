@@ -6,7 +6,7 @@ SpecPipe streamlines the batch testing and optimization of hyperspectral analysi
 
 ## Core features:
 - **Batch processing**: Automate numerous data processing and modeling workflows in a single batch operation.
-- **File-based**: A resumable, file-based processing pipeline enabling result validation and break tolerance.
+- **File-based**: A resumable, file-based processing pipeline with full-scale auditability and break tolerance.
 - **High-performance**: Optimized for hyperspectral images with minimal memory consumption and options of GPU acceleration and pipeline-level multiprocessing.
 - **Simple extensible integration**: Intuitive data management and straightforward integration for custom processing functions and Scikit-learn-style models.
 
