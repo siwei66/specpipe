@@ -90,9 +90,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
+    "pytest",
+    "_pytest",
     "pytest.*",
-    "_pytest.*",
-    ".*pytest.*"
+    "_pytest.*"
 ]
 ignore_errors = true
 
