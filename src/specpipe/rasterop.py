@@ -459,7 +459,7 @@ def pixel_spec_apply(  # noqa: C901
 
         # Apply compression if available
         if os.path.splitext(output_path)[1] == ".tiff" or os.path.splitext(output_path)[1] == ".tif":
-            if "float" in str(dtype_mapper(dtype, "raster")):
+            if "float32" in str(dtype_mapper(dtype, "raster")):
                 meta.update({'compress': 'lzw', 'predictor': 2})
             else:
                 meta.update({'compress': 'lzw'})
