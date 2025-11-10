@@ -9,6 +9,7 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 # ruff: noqa: N806
 # OS
 import os  # noqa: E402
+import sys  # noqa: E402
 import shutil  # noqa: E402
 import tempfile  # noqa: E402
 
@@ -539,4 +540,4 @@ class TestGroupStats(unittest.TestCase):
 # %% Test main
 
 if __name__ == "__main__":
-    unittest.main()
+    sys.exit(pytest.main([__file__]))

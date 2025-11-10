@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RegionsOfInterest version="1.1">
+  <Region name="4-1" color="255,0,0">
+    <GeometryDef>
+      <CoordSysStr>none</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+599 333 652 333 652 373 599 373 599 333
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+  <Region name="4-2" color="0,128,0">
+    <GeometryDef>
+      <CoordSysStr>none</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+521 329 589 329 589 369 521 369 521 329
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+  <Region name="4-3" color="0,0,255">
+    <GeometryDef>
+      <CoordSysStr>none</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+606 391 689 391 689 438 606 438 606 391
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+  <Region name="4-4" color="255,255,0">
+    <GeometryDef>
+      <CoordSysStr>none</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+481 372 570 372 570 415 481 415 481 372
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+  <Region name="4-5" color="0,255,255">
+    <GeometryDef>
+      <CoordSysStr>none</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+610 454 659 454 659 503 610 503 610 454
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+</RegionsOfInterest>

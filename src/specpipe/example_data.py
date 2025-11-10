@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Example data generator for SpecPipe
+Example data generators and downloader for SpecPipe
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
 # OS
 import os
+
+# Time
+import time
 
 # Typing
 from typing import Optional, Union
@@ -21,6 +24,10 @@ import rasterio
 # Local
 from .specexp import SpecExp
 from .specio import roi_to_envi_xml, silent, simple_type_validator
+
+# Download
+import urllib
+
 
 # %% test helper functions
 
@@ -231,3 +238,53 @@ def create_test_spec_exp(dir_path: str, sample_n: int = 10, n_bands: int = 4, is
 
 # Alias
 create_example_spec_exp = create_test_spec_exp
+
+
+# %% Demo data downloader
+
+
+@simple_type_validator
+def download_demo_data(
+    data_dir: str = os.getcwd(),
+    demo_dir_url: str = 'https://raw.githubusercontent.com/siwei66/specpipe/demo/demo_data/',
+    files: tuple = ('demo_1.xml', 'demo_2.xml', 'demo_3.xml', 'demo_4.xml', 'demo_5.xml', 'demo.tiff'),
+    retry_limit: int = 5,
+) -> None:
+    """
+    Demo data downloader.
+    """
+    # Validate retry limit
+    retry_limit = min(3, retry_limit)
+    # Setup download directory
+    data_dir = (data_dir.replace('\\', '/') + '/').replace('//', '/')
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    # Package demo dir path
+    downloaded = []
+    for file in files:
+        url = demo_dir_url + file
+        local_path = data_dir + file
+        i = 0
+        while i < retry_limit:
+            try:
+                urllib.request.urlretrieve(url, local_path)
+                # Verify download
+                if os.path.exists(local_path):
+                    downloaded.append(file)
+                    print(f"\nDownloaded: {local_path}")
+                    break
+            except Exception as e:
+                i = i + 1
+                print(f"\nDownload file '{file}' failed: {e}, \nRetry {i} in {2 ** i} seconds...")
+                time.sleep(min(2**i, 16))
+                if i >= retry_limit:
+                    print(
+                        f"\nDownload '{file}' failed, please download it manually from:\
+                          https://github.com/siwei66/specpipe/demo/demo_data/"
+                    )
+        if set(downloaded) != set(files):
+            raise Exception(
+                "Download is not completed, plaese download the files manually from: \
+                            https://github.com/siwei66/specpipe/demo/demo_data/"
+            )
+    return None

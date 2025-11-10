@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 # Typing
 from typing import Callable, Optional, Union, overload
+from types import ModuleType
 
 # Basic data
 import numpy as np
@@ -410,17 +411,24 @@ def auto_fp(  # noqa: C901
 
 # Tiled pixel-wise apply a 1D function
 @simple_type_validator
-def pixel_spec_apply(
+def pixel_spec_apply(  # noqa: C901
     image_path: str,
     output_path: str,
     spectral_function: Callable,
     dtype: Union[type, str, np.dtype, torch.dtype] = "float32",
     tile_size: int = -1,
+    *,
     progress: bool = True,
+    override: bool = True,
+    # Dependencies for multiprocessing
+    os: ModuleType = os,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
 ) -> None:
     """
     Apply a function to the 1D spectra of every pixel of a raster image.
     The function must accept 1D arraylike as only required parameter, and return processed 1D arraylike data.
+    If override False, function will not be executed for existed dst image.
     """
     # Validate tile size and set default
     if tile_size == -1:
@@ -433,8 +441,12 @@ def pixel_spec_apply(
 
     with rasterio.open(image_path) as src:
         # Validate dst raster
-        if os.path.exists(output_path):
-            os.remove(output_path)
+        if override:
+            if os.path.exists(output_path):
+                os.remove(output_path)
+        else:
+            if os.path.exists(output_path):
+                return
 
         # Get output number of bands
         test_data = src.read(window=Window(col_off=0, row_off=0, width=1, height=1))
@@ -443,8 +455,14 @@ def pixel_spec_apply(
 
         # Get metadata from the source image
         meta = src.meta.copy()
-        meta.update({"dtype": dtype_mapper(dtype, "raster")})
-        meta.update({"count": num_bands_out})
+        meta.update({"dtype": dtype_mapper(dtype, "raster"), "count": num_bands_out})
+
+        # Apply compression if available
+        if os.path.splitext(output_path)[1] == ".tiff" or os.path.splitext(output_path)[1] == ".tif":
+            if "float" in str(dtype_mapper(dtype, "raster")):
+                meta.update({'compress': 'lzw', 'predictor': 2})
+            else:
+                meta.update({'compress': 'lzw'})
 
         # Create dst raster
         with rasterio.open(output_path, "w", **meta) as dst:
@@ -479,18 +497,25 @@ def pixel_spec_apply(
 
 # Tiled vectorized apply a 2D function
 @simple_type_validator
-def pixel_array_apply(
+def pixel_array_apply(  # noqa: C901
     image_path: str,
     output_path: str,
     spectral_function: Callable,
     dtype: Union[type, str, np.dtype, torch.dtype] = "float32",
     tile_size: int = -1,
+    *,
     progress: bool = True,
+    override: bool = True,
+    # Dependencies for multiprocessing
+    os: ModuleType = os,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
 ) -> None:
     """
     Apply a function to the 1D spectra of every pixel of a raster image.
     The function must accept 2D array as only required parameter, and return processed 2D array with same length.
-    Each row of the 2D array represents an 1D spectra or processed data of a pixel
+    Each row of the 2D array represents an 1D spectra or processed data of a pixel.
+    If override False, function will not be executed for existed dst image.
     """
     # Validate tile size and set default
     if tile_size == -1:
@@ -503,8 +528,12 @@ def pixel_array_apply(
 
     with rasterio.open(image_path) as src:
         # Validate dst raster
-        if os.path.exists(output_path):
-            os.remove(output_path)
+        if override:
+            if os.path.exists(output_path):
+                os.remove(output_path)
+        else:
+            if os.path.exists(output_path):
+                return
 
         # Get output number of bands
         test_data = src.read(window=Window(col_off=0, row_off=0, width=2, height=2))
@@ -515,8 +544,14 @@ def pixel_array_apply(
 
         # Get metadata from the source image
         meta = src.meta.copy()
-        meta.update({"dtype": dtype_mapper(dtype, "raster")})
-        meta.update({"count": num_bands_out})
+        meta.update({"dtype": dtype_mapper(dtype, "raster"), "count": num_bands_out})
+
+        # Apply compression if available
+        if os.path.splitext(output_path)[1] == ".tiff" or os.path.splitext(output_path)[1] == ".tif":
+            if "float" in str(dtype_mapper(dtype, "raster")):
+                meta.update({'compress': 'lzw', 'predictor': 2})
+            else:
+                meta.update({'compress': 'lzw'})
 
         # Create dst raster
         with rasterio.open(output_path, "w", **meta) as dst:
@@ -559,12 +594,19 @@ def pixel_tensor_apply(  # noqa: C901
     dtype: Union[type, str, np.dtype, torch.dtype] = "float32",
     tile_size: int = -1,
     device: str = "cuda",
+    *,
     progress: bool = True,
+    override: bool = True,
+    # Dependencies for multiprocessing
+    os: ModuleType = os,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
 ) -> None:
     """
     Apply a function to the 1D spectra of every pixel of a raster image.
     The function must accept 3D PyTorch tenser as only required parameter, and return processed 3D tensor with same size.
     The function must compute along 0 axis. And the input and output tensor must have the same size except 0 axis.
+    If override False, function will not be executed for existed dst image.
     """  # noqa: E501
     # Validate tile size and set default
     if tile_size == -1:
@@ -586,9 +628,13 @@ def pixel_tensor_apply(  # noqa: C901
     stream = torch.cuda.Stream() if "cuda" in str(device) else None
 
     with rasterio.open(image_path) as src:
-        # Validate dst raster for cuda output
-        if os.path.exists(output_path):
-            os.remove(output_path)
+        # Validate dst raster
+        if override:
+            if os.path.exists(output_path):
+                os.remove(output_path)
+        else:
+            if os.path.exists(output_path):
+                return
 
         # Data for test running of given function
         test_data = src.read(window=Window(col_off=0, row_off=0, width=2, height=2))
@@ -608,8 +654,14 @@ def pixel_tensor_apply(  # noqa: C901
 
         # Get metadata from the source image
         meta = src.meta.copy()
-        meta.update({"dtype": dtype_mapper(dtype, "raster")})
-        meta.update({"count": num_bands_out})
+        meta.update({"dtype": dtype_mapper(dtype, "raster"), "count": num_bands_out})
+
+        # Apply compression if available
+        if os.path.splitext(output_path)[1] == ".tiff" or os.path.splitext(output_path)[1] == ".tif":
+            if "float" in str(dtype_mapper(dtype, "raster")):
+                meta.update({'compress': 'lzw', 'predictor': 2})
+            else:
+                meta.update({'compress': 'lzw'})
 
         # Create output file with same number of bands
         with rasterio.open(output_path, "w", **meta) as dst:
@@ -674,12 +726,19 @@ def pixel_tensor_hyper_apply(  # noqa: C901
     dtype: Union[type, str, np.dtype, torch.dtype] = "float32",
     tile_size: int = -1,
     device: str = "cuda",
+    *,
     progress: bool = True,
+    override: bool = True,
+    # Dependencies for multiprocessing
+    os: ModuleType = os,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
 ) -> None:
     """
     Apply a function to the 1D spectra of every pixel of a raster image, optimized for hyperspectral image data transfer.
     The function must accept 3D PyTorch tenser as only required parameter, and return processed 3D tensor with same size.
     The function must compute along 1 axis. And the input and output tensor must have the same size except 1 axis.
+    If override False, function will not be executed for existed dst image.
     """  # noqa: E501
     # Validate tile size and set default
     if tile_size == -1:
@@ -702,9 +761,13 @@ def pixel_tensor_hyper_apply(  # noqa: C901
     # Use CUDA Stream
     stream = torch.cuda.Stream() if "cuda" in str(device) else None
 
-    # Validate dst raster for cuda output
-    if os.path.exists(output_path):
-        os.remove(output_path)
+    # Validate dst raster
+    if override:
+        if os.path.exists(output_path):
+            os.remove(output_path)
+    else:
+        if os.path.exists(output_path):
+            return
 
     with rasterio.open(image_path) as src:
         # Data for test running of given function
@@ -725,9 +788,16 @@ def pixel_tensor_hyper_apply(  # noqa: C901
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-        # Setup output
+        # Get metadata from the source image
         meta = src.meta.copy()
         meta.update({"dtype": dtype_mapper(dtype, "raster"), "count": num_bands_out})
+
+        # Apply compression if available
+        if os.path.splitext(output_path)[1] == ".tiff" or os.path.splitext(output_path)[1] == ".tif":
+            if "float" in str(dtype_mapper(dtype, "raster")):
+                meta.update({'compress': 'lzw', 'predictor': 2})
+            else:
+                meta.update({'compress': 'lzw'})
 
         with rasterio.open(output_path, "w", **meta) as dst:
             for row_start in tqdm(range(0, src.height, row_chunk), disable=not progress):
@@ -774,8 +844,14 @@ def pixel_apply(
     output_path: Optional[str] = None,
     dtype: Union[type, str, np.dtype, torch.dtype] = "float32",
     tile_size: int = -1,
+    *,
     progress: bool = True,
     return_output_path: bool = True,
+    override: bool = True,
+    # Dependencies for multiprocessing
+    os: ModuleType = os,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
 ) -> Optional[str]:
     """
     Apply a function to process the 1D spectra of every pixel of a raster image.
@@ -827,6 +903,10 @@ def pixel_apply(
     return_output_path : bool, optional
         Whether path of processed image is returned. Default is True.
 
+    override : bool, optional
+        Whether existed image of output_path is override.
+        If False, function will not be applied if output_path existed. The default is True.
+
     Returns
     -------
     output_path : str
@@ -851,19 +931,69 @@ def pixel_apply(
     # Apply function
     # Spec apply
     if function_type.lower() == "spec":
-        pixel_spec_apply(image_path, output_path, spectral_function, dtype, tile_size, progress)
+        pixel_spec_apply(
+            image_path,
+            output_path,
+            spectral_function,
+            dtype,
+            tile_size,
+            progress=progress,
+            override=override,
+            # Dependencies for multiprocessing
+            os=os,
+            np=np,
+            torch=torch,
+        )
 
     # Array apply
     elif function_type.lower() == "array":
-        pixel_array_apply(image_path, output_path, spectral_function, dtype, tile_size, progress)
+        pixel_array_apply(
+            image_path,
+            output_path,
+            spectral_function,
+            dtype,
+            tile_size,
+            progress=progress,
+            override=override,
+            # Dependencies for multiprocessing
+            os=os,
+            np=np,
+            torch=torch,
+        )
 
     # Tensor apply
     elif function_type.lower() == "tensor":
-        pixel_tensor_apply(image_path, output_path, spectral_function, dtype, tile_size, "cuda", progress)
+        pixel_tensor_apply(
+            image_path,
+            output_path,
+            spectral_function,
+            dtype,
+            tile_size,
+            "cuda",
+            progress=progress,
+            override=override,
+            # Dependencies for multiprocessing
+            os=os,
+            np=np,
+            torch=torch,
+        )
 
     # Hyper-tensor apply
     elif function_type.lower() == "tensor_hyper":
-        pixel_tensor_hyper_apply(image_path, output_path, spectral_function, dtype, tile_size, "cuda", progress)
+        pixel_tensor_hyper_apply(
+            image_path,
+            output_path,
+            spectral_function,
+            dtype,
+            tile_size,
+            "cuda",
+            progress=progress,
+            override=override,
+            # Dependencies for multiprocessing
+            os=os,
+            np=np,
+            torch=torch,
+        )
 
     # Else
     else:

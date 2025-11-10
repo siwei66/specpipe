@@ -33,6 +33,7 @@ from .specio import (
     shp_roi_coords,
     simple_type_validator,
 )
+from .specexp_vis import raster_rgb_preview
 
 # %% Spectral Experiment Class - SpecExp
 
@@ -196,7 +197,7 @@ class SpecExp:
     """  # noqa: E501
 
     @simple_type_validator
-    def __init__(self, report_directory: str, log_loading: bool = True) -> None:
+    def __init__(self, report_directory: str, log_loading: bool = False) -> None:
         # log_loading
         self._log_loading: bool = log_loading
 
@@ -706,8 +707,6 @@ class SpecExp:
             # Save updating reports
             df_all.to_csv(report_dir + "All_loaded_images_" + cts + ".csv", index=False)
             df_load_report.to_csv(report_dir + "Loaded_images_" + cts + ".csv", index=False)
-            # Print saved path
-            print("\nROI updating reports saved in: \n", report_dir)
 
     # Add raster image paths to an experiment group
     # Format of associated attribute:
@@ -1041,6 +1040,87 @@ class SpecExp:
                 return df_matched
             else:
                 return None
+
+    # Display images with ROIs
+    @simple_type_validator
+    def show_image(
+        self,
+        image_name: str,
+        group: str,
+        rgb_band_index: tuple[int, int, int],
+        display_size: tuple[Union[int, float], Union[int, float]] = (12, 9),
+        roi_name: Optional[str] = None,
+        roi_color: Union[str, tuple[float, float, float]] = "red",
+        roi_linewidth: Union[int, float] = 3,
+        *,
+        display_roi: bool = True,
+        normalize: bool = True,
+        output_path: Optional[str] = None,
+        dpi: int = 150,
+    ) -> None:
+        """
+        Display raster image with associated ROIs in RGB preview.
+
+        Parameters
+        ----------
+        image_name : str
+            Image name.
+        group : str
+            Image group.
+        rgb_band_index : tuple[int, int, int]
+            RGB band index.
+        display_size : tuple[Union[int, float], Union[int, float]]
+            Preview plot size.
+        roi_name : Optional[str], optional
+            ROI name, if None, all associated ROIs will be displayed. The default is None.
+        roi_color : Union[str, tuple[float, float, float]], optional
+            Color of ROI frame in name or RGB values in tuple. The default is "red".
+        roi_linewidth : Union[int, float], optional
+            Linewidth of ROI frame. The default is 3.
+        display_roi : bool, optional
+            Whether ROI is displayed. The default is True.
+        normalize : bool, optional
+            Whether image value is normalized for RGB display. The default is True.
+        output_path : Optional[str], optional
+            Output RGB image to the path, if None, no file output. The default is None.
+        dpi : int, optional
+            Output RGB image DPI. The default is 150.
+        """
+        # Get image
+        if roi_name is None:
+            roi_name_list: Optional[list] = None
+        else:
+            roi_name_list = [roi_name]
+        image = self.ls_images(
+            image_name=image_name, group=group, mask_of=None, print_result=False, return_dataframe=True
+        )
+        raster_path = image['Path'][0]
+        roi_coord_list = []
+        if display_roi:
+            # Get ROIs
+            rois = self.ls_rois_sample(
+                roi_name_list=roi_name_list,
+                image_name=image_name,
+                group=group,
+                print_result=False,
+                return_dataframe=True,
+            )['Coordinates']
+            # Aggregate ROIs
+            for roi in rois:
+                for poly in roi:
+                    roi_coord_list.append(poly)
+        # Plot RGB
+        raster_rgb_preview(
+            raster_path=raster_path,
+            rgb_band_index=rgb_band_index,
+            display_size=display_size,
+            roi_coords=roi_coord_list,
+            roi_color=roi_color,
+            roi_linewidth=roi_linewidth,
+            normalize=normalize,
+            output_path=output_path,
+            dpi=dpi,
+        )
 
     # Remove images by name pattern
     # Format of associated attribute:
@@ -2669,7 +2749,7 @@ class SpecExp:
 
         # Validate ROI data
         if len(item_list_original) == 0:
-            print(f"\nNo ROIs_{rm_target} added.")
+            print(f"\nNo ROIs_from_{rm_target} added.")
             return
 
         # Validate pattern
@@ -2679,8 +2759,8 @@ class SpecExp:
         if val_value == 0:
             raise ValueError("\nNo criterion is provided for removal")
 
-        removed_rois = []
-        remained_rois = item_list_original
+        removed_rois = item_list_original
+        remained_rois = []
         value_list: list[str]
         for iid, ipat in zip(item_id.values(), item_pattern.values()):
             # Value list for item i
@@ -2698,12 +2778,12 @@ class SpecExp:
                 # Filter
                 if len(matched_list) > 0:
                     new_roif = []
-                    for roii in remained_rois:
-                        if roii[iid] not in matched_list:
+                    for roii in removed_rois:
+                        if roii[iid] in matched_list:
                             new_roif.append(roii)
                         else:
-                            removed_rois.append(roii)
-                    remained_rois = new_roif
+                            remained_rois.append(roii)
+                    removed_rois = new_roif
 
         # Update ROIs and print report
         if (rm_target == "file") & (len(removed_rois) > 0):

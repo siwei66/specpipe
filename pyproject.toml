@@ -106,6 +106,8 @@ exclude = '''
   | buck-out
   | build
   | dist
+  | demo
+  | demo_script.py
 )/
 '''
 
@@ -123,7 +125,9 @@ extend-exclude = [
     "build", 
     "dist", 
     "local_tests", 
-    "example_code.py"
+    "demo",
+    "example_code.py",
+    "demo_script.py"
 ]
 [tool.ruff.lint]
 select = [

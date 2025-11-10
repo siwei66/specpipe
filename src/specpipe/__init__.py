@@ -15,6 +15,7 @@ __all__ = [
     "SpecExp",
     "SpecPipe",
     "ModelEva",
+    "raster_rgb_preview",
     ### SpecIO functions
     "search_file",
     "envi_roi_coords",
@@ -40,13 +41,19 @@ __all__ = [
     "create_example_raster",
     "create_example_roi_xml",
     "create_example_spec_exp",
+    ## Demo
+    "download_demo_data",
 ]
 
 # Components
 ## Core pipeline tools
-## Example data generator
-from .example_data import create_example_raster, create_example_roi_xml, create_example_spec_exp
+## Example data
+from .example_data import create_example_raster, create_example_roi_xml, create_example_spec_exp, download_demo_data
+
+## Model Evaluator
 from .modeleva import ModelEva
+
+## Raster operation
 from .rasterop import croproi, pixel_apply
 
 ## Spectral statistics tools
@@ -64,8 +71,13 @@ from .roistats import (
     round_digit,
     spectral_angle,
 )
-from .specexp import SpecExp
-from .specio import envi_roi_coords, search_file, shp_roi_coords
-from .specpipe import SpecPipe
 
-## Spectral processing tools
+## Spectral experiment data management
+from .specexp import SpecExp
+from .specexp_vis import raster_rgb_preview
+
+## SpecPipe IO tools
+from .specio import envi_roi_coords, search_file, shp_roi_coords
+
+## SpecPipe main pipeline
+from .specpipe import SpecPipe

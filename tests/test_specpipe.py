@@ -8,6 +8,7 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 # ruff: noqa: I001
 # OS
 import os
+import sys  # noqa: E402
 
 # Initialize LOKY_MAX_CPU_COUNT if it does not exist before imports to prevent corresponding warning
 os.environ.setdefault('LOKY_MAX_CPU_COUNT', '1')
@@ -45,7 +46,7 @@ from specpipe.specexp import SpecExp  # noqa: E402
 from specpipe.specio import silent, lsdir_robust  # noqa: E402
 
 # Functions to test
-from specpipe.specpipe import SpecPipe, _dl_val  # noqa: E402
+from specpipe.specpipe import SpecPipe  # noqa: E402
 
 # Confirm proper LOKY_MAX_CPU_COUNT
 loky_max_cpu_count = str(cpu_count())
@@ -61,8 +62,9 @@ except ImportError:
 
 
 # Image to image
-def original_img(path: str) -> str:
-    return path
+def original_img(input_path: str, output_path: str) -> str:
+    shutil.copyfile(input_path, output_path)
+    return output_path
 
 
 # Image to spec1d
@@ -155,32 +157,6 @@ def create_test_spec_pipe(dir_path: str, sample_n: int = 10, n_bands: int = 8, i
         pipe.add_process(7, 8, 0, KNeighborsClassifier(n_neighbors=3))
 
     return pipe
-
-
-# %% test functions : SpecPipe
-
-
-def test_dl_val() -> None:
-    """Test Data_level validator."""
-
-    assert _dl_val(0) == (0, "image")
-    assert _dl_val(1) == (1, "pixel_spec")
-    assert _dl_val(2) == (2, "pixel_specs_array")
-    assert _dl_val(3) == (3, "pixel_specs_tensor")
-    assert _dl_val(4) == (4, "pixel_hyperspecs_tensor")
-    assert _dl_val(5) == (5, "image_roi")
-    assert _dl_val(6) == (6, "roi_specs")
-    assert _dl_val(7) == (7, "spec1d")
-    assert _dl_val(8) == (8, "model")
-    assert _dl_val("image") == (0, "image")
-    assert _dl_val("pixel_spec") == (1, "pixel_spec")
-    assert _dl_val("pixel_specs_array") == (2, "pixel_specs_array")
-    assert _dl_val("pixel_specs_tensor") == (3, "pixel_specs_tensor")
-    assert _dl_val("pixel_hyperspecs_tensor") == (4, "pixel_hyperspecs_tensor")
-    assert _dl_val("image_roi") == (5, "image_roi")
-    assert _dl_val("roi_specs") == (6, "roi_specs")
-    assert _dl_val("spec1d") == (7, "spec1d")
-    assert _dl_val("model") == (8, "model")
 
 
 class TestSpecPipe(unittest.TestCase):
@@ -741,12 +717,21 @@ class TestSpecPipe(unittest.TestCase):
         time.sleep(0.1)
 
         assert pipe.tested is False
-        assert os.path.exists(f"{test_dir}/test_run")
+        preprocessed_img_path = f"{test_dir}/test_run/Preprocessed_images/"
+        assert os.path.exists(preprocessed_img_path)
         preproc_img_names = [
-            name for name in lsdir_robust(test_dir) if "test_img" in name and ".tif" in name and name != "test_img.tif"
+            name
+            for name in lsdir_robust(preprocessed_img_path)
+            if "test_img" in name and ".tif" in name and name != "test_img.tif"
         ]
-        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
-        assert len(preproc_img_names) == len(preprocs)
+        img_sum = (
+            len(pipe.ls_process(input_data_level=0, print_result=False, return_result=True))
+            + len(pipe.ls_process(input_data_level=1, print_result=False, return_result=True))
+            + len(pipe.ls_process(input_data_level=2, print_result=False, return_result=True))
+            + len(pipe.ls_process(input_data_level=3, print_result=False, return_result=True))
+            + len(pipe.ls_process(input_data_level=4, print_result=False, return_result=True))
+        )
+        assert len(preproc_img_names) == img_sum
 
         # Full test without saving result
         plt.close("all")
@@ -844,12 +829,21 @@ class TestSpecPipe(unittest.TestCase):
         time.sleep(0.1)
 
         assert pipe.tested is False
-        assert os.path.exists(f"{test_dir}/test_run")
+        preprocessed_img_path = f"{test_dir}/test_run/Preprocessed_images/"
+        assert os.path.exists(preprocessed_img_path)
         preproc_img_names = [
-            name for name in lsdir_robust(test_dir) if "test_img" in name and ".tif" in name and name != "test_img.tif"
+            name
+            for name in lsdir_robust(preprocessed_img_path)
+            if "test_img" in name and ".tif" in name and name != "test_img.tif"
         ]
-        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
-        assert len(preproc_img_names) == len(preprocs)
+        img_sum = (
+            len(pipe.ls_process(input_data_level=0, print_result=False, return_result=True))
+            + len(pipe.ls_process(input_data_level=1, print_result=False, return_result=True))
+            + len(pipe.ls_process(input_data_level=2, print_result=False, return_result=True))
+            + len(pipe.ls_process(input_data_level=3, print_result=False, return_result=True))
+            + len(pipe.ls_process(input_data_level=4, print_result=False, return_result=True))
+        )
+        assert len(preproc_img_names) == img_sum
 
         # Full test without saving result
         plt.close("all")
@@ -929,15 +923,26 @@ class TestSpecPipe(unittest.TestCase):
         assert len(pipe.sample_data) == len(pipe.spec_exp.rois)
 
         # Assert resulting files
+        preprocessed_img_path = f"{test_dir}/Preprocessing/Preprocessed_images/"
+        assert os.path.exists(preprocessed_img_path)
         preproc_img_names = [
-            name for name in lsdir_robust(test_dir) if "test_img" in name and ".tif" in name and name != "test_img.tif"
+            name
+            for name in lsdir_robust(preprocessed_img_path)
+            if "test_img" in name and ".tif" in name and name != "test_img.tif"
         ]
-        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
-        assert len(preproc_img_names) == len(preprocs)
+        img_sum = (
+            len(pipe.ls_process(input_data_level=0, print_result=False, return_result=True))
+            + len(pipe.ls_process(input_data_level=1, print_result=False, return_result=True))
+            + len(pipe.ls_process(input_data_level=2, print_result=False, return_result=True))
+            + len(pipe.ls_process(input_data_level=3, print_result=False, return_result=True))
+            + len(pipe.ls_process(input_data_level=4, print_result=False, return_result=True))
+        )
+        assert len(preproc_img_names) == img_sum
         result_dir = f"{test_dir}/Preprocessing/"
         assert os.path.exists(result_dir)
 
         # Result files
+        preprocs = pipe.process_chains_to_df().iloc[:, :-1].drop_duplicates(ignore_index=True)
         preproc_csv_names = [f"PreprocessingChainResult_chain_ind_{i}.csv" for i in range(len(preprocs))]
         preproc_dill_names = [f"PreprocessingChainResult_chain_ind_{i}.dill" for i in range(len(preprocs))]
         assert set(preproc_csv_names).issubset(set(lsdir_robust(result_dir)))
@@ -1557,9 +1562,6 @@ class TestSpecPipe(unittest.TestCase):
 
 # %% Tests - SpecPipe
 
-
-# test_dl_val()
-
 # TestSpecPipe.test_initialization_image_exp()
 # TestSpecPipe.test_initialization_standalone_spec_exp()
 
@@ -1595,4 +1597,4 @@ class TestSpecPipe(unittest.TestCase):
 # %% Test main
 
 if __name__ == "__main__":
-    unittest.main()
+    sys.exit(pytest.main([__file__]))

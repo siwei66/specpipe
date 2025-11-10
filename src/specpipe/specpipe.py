@@ -17,6 +17,7 @@ import warnings
 
 # Typing
 from typing import Annotated, Any, Callable, Literal, Optional, Union, overload
+from types import ModuleType
 
 # Time
 import time
@@ -30,16 +31,19 @@ import copy
 import json
 import numpy as np
 import pandas as pd
+import torch
 
 # Raster
 import rasterio
 from rasterio.windows import Window
+from rasterio.errors import NotGeoreferencedWarning
 
 # Visualization
 import matplotlib.pyplot as plt
 
 # Multiprocessing
 import dill
+from pathos.helpers import mp
 from pathos.multiprocessing import ProcessingPool, cpu_count
 
 # Local
@@ -54,829 +58,20 @@ from .specio import (
     df_to_csv,
     dump_vars,
     load_vars,
+    RealNumber,
     simple_type_validator,
+)
+from .specpipe_processor import (
+    _target_type_validation_for_serialization,
+    _dl_val,
+    _preprocessing_sample,
+    _ModelMethod,
+    _model_evaluator,
+    _model_evaluator_mp,
 )
 
 # For multiprocessing
 global ModelEva
-
-# %% Static functions for SpecPipe
-
-
-@simple_type_validator
-def _target_type_validation_for_serialization(
-    pc_sample_list: list[tuple[str, tuple[int], Any, Annotated[Any, arraylike_validator(ndim=1)]]],
-) -> list[tuple[str, tuple[int], Union[str, int, bool, float], Annotated[Any, arraylike_validator(ndim=1)]]]:
-    """Fix typing for integer after dill serialization."""
-    for loaded_i, loaded_sample in enumerate(pc_sample_list):
-        loaded_y = loaded_sample[2]
-        # Behavior check to fix type
-        test_value_y = loaded_y
-        try:
-            _ = test_value_y + 1
-            if "." in str(loaded_y):
-                loaded_y = float(loaded_y)
-            elif str(loaded_y) in ["True", "False"]:
-                loaded_y = bool(loaded_y)
-            else:
-                loaded_y = int(loaded_y)
-        except Exception:
-            loaded_y = str(loaded_y)
-        # Update target value
-        pc_sample_list[loaded_i] = (loaded_sample[0], loaded_sample[1], loaded_y, loaded_sample[3])
-    return pc_sample_list
-
-
-# Data_level validator
-# Data_level: 0 - image (path), \
-# 1 - pixel_spec (1D), 2 - pixel_specs_array (2D), 3 - pixel_specs_tensor (3D), 4 - pixel_hyperspecs_tensor (3D), \
-# 5 - image_ROI (img_path + ROI coords), 6 - ROI_specs (2D), 7 - spec1d (1D spec stats)
-# @validate_call
-@simple_type_validator
-def _dl_val(data_level: Union[str, int]) -> tuple[int, str]:
-    """
-    Data level validator, input data level name or index number, return (data level index, data level name).
-    """
-    # Validate data_level
-    data_levels = [
-        "image",
-        "pixel_spec",
-        "pixel_specs_array",
-        "pixel_specs_tensor",
-        "pixel_hyperspecs_tensor",
-        "image_roi",
-        "roi_specs",
-        "spec1d",
-        "model",
-    ]
-    data_level_n = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    if type(data_level) is str:
-        if data_level not in data_levels:
-            raise ValueError(f"data_level must be one of {data_levels}, but got: {data_level}")
-        else:
-            dlind = data_levels.index(data_level)
-    elif type(data_level) is int:
-        if data_level not in data_level_n:
-            raise ValueError(f"data_level number must be one of {data_level_n}, but got: {data_level}")
-        else:
-            dlind = data_level
-    return (dlind, data_levels[dlind])
-
-
-# Preprocessing of single sample using all chains
-@overload
-def _preprocessing_sample(
-    sample_data: dict,
-    process: list[tuple[str, str, str, str, int, Any, int, int]],
-    custom_chains: list,
-    process_chains: list,
-    specpipe_report_directory: str,
-    *,
-    dump_result: Literal[True] = True,
-    return_result_path: Literal[True] = True,
-    dump_backup: bool = False,
-    return_step_result: Literal[False] = False,
-    final_result_only: bool = True,
-    is_test_run: bool = False,
-    dump_directory: str = "",
-    # Update progress status, use in a processing loop for resume
-    update_progress_log: bool = False,
-    # Explicitly load function for multiprocessing
-    _dl_val: Callable = _dl_val,
-    pixel_apply: Callable = pixel_apply,
-    dump_vars: Callable = dump_vars,
-) -> str: ...
-
-
-@overload
-def _preprocessing_sample(
-    sample_data: dict,
-    process: list[tuple[str, str, str, str, int, Any, int, int]],
-    custom_chains: list,
-    process_chains: list,
-    specpipe_report_directory: str,
-    *,
-    dump_result: Literal[True] = True,
-    return_result_path: Literal[True] = True,
-    dump_backup: bool = False,
-    return_step_result: Literal[True] = True,
-    final_result_only: bool = True,
-    is_test_run: bool = False,
-    dump_directory: str = "",
-    # Update progress status, use in a processing loop for resume
-    update_progress_log: bool = False,
-    # Explicitly load function for multiprocessing
-    _dl_val: Callable = _dl_val,
-    pixel_apply: Callable = pixel_apply,
-    dump_vars: Callable = dump_vars,
-) -> tuple[str, dict]: ...
-
-
-@overload
-def _preprocessing_sample(
-    sample_data: dict,
-    process: list[tuple[str, str, str, str, int, Any, int, int]],
-    custom_chains: list,
-    process_chains: list,
-    specpipe_report_directory: str,
-    *,
-    dump_result: Literal[True] = True,
-    return_result_path: Literal[False] = False,
-    dump_backup: bool = False,
-    return_step_result: Literal[True] = True,
-    final_result_only: bool = True,
-    is_test_run: bool = False,
-    dump_directory: str = "",
-    # Update progress status, use in a processing loop for resume
-    update_progress_log: bool = False,
-    # Explicitly load function for multiprocessing
-    _dl_val: Callable = _dl_val,
-    pixel_apply: Callable = pixel_apply,
-    dump_vars: Callable = dump_vars,
-) -> dict: ...
-
-
-@overload
-def _preprocessing_sample(
-    sample_data: dict,
-    process: list[tuple[str, str, str, str, int, Any, int, int]],
-    custom_chains: list,
-    process_chains: list,
-    specpipe_report_directory: str,
-    *,
-    dump_result: Literal[True] = True,
-    return_result_path: Literal[False] = False,
-    dump_backup: bool = False,
-    return_step_result: Literal[False] = False,
-    final_result_only: bool = True,
-    is_test_run: bool = False,
-    dump_directory: str = "",
-    # Update progress status, use in a processing loop for resume
-    update_progress_log: bool = False,
-    # Explicitly load function for multiprocessing
-    _dl_val: Callable = _dl_val,
-    pixel_apply: Callable = pixel_apply,
-    dump_vars: Callable = dump_vars,
-) -> None: ...
-
-
-@overload
-def _preprocessing_sample(
-    sample_data: dict,
-    process: list[tuple[str, str, str, str, int, Any, int, int]],
-    custom_chains: list,
-    process_chains: list,
-    specpipe_report_directory: str,
-    *,
-    dump_result: Literal[False] = False,
-    return_result_path: bool = True,
-    dump_backup: bool = False,
-    return_step_result: bool = False,
-    final_result_only: bool = True,
-    is_test_run: bool = False,
-    dump_directory: str = "",
-    # Update progress status, use in a processing loop for resume
-    update_progress_log: bool = False,
-    # Explicitly load function for multiprocessing
-    _dl_val: Callable = _dl_val,
-    pixel_apply: Callable = pixel_apply,
-    dump_vars: Callable = dump_vars,
-) -> dict: ...
-
-
-# Preprocessing of single sample using all chains
-# SpecPipe attributes - argumente relation:
-#     sample_data = SpecPipe.sample_data | SpecPipe.pretest_data
-#     process = SpecPipe.process
-#     custom_chains = SpecPipe.custom_chains
-#     process_chains = SpecPipe.process_chains
-#     specpipe_report_directory = SpecPipe.spec_exp.report_directory
-# Sample data format - ROI: {ID, label, target, img_path, roi_coords}
-# Sample data format - standalone spec: {ID, label, target, spec1d: tuple}
-# Sample data format - test: {img_path, test_img_path, roi_coords, test_roi_coords, roitable, spec1d}
-# @validate_call
-@simple_type_validator
-def _preprocessing_sample(  # noqa: C901
-    sample_data: dict,
-    process: list[tuple[str, str, str, str, int, Any, int, int]],
-    custom_chains: list,
-    process_chains: list,
-    specpipe_report_directory: str,
-    *,
-    dump_result: bool = True,
-    return_result_path: bool = True,
-    dump_backup: bool = False,
-    return_step_result: bool = False,
-    final_result_only: bool = True,
-    is_test_run: bool = False,
-    dump_directory: str = "",
-    # Update progress status, use in a processing loop for resume
-    update_progress_log: bool = False,
-    # Explicitly load function for multiprocessing
-    _dl_val: Callable = _dl_val,
-    pixel_apply: Callable = pixel_apply,
-    dump_vars: Callable = dump_vars,
-) -> Union[str, dict, tuple[str, dict], None]:
-    """
-    Preprocessing of single sample using all chains of SpecPipe.
-
-    Parameters
-    ----------
-    sample_data : dict
-        'sample_data' or 'pretest_data' of SpecPipe.
-
-    process : list[tuple[str, str, str, str, int, Callable, int, int]]
-        'process' of SpecPipe.
-
-    custom_chains : list
-        'custom_chains' of SpecPipe.
-
-    process_chains : list
-        'process_chains' of SpecPipe.
-
-    specpipe_report_directory : str
-        'report_directory' of SpecExp specified for SpecPipe.
-
-    dump_result : bool, optional
-        Whether result is dumped to dill file. The default is True.
-
-    return_result_path : bool, optional
-        Whether the result file path is returned. The default is True.
-
-    dump_backup : bool, optional
-        Whether backup for the step result is dumped. The backup file is named with the datetime of dumping.
-
-    return_step_result : bool, optional
-        Whether the step result is returned. The default is False. If both path and step_result are to be returned, (path, step_result) is returned.
-
-    final_result_only : bool, optional
-        Whether only the final result of chains is dumped, if True, only the result from the last preprocessing step is dumped.
-        The default is True.
-
-    is_test_run : bool, optional
-        True if test data is applied for chain testing. The default is False.
-
-    dump_directory : str, optional
-        If '', default directory in specpipe_report_directory will be used as result file directory, or this directory is used for resulting files. The default is ''.
-
-    update_progress_log : bool = False
-        Whether to update progress log files, use to enable resume. The default is False.
-    """  # noqa: E501
-    # Func dependencies for func 'partial' for multiprocessing
-    import copy
-    import os
-    from datetime import datetime
-
-    import numpy as np
-
-    try:
-        # Break and resume testing mode
-        preprocess_resume_test_num = int(os.getenv("SPECPIPE_PREPROCESS_RESUME_TEST_NUM", "-1"))
-        if preprocess_resume_test_num > 0:
-            if preprocess_resume_test_num > 1:
-                raise ValueError("Preprocessing resume test raise")
-            else:
-                preprocess_resume_test_num = preprocess_resume_test_num + 1
-                os.environ["SPECPIPE_PREPROCESS_RESUME_TEST_NUM"] = str(preprocess_resume_test_num)
-
-        # Validate sample data label
-        if (sample_data["label"] == "") or (sample_data["label"] == "-"):
-            sample_data_label = sample_data["ID"]
-        else:
-            sample_data_label = sample_data["label"]
-
-        # Get methods
-        methods = np.array(process)
-
-        # Get testing chain
-        if len(custom_chains) > 0:
-            chains = custom_chains
-        elif len(process_chains) > 0:
-            chains = process_chains
-        else:
-            raise ValueError("\nNo process added")
-
-        # Validate chains
-        chain_length = len(process_chains[0])
-        for chain in process_chains:
-            if len(chain) != chain_length:
-                raise ValueError(
-                    f"Inconsistent steps of processing in chain: {chain} \
-                        \nExpected number of steps: {chain_length}, got: {len(chain)}"
-                )
-
-        # Chains
-        # [(process 1 ID of step 1, process 1 ID of step 2,...), (process 2 ID of step 1, process 1 ID of step 2,...), ...]  # noqa: E501
-        # Status vector: Check previous steps,
-        # once identical or previous process completed, avoid computing repeatly but use the previous result.
-        # [[Step1:[preceding processes 1],[preceding processes 2],...],[Step2:...],...]
-        model_ids = [pit[0] for pit in process if pit[3] == "model"]
-        if len(model_ids) > 0:
-            n_model_step = 1
-        else:
-            n_model_step = 0
-        # Number of preprocessing steps
-        preprocess_chain_length = len(chains[0]) - n_model_step
-        if preprocess_chain_length < 1:
-            raise ValueError("No preprocessing process found.")
-        calc_status: list[list] = [[] for _ in range(preprocess_chain_length)]
-        status_results: list[list] = [[] for _ in range(preprocess_chain_length)]
-
-        # For every chain implement processing pipeline
-        for chain_ind, chain in enumerate(chains):
-            chain_result: list = []
-            step_procs: list = []
-            # For every step exclude modeling step
-            for stepi in range(len(chain) - n_model_step):
-                step = chain[stepi]
-                # Create new step_procs and sample result for the step
-                step_procs = copy.deepcopy(step_procs)
-                chain_result = copy.deepcopy(chain_result)
-                # Note down processes of every step in a chain
-                step_procs.append(step)
-                # Inherit calculated result to avoid repeating calculation
-                if step_procs in calc_status[stepi]:
-                    chain_result = [srt[4] for srt in status_results[stepi] if srt[1] == step_procs]
-                # New step calculation
-                else:
-                    # Get method and method info
-                    # [0 Process_ID, 1 Process_label, 2 Input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
-                    method_item = methods[methods[:, 0] == step, :][0]
-                    dl_in = _dl_val(method_item[2])[0]
-                    dl_out = _dl_val(method_item[3])[0]
-                    method_func = method_item[5]
-                    # Get input data of the step
-                    # Pretest_data: [img_path, test_img_path, roi_coords, test_roi_coords, roitable, spec1d]
-                    if len(chain_result) == 0:
-                        if dl_in <= 5:
-                            step_input_data = sample_data["img_path"]
-                        elif dl_in == 6:
-                            step_input_data = sample_data["roitable"]
-                        elif dl_in == 7:
-                            step_input_data = sample_data["spec1d"]
-                    else:
-                        step_input_data = chain_result[-1]
-                    # Preprocessing computing
-                    try:
-                        if dl_out < 8:
-                            # Apply the step process function
-                            if dl_in == 0:
-                                chain_result.append(method_func(step_input_data))
-                            elif dl_in == 1:
-                                chain_result.append(pixel_apply(step_input_data, method_func, "spec", progress=False))
-                            elif dl_in == 2:
-                                chain_result.append(pixel_apply(step_input_data, method_func, "array", progress=False))
-                            elif dl_in == 3:
-                                chain_result.append(pixel_apply(step_input_data, method_func, "tensor", progress=False))
-                            elif dl_in == 4:
-                                chain_result.append(
-                                    pixel_apply(step_input_data, method_func, "tensor_hyper", progress=False)
-                                )
-                            elif dl_in == 5:
-                                chain_result.append(method_func(step_input_data, sample_data["roi_coords"]))
-                            elif (dl_in >= 6) & (dl_in <= 7):
-                                chain_result.append(method_func(step_input_data))
-                            # Save calculated step results
-                            # Status result: (0 - step_id, 1 step_procs, 2 dl_in, 3 dl_out, 4 sample_result)
-                            # Step_id as str of procs id
-                            step_id = ""
-                            for proc_id in step_procs:
-                                step_id = step_id + "proc_" + str(proc_id) + "-"
-                            # Store step result and calculation status
-                            status_results[stepi].append((step_id, step_procs, dl_in, dl_out, chain_result[-1]))
-                            calc_status[stepi].append(step_procs)
-                    except Exception as e:
-                        method_item = tuple(method_item)
-                        method_item_out = method_item[1:5] + (method_item[5].__class__.__name__,) + method_item[6:8]
-                        raise ValueError(
-                            f"\nTest failed for chain: \nChain index: {chain_ind}, \nChain: {chain};\
-                                \n\nProcess ID: {step}, \nProcess item: {method_item_out}, \n\nError message: \n{e}"
-                        ) from e
-
-        # Dump test preprocessing results of current chain (chain i)
-        if final_result_only:
-            status_results = status_results[-1:]
-        status_results_out = {
-            "ID": sample_data["ID"],
-            "label": sample_data_label,
-            "target": sample_data["target"],
-            "status_results": status_results,
-        }
-
-        # Dump step results
-        if is_test_run:
-            dir_name = "test_run"
-            file_name = "PreprocessingTestingResult"
-        else:
-            dir_name = "Preprocessing"
-            file_name = f"PreprocessingResult_sample_{sample_data_label}"
-        # Output path
-        if len(dump_directory) > 0:
-            sdir = dump_directory
-        else:
-            sdir = specpipe_report_directory + f"{dir_name}/Step_results/"
-        if not os.path.exists(sdir):
-            os.makedirs(sdir)
-        if dump_result:
-            chain_result_path = sdir + f"{file_name}.dill"
-            dump_vars(chain_result_path, status_results_out, backup=dump_backup)
-
-        # Update progress
-        step_dir = specpipe_report_directory + "Preprocessing/Step_results/"
-        log_dir_path = step_dir + "Preprocess_progress_logs/"
-        log_fp = log_dir_path + sample_data["ID"]
-        if update_progress_log:
-            if not os.path.exists(log_dir_path):
-                os.makedirs(log_dir_path)
-            if not os.path.exists(log_fp):
-                with open(log_fp, "w") as f:
-                    f.write("")
-
-        # Return result file path and step results if required
-        if dump_result:
-            # Return dumped file path and step results
-            if return_result_path & return_step_result:
-                return chain_result_path, status_results_out
-            elif return_result_path & (not return_step_result):
-                return chain_result_path
-            elif (not return_result_path) & return_step_result:
-                return status_results_out
-            else:
-                return None
-        # Return step results only
-        else:
-            return status_results_out
-            if not return_step_result:
-                raise warnings.warn(
-                    "When dump_result is False, \
-                        the result is always returned and the return_step_result argument is ignored.",
-                    UserWarning,
-                    stacklevel=3,
-                )
-
-    # Error handling
-    except Exception as e:
-        # Log directory
-        if is_test_run:
-            dir_name = "test_run"
-        else:
-            dir_name = "Preprocessing"
-        errdir = specpipe_report_directory + f"{dir_name}/Step_results/Error_logs/"
-        if not os.path.exists(errdir):
-            os.makedirs(errdir)
-        cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        # PID for multiprocessing
-        pid = os.getpid()
-        error_log_path = errdir + f"error_{cts}_pid_{pid}.log"
-        # Validate sample data label
-        if (sample_data["label"] == "") or (sample_data["label"] == "-"):
-            sample_data_label = sample_data["ID"]
-        else:
-            sample_data_label = sample_data["label"]
-        # Write error log
-        err_msg = f"Failed in the preprocessing of '{sample_data_label}', error message: \n\n{str(e)}"
-        with open(error_log_path, "w") as f:
-            f.write(err_msg)
-        raise ValueError(e) from e
-
-
-# Model method wrapper, sample_list as method input
-class _ModelMethod:
-    def __init__(
-        self,
-        # Model configuration
-        model_label: str,
-        is_regression: Optional[bool],
-        x_shape: Optional[tuple[int]],
-        report_dir: str,
-        method: object,
-        result_backup: bool,
-        # Modeling parameters
-        validation_method: str,
-        unseen_threshold: Optional[float],
-        # Model evaluation reporting parameters
-        data_split_config: Union[str, dict[str, Any]],
-        validation_config: Union[str, dict[str, Any]],
-        metrics_config: Union[str, dict[str, Any], None],
-        roc_plot_config: Union[str, dict, None],
-        scatter_plot_config: Union[str, dict[str, Any], None],
-        residual_config: Union[str, dict[str, Any], None],
-        residual_plot_config: Union[str, dict[str, Any], None],
-        influence_analysis_config: Union[str, dict[str, Any], None],
-    ) -> None:
-        self.__name__ = model_label
-        self.model_label = model_label
-        self.is_regression = is_regression
-        self.input_shape = x_shape
-        self.report_dir = report_dir
-        self.method = method
-        self.result_backup = result_backup
-        self.validation_method = validation_method
-        self.unseen_threshold = unseen_threshold
-        self.data_split_config = data_split_config
-        self.validation_config = validation_config
-        self.metrics_config = metrics_config
-        self.roc_plot_config = roc_plot_config
-        self.scatter_plot_config = scatter_plot_config
-        self.residual_config = residual_config
-        self.residual_plot_config = residual_plot_config
-        self.influence_analysis_config = influence_analysis_config
-
-    """
-    Model method wrapper to specify modeling and model evaluation parameters.
-    """
-
-    # @validate_call
-    @simple_type_validator
-    def evaluation(
-        self,
-        sample_list: list[
-            tuple[
-                str,
-                tuple[int],
-                Union[str, int, bool, float],
-                Annotated[Any, arraylike_validator(ndim=1)],
-            ]
-        ],
-        data_label: str,
-        report_directory: Optional[str] = None,
-        modeleva: type = ModelEva,
-        silent_all: bool = False,
-    ) -> None:
-        """
-        Evaluation of specified model. Configured at _ModelMethod instance.
-
-        Parameters
-        ----------
-        sample_list : TYPE
-            Standard sample data of SpecPipe for modeling.
-        data_label : str
-            Label for the specified dataset.
-        report_directory : Optional[str], optional
-            Report_directory for model evaluation reports. The default is using report_directory of the _ModelMethod instance.
-        """  # noqa: E501
-        if report_directory is None:
-            report_directory = self.report_dir
-        model_eva = modeleva(
-            sample_list=sample_list,
-            model=self.method,
-            validation_method=self.validation_method,
-            report_directory=report_directory,
-            model_label=self.model_label,
-            data_label=data_label,
-            is_regression=self.is_regression,
-            unseen_threshold=self.unseen_threshold,
-            result_backup=self.result_backup,
-            silent_all=silent_all,
-        )
-        if self.is_regression:
-            model_eva.regressor_evaluation(
-                data_split_config=self.data_split_config,
-                validation_config=self.validation_config,
-                metrics_config=self.metrics_config,
-                scatter_plot_config=self.scatter_plot_config,
-                residual_config=self.residual_config,
-                residual_plot_config=self.residual_plot_config,
-                influence_analysis_config=self.influence_analysis_config,
-            )
-        else:
-            model_eva.classifier_evaluation(
-                data_split_config=self.data_split_config,
-                validation_config=self.validation_config,
-                metrics_config=self.metrics_config,
-                roc_plot_config=self.roc_plot_config,
-                residual_config=self.residual_config,
-                influence_analysis_config=self.influence_analysis_config,
-            )
-
-    def __call__(self, sample_list: list, data_label: str, report_directory: Optional[str] = None) -> None:
-        self.evaluation(sample_list, data_label, report_directory)
-
-
-# Run modeling on single dataset
-# Notes: different from '_test_model',
-# Sample_list item: (0 - Sample id, 1 - Original shape, 2 - Target value, 3 - Sample predictor value)
-@simple_type_validator
-def _model_evaluator(  # noqa: C901
-    preprocess_result: list[
-        tuple[
-            str,
-            tuple[int],
-            Union[str, int, bool, float],
-            Annotated[Any, arraylike_validator(ndim=1)],
-        ]
-    ],
-    preprocess_chain: tuple,
-    preprocess_chain_label: str,
-    model_processes: list[tuple[str, str, str, str, int, Any, int, int]],
-    specpipe_report_directory: str,
-    result_directory: str = "",
-    # Update progress status, use in a processing loop for resume
-    update_progress_log: bool = False,
-    # Import applied functions and modules
-    _dl_val: Callable = _dl_val,
-    load_vars: Callable = load_vars,
-    dump_vars: Callable = dump_vars,
-    _target_type_validation_for_serialization: Callable = _target_type_validation_for_serialization,
-    modeleva: type = ModelEva,
-    silent_all: bool = False,
-) -> None:
-    """
-    Evaluation of added models on a single sample_list dataset.
-    'preprocess_result' must be the standard 'sample_list' output.
-    'preprocess_chain_label' serves as the 'data_label' for modeling data.
-    'preprocess_chain_label' must be unique across all sample lists for modeling.
-    """
-    # Import applied modules
-    import os
-    import time
-
-    import numpy as np
-
-    # Break and resume testing mode
-    model_resume_test_num = int(os.getenv("SPECPIPE_MODEL_RESUME_TEST_NUM", "-1"))
-    if model_resume_test_num > 0:
-        if model_resume_test_num > 1:
-            raise ValueError("Modeling resume test raise")
-        else:
-            model_resume_test_num = model_resume_test_num + 1
-            os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"] = str(model_resume_test_num)
-
-    # Name reassignment
-    sample_list = preprocess_result
-    preprocess_chain = tuple(preprocess_chain)
-    sample_list_label = preprocess_chain_label
-
-    # Validate report directory
-    if result_directory == "":
-        result_directory = specpipe_report_directory
-    model_result_dir = result_directory + "Modeling/"
-    if not os.path.exists(model_result_dir):
-        os.makedirs(model_result_dir)
-
-    # Validate sample_list_label - Absolutely unique number if label not provided (commonly it should be given)
-    if sample_list_label == "":
-        if update_progress_log:
-            raise ValueError(
-                "Consistent and unique sample_list_label must be provided \
-                    if update_progress_log set True for enabling break resuming."
-            )
-        sample_list_label = str(time.time_ns())[4:-2] + str(os.getpid())
-
-    # Validate model processes
-    for procit in model_processes:
-        if procit[3] != "model":
-            raise ValueError(f"Model process must have output data level of 'model', but got: '{procit[3]}'")
-        if not callable(procit[-3]):
-            raise ValueError(
-                f"Invalid model evaluation method, \
-                    given method is not callable : {procit[-3]}, got type : {type(procit[-3])}"
-            )
-
-    # Save preprocess chain info for the sample_list
-    model_report_dir = model_result_dir + "Model_evaluation_reports/"
-    if not os.path.exists(model_report_dir):
-        os.makedirs(model_report_dir)
-    # Chain file name
-    chain_label_file_path = model_report_dir + f"{preprocess_chain_label}.txt"
-    # Save chain process file
-    with open(chain_label_file_path, "w") as f:
-        for pci, pproc in enumerate(preprocess_chain):
-            if pci < (len(preprocess_chain) - 1):
-                f.write(f"{pproc}\n")
-            else:
-                f.write(f"{pproc}")
-
-    # Get model processes with input data level index dl_in_ind
-    # Process: [0 Process_ID, 1 Process_label, 2 Input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
-    for modelit in model_processes:
-        # Get test model
-        model_methodi = modelit[5]
-        # Get model input data level
-        dl_in_name = _dl_val(modelit[2])[1]
-        dl_in_ind = _dl_val(modelit[2])[0]
-        # Get model input data shape
-        input_dshape = model_methodi.input_shape
-        # Validate data shape
-        sample_list_shape = (len(sample_list), len(sample_list[0]))
-        if input_dshape is None:
-            input_dshape = sample_list_shape
-        elif np.prod(sample_list_shape) != np.prod(input_dshape):
-            raise ValueError(
-                f"Cannot reshape sample data with shape {sample_list_shape} \
-                    into specified input data shape {input_dshape} of the model.\
-                    \nInput step data ID: {sample_list[0]}\nModel label: {modelit[1]}"
-            )
-        # Modeling
-        # Sample_list item: (0 - Sample id, 1 - Original shape, 2 - Target value, 3 - Sample predictor value)
-        if dl_in_ind == 7:
-            # Regression
-            if model_methodi.is_regression:
-                model_methodi.evaluation(
-                    sample_list=sample_list,
-                    data_label="chain_" + sample_list_label,
-                    report_directory=model_result_dir,
-                    modeleva=modeleva,
-                    silent_all=silent_all,
-                )
-            # Classification
-            else:
-                model_methodi.evaluation(
-                    sample_list=sample_list,
-                    data_label="chain_" + sample_list_label,
-                    report_directory=model_result_dir,
-                    modeleva=modeleva,
-                    silent_all=silent_all,
-                )
-        else:
-            raise ValueError(f"Model only accepts data level 'spec1d' as input, but got: {dl_in_name}")
-
-    # Update progress
-    log_path = model_report_dir + "modeling_progress_log.dill"
-    if os.path.exists(log_path):
-        modeling_progress_log = load_vars(log_path)["modeling_progress_log"]
-        if preprocess_chain not in modeling_progress_log:
-            modeling_progress_log.append(preprocess_chain)
-        else:
-            warnings.warn(
-                f"Sample_list_label must be unique, got duplicated label: {sample_list_label}",
-                UserWarning,
-                stacklevel=3,
-            )
-        dump_vars(log_path, {"modeling_progress_log": modeling_progress_log}, backup=False)
-    else:
-        dump_vars(log_path, {"modeling_progress_log": [preprocess_chain]}, backup=False)
-
-
-@simple_type_validator
-def _model_evaluator_mp(
-    cdp: str,
-    pchains: list[tuple],
-    model_processes: list[tuple[str, str, str, str, int, Any, int, int]],
-    specpipe_report_directory: str,
-    result_directory: str = "",
-    # Update progress status, use in a processing loop for resume
-    update_progress_log: bool = False,
-    # Import applied functions and modules
-    _model_evaluator: Callable = _model_evaluator,
-    _dl_val: Callable = _dl_val,
-    load_vars: Callable = load_vars,
-    dump_vars: Callable = dump_vars,
-    _target_type_validation_for_serialization: Callable = _target_type_validation_for_serialization,
-    modeleva: type = ModelEva,
-    silent_all: bool = True,
-) -> None:
-    """
-    Evaluation of added models on a single sample_list dataset for multiprocessing.
-    cdp : chain data path
-    pchains : preprocessing chains
-    """
-    try:
-        # Import applied modules
-        import os
-        from datetime import datetime
-
-        # Load chain data
-        pc_it = load_vars(cdp)
-        pc_sample_list = pc_it["chain_res"]
-        pc_sample_list = _target_type_validation_for_serialization(pc_sample_list)
-        pchain = pc_it["chain_procs"]
-        # Use preprocess chain ID as chain label
-        pproc_chain_label = [f"Preprocessing_#{pci}" for pci, pc in enumerate(pchains) if pc == pchain][0]
-        _model_evaluator(
-            preprocess_result=pc_sample_list,
-            preprocess_chain=pchain,
-            preprocess_chain_label=pproc_chain_label,
-            model_processes=model_processes,
-            specpipe_report_directory=specpipe_report_directory,
-            result_directory=result_directory,
-            update_progress_log=update_progress_log,
-            # Import applied functions
-            _dl_val=_dl_val,
-            load_vars=load_vars,
-            dump_vars=dump_vars,
-            modeleva=modeleva,
-            silent_all=silent_all,
-        )
-
-    # Error handling
-    except Exception as e:
-        # Validate report directory
-        if result_directory == "":
-            result_directory = specpipe_report_directory
-        model_result_dir = result_directory + "Modeling/"
-        if not os.path.exists(model_result_dir):
-            os.makedirs(model_result_dir)
-        errdir = model_result_dir + "Error_logs/"
-        if not os.path.exists(errdir):
-            os.makedirs(errdir)
-        cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        pid = os.getpid()
-        error_log_path = errdir + f"error_{cts}_pid_{pid}.log"
-        err_msg = f"\nFailed in the modeling of preprocessing chain from path '{cdp}', error message: \n\n{str(e)}\n"
-        with open(error_log_path, "w") as f:
-            f.write(err_msg)
-        raise ValueError(e) from e
 
 
 # %% Spectral Modeling Pipeline Class - SpecPipe
@@ -950,66 +145,11 @@ class SpecPipe:
 
     """  # noqa: E501
 
-    # @validate_call
     @simple_type_validator
     def __init__(self, spec_exp: SpecExp) -> None:  # noqa: C901
         ## Experiment data manager - SpecExp
-        # Validate SpecExp
-        if type(spec_exp) is not SpecExp:
-            raise TypeError(f"spec_exp must be a SpecExp object, but got: {type(spec_exp)}")
-
-        # Validate report diretory
-        if not os.path.isdir(spec_exp._report_directory):
-            raise ValueError(f"\nReport directory of given SpecExp is invalid: \n'{spec_exp._report_directory}'")
-
-        # Validate group
-        if len(spec_exp.groups) == 0:
-            raise ValueError("No group is found in given SpecExp")
-
-        # Validate sample data configs
-        if len(spec_exp.standalone_specs_sample) == 0:
-            if len(spec_exp.images) == 0:
-                raise ValueError("Neither image path nor standalone spectrum is found in given SpecExp")
-            elif len(spec_exp.rois_sample) == 0:
-                raise ValueError("Neither sample ROI nor standalone spectrum is found in given SpecExp")
-            for g in spec_exp.groups:
-                group_images = spec_exp.ls_images(group=g, return_dataframe=True, print_result=False)
-                group_rois = spec_exp.ls_rois(group=g, roi_type="sample", return_dataframe=True, print_result=False)
-                if len(group_images) == 0:
-                    raise ValueError(f"Neither image nor standalone spectrum is found in group: '{g}'")
-                elif len(group_rois) == 0:
-                    raise ValueError(f"Neither image sample ROI nor standalone spectrum is found in group: '{g}'")
-        else:
-            if len(spec_exp.images) > 0 or len(spec_exp.rois_sample) > 0:
-                raise ValueError(
-                    "Hybrid samples from both standalone spectra and spectral images \
-                        is not allowed by SpecPipe pipeline.\
-                        \nPlease provide either pure image samples or standalone spectrum samples"
-                )
-            for g in spec_exp.groups:
-                if (
-                    len(
-                        spec_exp.ls_standalone_specs(
-                            group=g,
-                            use_type="sample",
-                            print_result=False,
-                            return_dataframe=True,
-                        )
-                    )
-                    == 0
-                ):
-                    raise ValueError(f"No spectrum is found in group: '{g}'")
-
-        # Validate sample target values
-        sample_target_values = [spt[2] for spt in spec_exp.sample_targets]
-        if len(spec_exp.sample_targets) == 0 or sample_target_values == [None] * len(sample_target_values):
-            raise ValueError("No sample target value is found in given SpecExp")
-        for stt in spec_exp.sample_targets:
-            if stt[2] is None or stt[2] == np.nan:
-                raise ValueError(
-                    "Sample target value with ID '{stt[0]}', label '{stt[1]}' and group '{stt[3]}'\
-                    is missing. Got sample target value: {stt[2]}"
-                )
+        # Validate SpecExp integrity
+        self._spec_exp_validator(spec_exp)
 
         # SpecExp
         # SpecExp._groups: [0 group]
@@ -1021,12 +161,15 @@ class SpecPipe:
         # [0 fixed sample id, 1 user assinged labels, 2 Target values]
         self._sample_targets: list[tuple[str, str, Union[str, bool, int, float], str]] = spec_exp.sample_targets
 
+        # Is_target_numeric according to sample target values
+        self._is_target_numeric: bool = self._check_target_numeric(spec_exp)
+
         # Report directory
         self._report_directory: str = self.spec_exp._report_directory
 
         # Processes
         # [0 Process_ID, 1 Process_label, 2 Input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
-        self._process: list[tuple[str, str, str, str, int, Any, int, int]] = []
+        self._process: list[tuple[str, str, str, str, int, Callable, int, int]] = []
 
         # Generated process chain for full factors
         # [(process 1 ID of step 1, process 2 ID of step 1,...), (process 1 ID of step 2, process 2 ID of step 2,...), ...]  # noqa: E501
@@ -1084,11 +227,16 @@ class SpecPipe:
         return self._spec_exp
 
     @spec_exp.setter
-    def spec_exp(self, value: SpecExp) -> None:
-        if isinstance(value, SpecExp):
-            self._spec_exp = value
+    def spec_exp(self, spec_exp: SpecExp) -> None:
+        if isinstance(spec_exp, SpecExp):
+            self._tested = False
+            self._spec_exp_updater(spec_exp)
         else:
             raise ValueError(f"{self.__class__.__name__}.spec_exp must be a SpecExp instance")
+
+    # Alias method
+    def update_spec_exp(self, spec_exp: SpecExp) -> None:
+        self.spec_exp = spec_exp
 
     @property
     def band_wavelength(self) -> Optional[tuple]:
@@ -1130,11 +278,19 @@ class SpecPipe:
         raise ValueError("sample_targets cannot be modified in SpecPipe, please update using 'SpecExp' instead")
 
     @property
-    def process(self) -> list[tuple[str, str, str, str, int, Any, int, int]]:
+    def is_target_numeric(self) -> bool:
+        return self._is_target_numeric
+
+    @is_target_numeric.setter
+    def is_target_numeric(self, value: bool) -> None:
+        raise ValueError("is_target_numeric cannot be modified in SpecPipe, please update using 'SpecExp' instead")
+
+    @property
+    def process(self) -> list[tuple[str, str, str, str, int, Callable, int, int]]:
         return self._process
 
     @process.setter
-    def process(self, value: list[tuple[str, str, str, str, int, Any, int, int]]) -> None:
+    def process(self, value: list[tuple[str, str, str, str, int, Callable, int, int]]) -> None:
         raise ValueError("process cannot be modified directly, use 'add_process' and 'rm_process' instead")
 
     @property
@@ -1201,6 +357,107 @@ class SpecPipe:
     def create_time(self, value: str) -> None:
         raise ValueError("create_time is immutable and cannot be modified")
 
+    # SpecExp validation
+    @simple_type_validator
+    def _spec_exp_validator(self, spec_exp: SpecExp) -> None:  # noqa: C901
+        # Validate SpecExp
+        if type(spec_exp) is not SpecExp:
+            raise TypeError(f"spec_exp must be a SpecExp object, but got: {type(spec_exp)}")
+
+        # Validate report diretory
+        if not os.path.isdir(spec_exp._report_directory):
+            raise ValueError(f"\nReport directory of given SpecExp is invalid: \n'{spec_exp._report_directory}'")
+
+        # Validate group
+        if len(spec_exp.groups) == 0:
+            raise ValueError("No group is found in given SpecExp")
+
+        # Validate sample data configs
+        if len(spec_exp.standalone_specs_sample) == 0:
+            if len(spec_exp.images) == 0:
+                raise ValueError("Neither image path nor standalone spectrum is found in given SpecExp")
+            elif len(spec_exp.rois_sample) == 0:
+                raise ValueError("Neither sample ROI nor standalone spectrum is found in given SpecExp")
+            for g in spec_exp.groups:
+                group_images = spec_exp.ls_images(group=g, return_dataframe=True, print_result=False)
+                group_rois = spec_exp.ls_rois(group=g, roi_type="sample", return_dataframe=True, print_result=False)
+                if len(group_images) == 0:
+                    raise ValueError(f"Neither image nor standalone spectrum is found in group: '{g}'")
+                elif len(group_rois) == 0:
+                    raise ValueError(f"Neither image sample ROI nor standalone spectrum is found in group: '{g}'")
+        else:
+            if len(spec_exp.images) > 0 or len(spec_exp.rois_sample) > 0:
+                raise ValueError(
+                    "Hybrid samples from both standalone spectra and spectral images \
+                        is not allowed by SpecPipe pipeline.\
+                        \nPlease provide either pure image samples or standalone spectrum samples"
+                )
+            for g in spec_exp.groups:
+                if (
+                    len(
+                        spec_exp.ls_standalone_specs(
+                            group=g,
+                            use_type="sample",
+                            print_result=False,
+                            return_dataframe=True,
+                        )
+                    )
+                    == 0
+                ):
+                    raise ValueError(f"No spectrum is found in group: '{g}'")
+
+        # Validate sample target values
+        sample_target_values = [spt[2] for spt in spec_exp.sample_targets]
+        if len(spec_exp.sample_targets) == 0 or sample_target_values == [None] * len(sample_target_values):
+            raise ValueError("No sample target value is found in given SpecExp")
+        for stt in spec_exp.sample_targets:
+            if stt[2] is None or stt[2] == np.nan:
+                raise ValueError(
+                    "Sample target value with ID '{stt[0]}', label '{stt[1]}' and group '{stt[3]}'\
+                    is missing. Got sample target value: {stt[2]}"
+                )
+        return None
+
+    # SpecExp target value numeric validator
+    @staticmethod
+    @simple_type_validator
+    def _check_target_numeric(spec_exp: SpecExp) -> bool:
+        # Read target values
+        sample_target_values = [spt[2] for spt in spec_exp.sample_targets]
+        # Validate whether numeric
+        is_numeric: bool = True
+        for yi in sample_target_values:
+            if not isinstance(yi, RealNumber):
+                is_numeric = False
+        return is_numeric
+
+    # SpecExp-related initializer / updater
+    @simple_type_validator
+    def _spec_exp_updater(self, spec_exp: SpecExp):
+        # Backup current spec_exp
+        spec_exp_old = copy.deepcopy(self.spec_exp)
+        # Update data and test
+        try:
+            self._spec_exp_validator(spec_exp)
+        except Exception as e:
+            raise ValueError("Given SpecExp instance is invalid") from e
+        try:
+            self._spec_exp = spec_exp
+            self._sample_targets = spec_exp.sample_targets
+            self._is_regression: bool = self._check_target_numeric(self.spec_exp)
+            self._report_directory: str = self.spec_exp._report_directory
+            self._pretest_data_init()
+            if len(self.process_chains) > 0:
+                self.test_run(dump_result=False)
+        except Exception as e:
+            # Roll back when fail in test
+            self._spec_exp = spec_exp_old
+            self._sample_targets = spec_exp_old.sample_targets
+            self._is_regression: bool = self._check_target_numeric(self.spec_exp_old)
+            self._report_directory: str = self._spec_exp._report_directory
+            self._pretest_data_init()
+            raise ValueError("Given SpecExp failed in test_run, spec_exp configuration rolls back.") from e
+
     # Process configuration ===================================
 
     # Generate test data of each level for process validation
@@ -1209,7 +466,6 @@ class SpecPipe:
     # 1 - pixel_spec (1D), 2 - pixel_specs_array (2D), 3 - pixel_specs_tensor (3D), 4 - pixel_hyperspecs_tensor (3D), \
     # 5 - image_ROI (img_path + ROI coords), 6 - ROI_specs (2D), 7 - spec1d (1D spec stats)
     # Pretest_data: [img_path, test_img_path, roi_coords, test_roi_coords, roitable, spec1d]
-    # @validate_call
     @simple_type_validator
     def _pretest_data_init(self) -> None:
         """
@@ -1339,7 +595,6 @@ class SpecPipe:
     # 1 - pixel_spec (1D), 2 - pixel_specs_array (2D), 3 - pixel_specs_tensor (3D), 4 - pixel_hyperspecs_tensor (3D), \
     # 5 - image_ROI (img_path + ROI coords), 6 - ROI_specs (2D), 7 - spec1d (1D spec stats)
     # Pretest_data: [img_path, test_img_path, roi_coords, test_roi_coords, roitable, spec1d]
-    # @validate_call
     @simple_type_validator
     def _process_validator(  # noqa: C901
         self,
@@ -1369,15 +624,75 @@ class SpecPipe:
             # Test data
             if dl_out < 8:
                 if dl_in == 0:
-                    result = method(test_img_path)
+                    # Output dst image path
+                    img_path = os.path.splitext(str(test_img_path).replace("\\", "/").replace("//", "/"))
+                    img_name = img_path[0].split("/")[-1]
+                    output_path = (
+                        self.report_directory
+                        + "/Pre_execution_test_data/"
+                        + img_name
+                        + "_processed_by_"
+                        + method.__name__
+                        + img_path[1]
+                    )
+                    # Process image and return path of processed image
+                    result = method(test_img_path, output_path)
                 elif dl_in == 1:
-                    result = pixel_apply(test_img_path, method, "spec", progress=False)
+                    # Output dst image path
+                    img_path = os.path.splitext(str(test_img_path).replace("\\", "/").replace("//", "/"))
+                    img_name = img_path[0].split("/")[-1]
+                    output_path = (
+                        self.report_directory
+                        + "/Pre_execution_test_data/"
+                        + img_name
+                        + "_px_app_"
+                        + method.__name__
+                        + img_path[1]
+                    )
+                    # Process image and return path of processed image
+                    result = pixel_apply(test_img_path, method, "spec", output_path, progress=False)
                 elif dl_in == 2:
-                    result = pixel_apply(test_img_path, method, "array", progress=False)
+                    # Output dst image path
+                    img_path = os.path.splitext(str(test_img_path).replace("\\", "/").replace("//", "/"))
+                    img_name = img_path[0].split("/")[-1]
+                    output_path = (
+                        self.report_directory
+                        + "/Pre_execution_test_data/"
+                        + img_name
+                        + "_px_app_"
+                        + method.__name__
+                        + img_path[1]
+                    )
+                    # Process image and return path of processed image
+                    result = pixel_apply(test_img_path, method, "array", output_path, progress=False)
                 elif dl_in == 3:
-                    result = pixel_apply(test_img_path, method, "tensor", progress=False)
+                    # Output dst image path
+                    img_path = os.path.splitext(str(test_img_path).replace("\\", "/").replace("//", "/"))
+                    img_name = img_path[0].split("/")[-1]
+                    output_path = (
+                        self.report_directory
+                        + "/Pre_execution_test_data/"
+                        + img_name
+                        + "_px_app_"
+                        + method.__name__
+                        + img_path[1]
+                    )
+                    # Process image and return path of processed image
+                    result = pixel_apply(test_img_path, method, "tensor", output_path, progress=False)
                 elif dl_in == 4:
-                    result = pixel_apply(test_img_path, method, "tensor_hyper", progress=False)
+                    # Output dst image path
+                    img_path = os.path.splitext(str(test_img_path).replace("\\", "/").replace("//", "/"))
+                    img_name = img_path[0].split("/")[-1]
+                    output_path = (
+                        self.report_directory
+                        + "/Pre_execution_test_data/"
+                        + img_name
+                        + "_px_app_"
+                        + method.__name__
+                        + img_path[1]
+                    )
+                    # Process image and return path of processed image
+                    result = pixel_apply(test_img_path, method, "tensor_hyper", output_path, progress=False)
                 elif dl_in == 5:
                     result = method(test_img_path, self._pretest_data["roi_coords"])
                 elif dl_in == 6:
@@ -1741,7 +1056,10 @@ class SpecPipe:
         # Application sequence of non-model processes with input data level spec1d / 7
         preprocess_dl7 = self.ls_process(input_data_level=7, return_result=True, print_result=False)
         app_seqs = [proci[4] for proci in np.array(preprocess_dl7[preprocess_dl7["Output_data_level"] != "model"])]
-        application_sequence = max(app_seqs) + 1
+        if len(app_seqs) > 0:
+            application_sequence = max(app_seqs) + 1
+        else:
+            application_sequence = 0
         method = model_method
         process_label = ""
         # No use for model data level, model_label is applied for model data level in add_process istead
@@ -1902,7 +1220,6 @@ class SpecPipe:
     # Add process
     # Format of associated attribute:
     # [0 Process_ID, 1 Process_label, 2 input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
-    # @validate_call
     @simple_type_validator
     def add_process(  # noqa: C901
         self,
@@ -1942,7 +1259,8 @@ class SpecPipe:
         - input_data_level : Union[str, int]
             Input data level for the process method:
                 0 or 'image' :
-                    Method directly applied to raster images, accepting raster image path as input.
+                    Method directly applied to raster images.
+                    The function must accepts input raster image path as the first parameter and output raster image path as the second parameter.
 
                 1 or 'pixel_spec' :
                     Method applied to the 1D spectra of every pixel of the raster image, accepting pixel 1D spectra as input.
@@ -2147,7 +1465,7 @@ class SpecPipe:
 
             # Validate model labels
             existed_model_labels = [proc[1] for proc in self.process if proc[3] == 'model' and proc[1] != ''] + [
-                proc[5].model_label for proc in self.process if proc[3] == 'model'
+                proc[5].model_label for proc in self.process if proc[3] == 'model' and hasattr(proc[5], 'model_label')
             ]
             if model_label is None:
                 # Validate for duplication
@@ -2255,8 +1573,8 @@ class SpecPipe:
             pchain = []
             fseq = -1
             pti = -1
+            p_item: tuple[str, str, str, str, int, Callable, int, int]
             for p_item in self._process:
-                p_item = tuple(p_item)
                 if p_item[6] != fseq:
                     pchain.append([p_item[0]])
                     fseq = p_item[6]
@@ -2269,7 +1587,6 @@ class SpecPipe:
             raise ValueError("No process added")
 
     # Number to mixed radix vector
-    # @validate_call
     @simple_type_validator
     def _num_to_mixed_radix(self, number: int, shape: Union[list[int], tuple[int]]) -> list[int]:
         """
@@ -2473,7 +1790,6 @@ class SpecPipe:
     load_config = load_pipe_config
 
     # Read process chains from dataframe
-    # @validate_call
     @simple_type_validator
     def custom_chains_from_df(
         self,
@@ -2588,7 +1904,6 @@ class SpecPipe:
     # 0 - image (path), \
     # 1 - pixel_spec (1D), 2 - pixel_specs_array (2D), 3 - pixel_specs_tensor (3D), 4 - pixel_hyperspecs_tensor (3D), \
     # 5 - image_ROI (img_path + ROI coords), 6 - ROI_specs (2D), 7 - spec1d (1D spec stats)
-    # @validate_call
     @simple_type_validator
     def _get_process(  # noqa: C901
         self,
@@ -2648,6 +1963,7 @@ class SpecPipe:
                     if type(prps[i]) is Callable:
                         cond = prop is prps[i]
                     else:
+                        assert hasattr(prop, '__name__')
                         cond = ((prps[i] == prop.__name__) & exact_match) | (
                             (prps[i] in prop.__name__) & (not exact_match)
                         )
@@ -2703,7 +2019,6 @@ class SpecPipe:
     # 0 - image (path), \
     # 1 - pixel_spec (1D), 2 - pixel_specs_array (2D), 3 - pixel_specs_tensor (3D), 4 - pixel_hyperspecs_tensor (3D), \
     # 5 - image_ROI (img_path + ROI coords), 6 - ROI_specs (2D), 7 - spec1d (1D spec stats)
-    # @validate_call
     @simple_type_validator
     def ls_process(
         self,
@@ -2832,7 +2147,6 @@ class SpecPipe:
     # 0 - image (path), \
     # 1 - pixel_spec (1D), 2 - pixel_specs_array (2D), 3 - pixel_specs_tensor (3D), 4 - pixel_hyperspecs_tensor (3D), \
     # 5 - image_ROI (img_path + ROI coords), 6 - ROI_specs (2D), 7 - spec1d (1D spec stats)
-    # @validate_call
     @simple_type_validator
     def rm_process(
         self,
@@ -2996,7 +2310,6 @@ class SpecPipe:
     # 1 - pixel_spec (1D), 2 - pixel_specs_array (2D), 3 - pixel_specs_tensor (3D), 4 - pixel_hyperspecs_tensor (3D), \
     # 5 - image_ROI (img_path + ROI coords), 6 - ROI_specs (2D), 7 - spec1d (1D spec stats)
     # Pretest_data: [img_path, test_img_path, roi_coords, test_roi_coords, roitable, spec1d]
-    # @validate_call
     @simple_type_validator
     def test_run(
         self,
@@ -3041,6 +2354,11 @@ class SpecPipe:
                     Pre-execution test data initialization fails. Please report."
             )
 
+        # Preprocessed test image dir
+        preprocessed_img_dir = self._spec_exp.report_directory + "test_run/Preprocessed_images/"
+        if not os.path.exists(preprocessed_img_dir):
+            os.makedirs(preprocessed_img_dir)
+
         # Preprocessing test
         status_results: dict = _preprocessing_sample(  # type: ignore[call-overload]
             sample_data=test_data,
@@ -3048,6 +2366,7 @@ class SpecPipe:
             custom_chains=self.custom_chains,
             process_chains=self.process_chains,
             specpipe_report_directory=self.spec_exp.report_directory,
+            preprocess_status=self._init_preprocessing_status(),
             dump_result=dump_result,
             return_result_path=False,
             dump_backup=dump_backup,
@@ -3061,7 +2380,6 @@ class SpecPipe:
         if test_modeling:
             if len(self.ls_model(print_result=False, return_result=True)) > 0:
                 self._test_model(status_results, self.spec_exp.report_directory)
-
             # Change process test status
             self._tested = True
 
@@ -3083,6 +2401,7 @@ class SpecPipe:
         for modelit in model_procs:
             # Get test model
             model_methodi = modelit[5]
+            assert hasattr(model_methodi, 'validation_method')
 
             # Get minimum mock sample size according to validation fold
             val_method = model_methodi.validation_method
@@ -3101,6 +2420,7 @@ class SpecPipe:
             dl_in_ind = _dl_val(modelit[2])[0]
 
             # Get model input data shape
+            assert hasattr(model_methodi, "input_shape")
             ts_shape = model_methodi.input_shape
 
             ## Construct test samples list and implement model testing
@@ -3139,6 +2459,7 @@ class SpecPipe:
                         if not os.path.exists(model_report_dir):
                             os.makedirs(model_report_dir)
                         # Build testing sample list
+                        assert hasattr(model_methodi, 'is_regression')
                         if model_methodi.is_regression:
                             # Regression mock data
                             test_samples: list[tuple[str, Any, Union[float, int, bool, str], np.ndarray]] = [
@@ -3168,6 +2489,7 @@ class SpecPipe:
                                 for i in range(sample_min_size)
                             ]
                         # Test modeling
+                        assert hasattr(model_methodi, 'evaluation')
                         model_methodi.evaluation(
                             sample_list=test_samples,
                             data_label="test_chain_" + str(pci),
@@ -3182,9 +2504,8 @@ class SpecPipe:
     # Process: [0 Process_ID, 1 Process_label, 2 Input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
     # Status_result: (0 - step_id, 1 step_procs, 2 dl_in, 3 dl_out, 4 sample_result)
     # Sample_list: (0 - Sample id, 1 - Original shape, 2 - Target value, 3 - Sample predictor value)
-    # @validate_call
     @simple_type_validator
-    def preprocessing(
+    def preprocessing(  # noqa: C901
         self,
         result_directory: str = "",
         n_processor: int = 1,
@@ -3196,6 +2517,7 @@ class SpecPipe:
         show_progress: bool = True,
         save_config: bool = True,
         summary: bool = True,
+        geo_reference_warning: bool = False,
     ) -> None:
         """
         Implement preprocessing steps of all processing chains on the entire dataset and output modeling-ready sample_list data to files.
@@ -3235,6 +2557,9 @@ class SpecPipe:
 
         summary : bool, optional
             Whether to summarize preprocessed data and target value. The default is True.
+
+        geo_reference_warning: bool, optional
+            Whether to suppress GeoReferenceWarning, if False, the warning is suppressed. The default is False.
         """  # noqa: E501
         # Prompt "if __name__ == '__main__':" protection for windows multiprocessing
         if n_processor > 1:
@@ -3245,6 +2570,10 @@ class SpecPipe:
                 )
                 warnings.warn(warn_msg, UserWarning, stacklevel=2)
 
+        # Suppress NotGeoreferencedWarning
+        if not geo_reference_warning:
+            warnings.simplefilter("ignore", NotGeoreferencedWarning)
+
         # Save configurations
         if save_config:
             self.save_pipe_config(copy=True)
@@ -3252,6 +2581,14 @@ class SpecPipe:
         # Added chain testing
         if not self.tested:
             self.test_run(test_modeling=True, return_result=False, dump_result=False, dump_backup=False)
+
+        # Default result_directory
+        if result_directory == "":
+            result_directory = self._spec_exp.report_directory
+        # Preprocessed image dir for data level 0~4
+        preprocessed_img_dir = result_directory + "Preprocessing/Preprocessed_images/"
+        if not os.path.exists(preprocessed_img_dir):
+            os.makedirs(preprocessed_img_dir)
 
         # Preprocessing
         self._preprocessor(
@@ -3280,7 +2617,10 @@ class SpecPipe:
 
         # Group stats for preprocessing
         if summary:
-            _ = sample_group_stats(self.report_directory)
+            _ = sample_group_stats(self.report_directory, is_regression=self.is_target_numeric)
+
+        # Recover NotGeoreferencedWarning
+        warnings.simplefilter("default", NotGeoreferencedWarning)
 
     @simple_type_validator
     def _preprocessor(  # noqa: C901
@@ -3291,6 +2631,14 @@ class SpecPipe:
         final_result_only: bool = True,
         resume: bool = False,
         show_progress: bool = True,
+        *,
+        # Dependencies for multiprocessing
+        copy: ModuleType = copy,
+        os: ModuleType = os,
+        time: ModuleType = time,
+        datetime: type = datetime,
+        np: ModuleType = np,
+        torch: ModuleType = torch,
     ) -> None:
         """
         Preprocessing of all processing chains on the entire dataset.
@@ -3335,7 +2683,10 @@ class SpecPipe:
             else:
                 rest_sample_data = self.sample_data
 
-        ## Preprocessing of all data and generate sample_list data of all chains
+        # Initialize preprocessing status for image operation
+        preprocess_status = self._init_preprocessing_status()
+
+        # Preprocessing of all data and generate sample_list data of all chains
         if show_progress:
             print("\nPreprocess samples ...")
         self._preprocess_result_path = []
@@ -3362,6 +2713,7 @@ class SpecPipe:
                     is_test_run=False,
                     dump_directory=step_dir,
                     update_progress_log=True,
+                    preprocess_status=preprocess_status,
                 )
                 self._preprocess_result_path.append(pti)
 
@@ -3389,6 +2741,13 @@ class SpecPipe:
                 is_test_run=False,
                 dump_directory=step_dir,
                 update_progress_log=True,
+                preprocess_status=preprocess_status,
+                # Explicitly assign dependencies for multiprocessing
+                copy=copy,
+                os=os,
+                datetime=datetime,
+                np=np,
+                torch=torch,
             )
             # Processing - multiprocessing for loop
             with ProcessingPool(nodes=ncpu) as pool:
@@ -3538,6 +2897,19 @@ class SpecPipe:
                 UserWarning,
                 stacklevel=3,
             )
+
+    # Preprocessing image processing status
+    @staticmethod
+    def _init_preprocessing_status() -> dict:
+        """Initialize shared image processing status for preprocessing."""
+        manager = mp.Manager()
+        preprocess_status: dict = {
+            'start_status': manager.list(),
+            'completion_status': manager.list(),
+            'processed_image_init': manager.list(),
+            'lock': manager.Lock(),
+        }
+        return preprocess_status
 
     # Run modeling on single dataset
     # Sample_list item: (0 - Sample id, 1 - Original shape, 2 - Target value, 3 - Sample predictor value)
@@ -3795,6 +3167,7 @@ class SpecPipe:
         show_progress: bool = True,
         save_config: bool = True,
         summary: bool = True,
+        geo_reference_warning: bool = False,
     ) -> None:
         """
         Run pipeline of given processes on SpecExp instance (corresponding manager of spectral experiment data).
@@ -3841,6 +3214,9 @@ class SpecPipe:
             Whether to summarize the preprocessed data, performance metrics and marginal performance metrics.
             The marginal performances of different processes at each step are compared using Mann-Whitney U test.
             The default is True.
+
+        geo_reference_warning: bool, optional
+            Whether to suppress GeoReferenceWarning, if False, the warning is suppressed. The default is False.
         """  # noqa: E501
 
         # Validate processor
@@ -3859,6 +3235,10 @@ class SpecPipe:
                     UserWarning,
                     stacklevel=2,
                 )
+
+        # Suppress NotGeoreferencedWarning
+        if not geo_reference_warning:
+            warnings.simplefilter("ignore", NotGeoreferencedWarning)
 
         # Save configurations
         if save_config:
@@ -3882,6 +3262,7 @@ class SpecPipe:
             show_progress=show_progress,
             save_config=False,
             summary=summary,
+            geo_reference_warning=geo_reference_warning,
         )
 
         # Model evaluation
@@ -3910,3 +3291,5 @@ class SpecPipe:
             result_dir = self.report_directory
         self._save_sample_targets(result_dir)
         print(f"\n\nPipeline running complete, result stored in:\n{result_dir}")
+
+        warnings.simplefilter("default", NotGeoreferencedWarning)

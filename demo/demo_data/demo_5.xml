@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RegionsOfInterest version="1.1">
+  <Region name="5-1" color="255,0,0">
+    <GeometryDef>
+      <CoordSysStr>none</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+464 502 486 502 486 525 464 525 464 502
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+  <Region name="5-2" color="0,128,0">
+    <GeometryDef>
+      <CoordSysStr>none</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+469.70048334 529.2944035 493.62112427 529.2944035 493.62112427 544.69537354 469.70048334 544.69537354 469.70048334 529.2944035
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+  <Region name="5-3" color="0,0,255">
+    <GeometryDef>
+      <CoordSysStr>none</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+504.43456116 548.95520226 563.08929443 548.95520226 563.08929443 564.02850342 504.43456116 564.02850342 504.43456116 548.95520226
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+  <Region name="5-4" color="255,255,0">
+    <GeometryDef>
+      <CoordSysStr>none</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+558.50175777 526.0176037 584.06079102 526.0176037 584.06079102 542.40161133 558.50175777 542.40161133 558.50175777 526.0176037
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+  <Region name="5-5" color="0,255,255">
+    <GeometryDef>
+      <CoordSysStr>none</CoordSysStr>
+      <Polygon>
+        <Exterior>
+          <LinearRing>
+            <Coordinates>
+561.77855756 488.00672609 585.69921875 488.00672609 585.69921875 521.75775146 561.77855756 521.75775146 561.77855756 488.00672609
+            </Coordinates>
+          </LinearRing>
+        </Exterior>
+      </Polygon>
+    </GeometryDef>
+  </Region>
+</RegionsOfInterest>

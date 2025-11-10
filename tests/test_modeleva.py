@@ -7,12 +7,12 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 
 # OS
 import os
+import sys  # noqa: E402
 import shutil
 import tempfile
 
 # Test
 import pytest
-import unittest
 
 # Basic data
 import numpy as np
@@ -661,4 +661,4 @@ class TestModelEva:
 # %% Test main
 
 if __name__ == "__main__":
-    unittest.main()
+    sys.exit(pytest.main([__file__]))

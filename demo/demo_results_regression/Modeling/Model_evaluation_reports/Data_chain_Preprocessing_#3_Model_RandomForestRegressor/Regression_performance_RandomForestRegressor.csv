@@ -1,0 +1,2 @@
+Mean_Error,Standard_Deviation_of_Error,Mean_Absolute_Error,Normalized_MAE,CV_MAE,Mean_Squared_Error,Root_Mean_Squared_Error,Normalized_RMSE,CV_RMSE,Residual_Prediction_Deviation,R2
+-0.01999999999999997,0.8014985963805552,0.612,0.153,0.306,0.6428,0.8017480901130978,0.20043702252827444,0.4008740450565489,1.7639126052343954,0.6786

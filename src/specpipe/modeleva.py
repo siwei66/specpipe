@@ -729,9 +729,29 @@ class ModelEva:
                 for train_idx, val_idx in kf.split(indices):
                     dsp_inds.append((train_idx, val_idx))
             else:
-                kf = StratifiedKFold(n_splits=val_method, shuffle=True, random_state=random_state)
-                for train_idx, val_idx in kf.split(self.X, self.y):
-                    dsp_inds.append((train_idx, val_idx))
+                # Validate number of class
+                y_1d_arr: np.ndarray = self.y.reshape(1, -1)[0]
+                n_member_min: int = len(y_1d_arr)
+                assert self.ynames is not None
+                for yn in self.ynames:
+                    n_member_min = min(n_member_min, len(y_1d_arr[y_1d_arr == yn]))
+                # If number of samples/members in each class greater than number of splits
+                # StratifiedKFold if available
+                if n_member_min >= val_method:
+                    kf = StratifiedKFold(n_splits=val_method, shuffle=True, random_state=random_state)
+                    for train_idx, val_idx in kf.split(self.X, self.y):
+                        dsp_inds.append((train_idx, val_idx))
+                # Fall back to plain KFold
+                else:
+                    warnings.warn(
+                        f"Sample number of single class {n_member_min} less than number of classes,\
+                            data split falls back to 'KFold' instead of 'StratifiedKFold'",
+                        UserWarning,
+                        stacklevel=1,
+                    )
+                    kf = KFold(n_splits=val_method, shuffle=True, random_state=random_state)
+                    for train_idx, val_idx in kf.split(indices):
+                        dsp_inds.append((train_idx, val_idx))
 
         # LOOCV
         elif val_method == "loo":

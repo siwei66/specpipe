@@ -9,6 +9,7 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 
 # OS
 import os
+import sys  # noqa: E402
 import tempfile
 
 # Test
@@ -2136,4 +2137,4 @@ class TestPixelApply:
 # %% Test main
 
 if __name__ == "__main__":
-    unittest.main()
+    sys.exit(pytest.main([__file__]))

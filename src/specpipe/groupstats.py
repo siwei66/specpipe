@@ -94,16 +94,22 @@ def chain_sample_group_stats(  # noqa: C901
     for yi in targets:
         if not isinstance(yi, RealNumber):
             is_numeric = False
-    # Check is_regression
-    if is_regression is not None:
-        if (is_regression and is_numeric) or (not is_regression and not is_numeric):
-            pass
-        elif is_regression and not is_numeric:
+    # Auto check is_regression
+    if is_regression is None:
+        if is_numeric:
+            is_regression = True
+        else:
+            is_regression = False
+    # Forced is_regression
+    else:
+        if is_regression and not is_numeric:
             raise ValueError(f"Got categorical target values when is_regression is True: {targets}")
         elif not is_regression and is_numeric:
             is_numeric = False
+        else:
+            pass
     # Force type of target values
-    if is_numeric:
+    if is_regression:
         df_preprocessed['y'] = df_preprocessed['y'].astype("float")
     else:
         df_preprocessed['y'] = df_preprocessed['y'].astype("str")
@@ -119,7 +125,7 @@ def chain_sample_group_stats(  # noqa: C901
     stats_col = ['Group'] + list(df_preprocessed.columns[3:-1])
 
     # Numeric targets
-    if is_numeric:
+    if is_regression:
         # Overall stats and default measures
         ostats = Stats2d().stats2d(df_preprocessed.iloc[:, 2:-1].values)
         # y stats
@@ -197,8 +203,12 @@ def chain_sample_group_stats(  # noqa: C901
             gdata = df_preprocessed[df_preprocessed['Group'] == g]
             gstats_x = Stats2d().stats2d(gdata.iloc[:, 3:-1].values)
             ylabel, ycount = np.unique(gdata.iloc[:, 2], return_counts=True)
-            ycount_row = [str(g)] + list(ycount)
-            df_ystats.iloc[ig + 1, :] = ycount_row
+            ycount_row = list(ycount)
+            # Y stats - fill target category counts of the current group
+            df_ystats['Group'][ig + 1] = str(g)
+            for lb_i, lb in enumerate(ylabel):
+                df_ystats.at[df_ystats.index[ig + 1], lb] = ycount[lb_i]
+            # X stats
             for m in list(gstats_x.keys()):
                 # X group stats
                 xstats = gstats_x[m].tolist()
@@ -678,11 +688,11 @@ def classification_performance_marginal_stats(
             step_gstats_macauc.loc[5, pid1] = np.nanmax(macro_auc_1)
             # Micro avg AUC
             micro_auc_1 = group_micauc[pid1]
-            step_gstats_macauc.loc[1, pid1] = len(micro_auc_1)
-            step_gstats_macauc.loc[2, pid1] = np.nanmean(micro_auc_1)
-            step_gstats_macauc.loc[3, pid1] = np.nanmin(micro_auc_1)
-            step_gstats_macauc.loc[4, pid1] = np.nanmedian(micro_auc_1)
-            step_gstats_macauc.loc[5, pid1] = np.nanmax(micro_auc_1)
+            step_gstats_micauc.loc[1, pid1] = len(micro_auc_1)
+            step_gstats_micauc.loc[2, pid1] = np.nanmean(micro_auc_1)
+            step_gstats_micauc.loc[3, pid1] = np.nanmin(micro_auc_1)
+            step_gstats_micauc.loc[4, pid1] = np.nanmedian(micro_auc_1)
+            step_gstats_micauc.loc[5, pid1] = np.nanmax(micro_auc_1)
             # Mann-Whiteney U-Test P value
             for i, pid2 in enumerate(['All'] + step_process_ids):
                 if len(step_process_ids) > 1:
@@ -712,8 +722,6 @@ def classification_performance_marginal_stats(
 
 
 # Marginal performance statistics
-
-
 @simple_type_validator
 def performance_marginal_stats(report_directory: str) -> dict[str, Any]:
     """

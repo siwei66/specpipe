@@ -102,7 +102,7 @@ exp.ls_targets()
 
 
 # 3. Design testing pipeline
-"""
+_ = """
 The processing functions are wrapped according to different 'data levels'.
 A classic data levels in spectral image processing is:
 ##    raster image data -> ROI spectra -> ROI statistics -> traits to model
