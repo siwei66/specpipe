@@ -156,14 +156,16 @@ def create_test_roi_xml(
     path_out = str(path_out)
 
     # Output
+    result: Union[str, list[dict], tuple[str, list[dict]]]
     if return_path and not return_roi_list:
-        return path_out
+        result = path_out
     elif not return_path and return_roi_list:
-        return roi_list
+        result = roi_list
     elif return_path and return_roi_list:
-        return path_out, roi_list
+        result = path_out, roi_list
     else:
         return None
+    return result
 
 
 # Alias
