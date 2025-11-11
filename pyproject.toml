@@ -90,7 +90,7 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["_pytest.*", "pytest.*"]
-disable_error_code = syntax
+disable_error_code = "syntax"
 
 [tool.black]
 line-length = 120
