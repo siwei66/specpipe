@@ -38,7 +38,7 @@ jobs:
 
     - name: Type check with Mypy
       run: |
-        mypy .
+        mypy  --python-version ${{ matrix.python-version }} .
 
     - name: Format with Black
       run: |

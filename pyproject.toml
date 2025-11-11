@@ -88,10 +88,6 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 ignore_missing_imports = true
 
-[[tool.mypy.overrides]]
-module = ["_pytest.*", "pytest.*"]
-disable_error_code = "syntax"
-
 [tool.black]
 line-length = 120
 target-version = ["py39"]
