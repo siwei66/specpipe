@@ -173,12 +173,15 @@ pipe.ls_chains()
 # Run pipeline
 pipe.run()
 
+pipe.run(n_processor=10)
+
 
 # 5 Regression Case
 
 # Create a directory for regression results
 report_dir_reg = demo_dir + "/demo_results_regression/"
-os.makedirs(report_dir_reg)
+if not os.path.exists(report_dir_reg):
+    os.makedirs(report_dir_reg)
 
 # Copy SpecExp and SpecPipe
 import copy
@@ -226,3 +229,5 @@ pipe_reg.ls_chains()
 
 # Run regression pipeline
 pipe_reg.run()
+
+pipe_reg.run(n_processor=10)

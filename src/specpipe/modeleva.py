@@ -945,6 +945,10 @@ class ModelEva:
         # Write result to file
         task_time = self._model_time
         df_val.to_csv(dout + f"Validation_results_{self.model_label}.csv", index=False)
+        dill_result_path = dout + f".__specpipe_dill_data/.__specpipe_core_result_Validation_results_{self.model_label}.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(df_val, open(dill_result_path, "wb"))
         if self.result_backup:
             df_val.to_csv(dout + f"Validation_results_{self.model_label}_{task_time}.csv", index=False)
 
@@ -1098,6 +1102,11 @@ class ModelEva:
         # Save metrics df to CSV
         task_time = self._model_time
         metrics_df.to_csv(dout + f"Classification_performance_{self.model_label}.csv", index=False)
+        dill_result_path = dout + \
+            f".__specpipe_dill_data/.__specpipe_core_result_Classification_performance_{self.model_label}.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(metrics_df, open(dill_result_path, "wb"))
         if self.result_backup:
             metrics_df.to_csv(dout + f"Classification_performance_{self.model_label}_{task_time}.csv", index=False)
 
@@ -1251,6 +1260,10 @@ class ModelEva:
         # Save plot to PNG
         task_time = self._model_time
         plt.savefig(dout + f"ROC_curve_{self.model_label}.png", dpi=300)
+        dill_result_path = dout + f".__specpipe_dill_data/.__specpipe_core_result_ROC_curve_{self.model_label}.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(plt.gcf(), open(dill_result_path, "wb"))
         if self.result_backup:
             plt.savefig(dout + f"ROC_curve_{self.model_label}_{task_time}.png", dpi=300)
         if show_plot:
@@ -1343,6 +1356,11 @@ class ModelEva:
         # Save case report df to CSV
         task_time = self._model_time
         df_res.to_csv(dout + f"Residual_analysis_{self.model_label}.csv", index=True, index_label="Sample_ID")
+        dill_result_path = dout + \
+            f".__specpipe_dill_data/.__specpipe_core_result_Residual_analysis_{self.model_label}.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(df_res, open(dill_result_path, "wb"))
         if self.result_backup:
             df_res.to_csv(
                 dout + f"Residual_analysis_{self.model_label}_{task_time}.csv",
@@ -1546,6 +1564,11 @@ class ModelEva:
         # Save metrics df to CSV
         task_time = self._model_time
         influence_df.to_csv(dout + f"Influence_analysis_{self.model_label}.csv", index=True, index_label="Sample_ID")
+        dill_result_path = dout + \
+            f".__specpipe_dill_data/.__specpipe_core_result_Influence_analysis_{self.model_label}.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(influence_df, open(dill_result_path, "wb"))
         if self.result_backup:
             influence_df.to_csv(
                 dout + f"Influence_analysis_{self.model_label}_{task_time}.csv",
@@ -1818,6 +1841,11 @@ class ModelEva:
         # Write result to file
         task_time = self._model_time
         df_val.to_csv(dout + f"Validation_results_{self.model_label}.csv", index=False)
+        dill_result_path = dout + \
+            f".__specpipe_dill_data/.__specpipe_core_result_Validation_results_{self.model_label}.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(df_val, open(dill_result_path, "wb"))
         if self.result_backup:
             df_val.to_csv(dout + f"Validation_results_{self.model_label}_{task_time}.csv", index=False)
 
@@ -1893,6 +1921,11 @@ class ModelEva:
         # Save metrics df to CSV
         task_time = self._model_time
         metrics_df.to_csv(dout + f"Regression_performance_{self.model_label}.csv", index=False)
+        dill_result_path = dout + \
+            f".__specpipe_dill_data/.__specpipe_core_result_Regression_performance_{self.model_label}.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(metrics_df, open(dill_result_path, "wb"))
         if self.result_backup:
             metrics_df.to_csv(dout + f"Regression_performance_{self.model_label}_{task_time}.csv", index=False)
 
@@ -2042,6 +2075,11 @@ class ModelEva:
         # Save figure
         task_time = self._model_time
         plt.savefig(dout + f"Scatter_plot_{self.model_label}.png", dpi=300)
+        dill_result_path = dout + \
+            f".__specpipe_dill_data/.__specpipe_core_result_Scatter_plot_{self.model_label}.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(plt.gcf(), open(dill_result_path, "wb"))
         if self.result_backup:
             plt.savefig(dout + f"Scatter_plot_{self.model_label}_{task_time}.png", dpi=300)
         if show_plot:
@@ -2212,6 +2250,10 @@ class ModelEva:
         # Save figure
         task_time = self._model_time
         plt.savefig(dout + f"Residual_plot_{self.model_label}.png", dpi=300)
+        dill_result_path = dout + f".__specpipe_dill_data/.__specpipe_core_result_Residual_plot_{self.model_label}.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(plt.gcf(), open(dill_result_path, "wb"))
         if self.result_backup:
             plt.savefig(dout + f"Residual_plot_{self.model_label}_{task_time}.png", dpi=300)
         if show_plot:
@@ -2264,6 +2306,11 @@ class ModelEva:
         # Save case report df to CSV
         task_time = self._model_time
         df_res.to_csv(dout + f"Residual_analysis_{self.model_label}.csv", index=True, index_label="Sample_ID")
+        dill_result_path = dout + \
+            f".__specpipe_dill_data/.__specpipe_core_result_Residual_analysis_{self.model_label}.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(df_res, open(dill_result_path, "wb"))
         if self.result_backup:
             df_res.to_csv(
                 dout + f"Residual_analysis_{self.model_label}_{task_time}.csv",
@@ -2386,6 +2433,11 @@ class ModelEva:
         # Save metrics df to CSV
         task_time = self._model_time
         influence_df.to_csv(dout + f"Influence_analysis_{self.model_label}.csv", index=True, index_label="Sample_ID")
+        dill_result_path = dout + \
+            f".__specpipe_dill_data/.__specpipe_core_result_Influence_analysis_{self.model_label}.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(influence_df, open(dill_result_path, "wb"))
         if self.result_backup:
             influence_df.to_csv(
                 dout + f"Influence_analysis_{self.model_label}_{task_time}.csv",

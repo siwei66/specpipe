@@ -16,6 +16,9 @@ import numpy as np
 # Typing
 from typing import Optional, Any
 
+# File
+import dill
+
 # Statistics
 from scipy.stats import mannwhitneyu
 
@@ -166,10 +169,17 @@ def chain_sample_group_stats(  # noqa: C901
             df_ystats.iloc[ig + 1, :] = ystats_row
 
         # Save results
+        # Save target stats
         df_ystats.to_csv(
             write_dir + f"PreprocessingChainResult_chain_ind_{preprocessing_chain_index}_y_stats.csv",
             index=False,
         )
+        # Dump y stats dill (specpipe private)
+        dill_result_path = write_dir + ".__specpipe_dill_data/.__specpipe_result_summary_sample_targets_stats.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(df_ystats, open(dill_result_path, "wb"))
+        # Save X stats
         for m in list(gstats.keys()):
             dfm = df_xstats_dict[m]
             dfm.to_csv(
@@ -220,9 +230,17 @@ def chain_sample_group_stats(  # noqa: C901
                 df_xstats_dict[m] = dfm
 
         # Save results
+        # Save target stats
         df_ystats.to_csv(
             write_dir + f"PreprocessingChainResult_chain_ind_{preprocessing_chain_index}_y_stats.csv", index=False
         )
+        # Dump y stats dill (specpipe private)
+        dill_result_path = write_dir + ".__specpipe_dill_data/.__specpipe_result_summary_sample_targets_stats.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(df_ystats, open(dill_result_path, "wb"))
+
+        # Save X stats
         for m in list(gstats_x.keys()):
             dfm = df_xstats_dict[m]
             dfm.to_csv(
@@ -453,8 +471,19 @@ def performance_metrics_summary(  # noqa: C901
         for proc_item in result_chain:
             result_chain1.append(process_label_to_id(proc_item, config_dir))
         result_chain = tuple(result_chain1)
-        # Read performance metrics
+        # Metrics directory
         metrics_dir = f"{report_dir}{dir_name}/"
+        # Save processes of the full chain
+        cprocs_in_id = result_chain1
+        cprocs_in_label = [process_id_to_label(proc_id, config_dir) for proc_id in cprocs_in_id]
+        df_cprocs = pd.DataFrame({"Chain_in_process_ID": cprocs_in_id, "Chain_in_process_label": cprocs_in_label})
+        # Dump dill (specpipe private)
+        dill_result_path = metrics_dir + \
+            ".__specpipe_dill_data/.__specpipe_result_summary_Chain_process_info.dill"
+        if not os.path.exists(os.path.dirname(dill_result_path)):
+            os.makedirs(os.path.dirname(dill_result_path))
+        dill.dump(df_cprocs, open(dill_result_path, "wb"))
+        # Read performance metrics
         metrics_filename = [
             entry.name
             for entry in os.scandir(metrics_dir)
@@ -529,8 +558,6 @@ def performance_metrics_summary(  # noqa: C901
 
 
 # Marginal performance statistics for regression
-
-
 def regression_performance_marginal_stats(
     metrics_dict: dict[str, Any],
     pipeline_config_dir: str,
@@ -604,15 +631,24 @@ def regression_performance_marginal_stats(
         # Save step result
         if len(step_process_ids) > 1:
             step_gstats_r2.to_csv(report_dir + f"Marginal_R2_stats_{str(step).lower()}.csv", index=False)
+            # Dump dill (specpipe private)
+            dill_result_path = report_dir + \
+                f".__specpipe_dill_data/.__specpipe_result_summary_Marginal_R2_stats_{str(step).lower()}.dill"
+            if not os.path.exists(os.path.dirname(dill_result_path)):
+                os.makedirs(os.path.dirname(dill_result_path))
+            dill.dump(step_gstats_r2, open(dill_result_path, "wb"))
 
     df_reg_metrics.to_csv(report_dir + "Performance_summary.csv", index=False)
+    # Dump dill (specpipe private)
+    dill_result_path = report_dir + ".__specpipe_dill_data/.__specpipe_result_summary_Performance_summary.dill"
+    if not os.path.exists(os.path.dirname(dill_result_path)):
+        os.makedirs(os.path.dirname(dill_result_path))
+    dill.dump(df_reg_metrics, open(dill_result_path, "wb"))
 
     return marginal_performance_stats
 
 
 # Marginal performance statistics for classification
-
-
 def classification_performance_marginal_stats(
     metrics_dict: dict[str, Any],
     pipeline_config_dir: str,
@@ -708,15 +744,43 @@ def classification_performance_marginal_stats(
         marginal_performance_stats[step] = {"macro_auc": step_gstats_macauc, "micro_auc": step_gstats_micauc}
         # Save step result
         if len(step_process_ids) > 1:
+            # Save macro-avg AUC
             step_gstats_macauc.to_csv(report_dir + f"Marginal_macro_avg_AUC_stats_{str(step).lower()}.csv", index=False)
+            # Dump dill (specpipe private)
+            dill_result_path = report_dir + \
+                f".__specpipe_dill_data/.__specpipe_result_summary_Marginal_macro_avg_AUC_stats_{str(step).lower()}.dill"  # noqa: E501
+            if not os.path.exists(os.path.dirname(dill_result_path)):
+                os.makedirs(os.path.dirname(dill_result_path))
+            dill.dump(step_gstats_macauc, open(dill_result_path, "wb"))
+            # Save micro-avg AUC
             step_gstats_micauc.to_csv(report_dir + f"Marginal_micro_avg_AUC_stats_{str(step).lower()}.csv", index=False)
+            # Dump dill (specpipe private)
+            dill_result_path = report_dir + \
+                f".__specpipe_dill_data/.__specpipe_result_summary_Marginal_micro_avg_AUC_stats_{str(step).lower()}.dill"  # noqa: E501
+            if not os.path.exists(os.path.dirname(dill_result_path)):
+                os.makedirs(os.path.dirname(dill_result_path))
+            dill.dump(step_gstats_micauc, open(dill_result_path, "wb"))
 
     # Collect performance summary
     marginal_performance_stats["macro_summary"] = df_macro_metrics
     marginal_performance_stats["micro_summary"] = df_micro_metrics
     # Save performance summary
+    # Save macro-avg performance
     df_macro_metrics.to_csv(report_dir + "Macro_avg_performance_summary.csv", index=False)
+    # Dump dill (specpipe private)
+    dill_result_path = report_dir + \
+        ".__specpipe_dill_data/.__specpipe_result_summary_Macro_avg_performance_summary.dill"
+    if not os.path.exists(os.path.dirname(dill_result_path)):
+        os.makedirs(os.path.dirname(dill_result_path))
+    dill.dump(df_macro_metrics, open(dill_result_path, "wb"))
+    # Save micro-avg performance
     df_micro_metrics.to_csv(report_dir + "Micro_avg_performance_summary.csv", index=False)
+    # Dump dill (specpipe private)
+    dill_result_path = report_dir + \
+        ".__specpipe_dill_data/.__specpipe_result_summary_Micro_avg_performance_summary.dill"
+    if not os.path.exists(os.path.dirname(dill_result_path)):
+        os.makedirs(os.path.dirname(dill_result_path))
+    dill.dump(df_micro_metrics, open(dill_result_path, "wb"))
 
     return marginal_performance_stats
 

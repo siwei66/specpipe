@@ -7,6 +7,7 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 
 # OS
 import os
+import sys
 import shutil
 
 # Interface
@@ -2564,6 +2565,13 @@ class SpecPipe:
         # Prompt "if __name__ == '__main__':" protection for windows multiprocessing
         if n_processor > 1:
             if os.name == "nt":
+                print(  # noqa: E501
+                    "\n\n >>> WARNING: Windows users must run multiprocessing within block \n\nif __name__ == '__main__':\
+                    \n\n Please make sure all of your main codes in the script are placed within this block. \n\n",
+                    file=sys.stderr,
+                    flush=True
+                )
+                time.sleep(2)
                 warn_msg = (
                     "\nWindows users must run multiprocessing within block \n\nif __name__ == '__main__':"
                     + "Please make sure all of your main codes in the script are placed within this block."
@@ -2958,6 +2966,13 @@ class SpecPipe:
         # Prompt "if __name__ == '__main__':" protection for windows multiprocessing
         if n_processor > 1:
             if os.name == "nt":
+                print(  # noqa: E501
+                    "\n\n >>> WARNING: Windows users must run multiprocessing within block \n\nif __name__ == '__main__':\
+                    \n\n Please make sure all of your main codes in the script are placed within this block. \n\n",
+                    file=sys.stderr,
+                    flush=True
+                )
+                time.sleep(2)
                 warnings.warn(
                     "Windows users must run multiprocessing within block \n\nif __name__ == '__main__': \n\n\
                     Please make sure all of your main codes in the script are placed within this block.",
@@ -3229,6 +3244,13 @@ class SpecPipe:
         # Prompt "if __name__ == '__main__':" protection for windows multiprocessing
         if n_processor > 1:
             if os.name == "nt":
+                print(  # noqa: E501
+                    "\n\n >>> WARNING: Windows users must run multiprocessing within block \n\nif __name__ == '__main__':\
+                    \n\n Please make sure all of your main codes in the script are placed within this block. \n\n",
+                    file=sys.stderr,
+                    flush=True
+                )
+                time.sleep(2)
                 warnings.warn(
                     "Windows users must run multiprocessing within block \n\nif __name__ == '__main__': \n\n\
                     Please make sure all of your main codes in the script are placed within this block.",

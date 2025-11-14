@@ -729,7 +729,7 @@ def _wait_for_completion(
     """Wait for the completion of started processing of existed image."""
     start_time = time.time()
     # Validate max wait time
-    max_wait_time = min(max_wait_time, 1)
+    max_wait_time = max(max_wait_time, 1)
     lock = preprocess_status['lock']
     completion_status = preprocess_status['completion_status']
     while True:
