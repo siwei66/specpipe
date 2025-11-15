@@ -62,10 +62,22 @@ exp.ls_images()
 exp.add_rois_by_suffix(roi_filename_suffix="_[12].xml", search_directory=data_dir, group="group_1")
 exp.add_rois_by_suffix("_[345].xml", data_dir, "group_2")
 
+# Remove ROIs by name
+exp.rm_rois(roi_name='5-5')
+
+# Remove ROIs by source file name
+exp.rm_rois(roi_source_file_name='demo_5.xml')
+
+# Load ROIs to a image using ROI files by paths
+exp.add_rois_by_file([f"{data_dir}/demo_5.xml"], image_name="example.tif", group="group_2")
+
 # Check added ROIs
 exp.ls_rois()
 
-# Show RGB preview with ROIs
+# Check sample ROIs
+exp.ls_rois_sample()
+
+# Show raster RGB preview with associated ROIs
 exp.show_image("demo.tiff", "group_1", rgb_band_index=(19, 12, 6), output_path=report_dir + "demo_rast_rgb1.png")
 exp.show_image("demo.tiff", "group_2", rgb_band_index=(19, 12, 6), output_path=report_dir + "demo_rast_rgb2.png")
 
@@ -107,14 +119,15 @@ from specpipe import SpecPipe
 
 pipe = SpecPipe(exp)
 
+
 # 3.2 Image processing
 
+
 # Create some image processing functions
-import numpy as np
-
-
 # Standard normal variate
 def snv(v):  # type: ignore
+    import numpy as np
+
     vmean = np.mean(v, axis=1, keepdims=True)
     vstd = np.std(v, axis=1, keepdims=True)
     vstd[vstd == 0] = 1e-10
@@ -122,7 +135,7 @@ def snv(v):  # type: ignore
     return snv
 
 
-# Compared with raw data
+# Compared with raw data for example
 def raw(v):  # type: ignore
     return v
 
@@ -172,8 +185,6 @@ pipe.ls_chains()
 
 # Run pipeline
 pipe.run()
-
-pipe.run(n_processor=10)
 
 
 # 5 Regression Case
@@ -229,5 +240,3 @@ pipe_reg.ls_chains()
 
 # Run regression pipeline
 pipe_reg.run()
-
-pipe_reg.run(n_processor=10)

@@ -40,6 +40,7 @@ def raster_rgb_preview(  # noqa: C901
     normalize: bool = True,
     output_path: Optional[str] = None,
     dpi: int = 150,
+    show_image: bool = True,
 ) -> None:
     """
     Display raster image in RGB plot.
@@ -127,4 +128,7 @@ def raster_rgb_preview(  # noqa: C901
         print(f"RGB image saved as: {output_path}")
 
     # Show plot and clear plt
-    plt.show()
+    if show_image:
+        plt.show()
+    else:
+        plt.close()

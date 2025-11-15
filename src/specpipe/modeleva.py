@@ -945,7 +945,9 @@ class ModelEva:
         # Write result to file
         task_time = self._model_time
         df_val.to_csv(dout + f"Validation_results_{self.model_label}.csv", index=False)
-        dill_result_path = dout + f".__specpipe_dill_data/.__specpipe_core_result_Validation_results_{self.model_label}.dill"
+        dill_result_path = (
+            dout + f".__specpipe_dill_data/.__specpipe_core_result_Validation_results_{self.model_label}.dill"
+        )
         if not os.path.exists(os.path.dirname(dill_result_path)):
             os.makedirs(os.path.dirname(dill_result_path))
         dill.dump(df_val, open(dill_result_path, "wb"))
@@ -1102,8 +1104,9 @@ class ModelEva:
         # Save metrics df to CSV
         task_time = self._model_time
         metrics_df.to_csv(dout + f"Classification_performance_{self.model_label}.csv", index=False)
-        dill_result_path = dout + \
-            f".__specpipe_dill_data/.__specpipe_core_result_Classification_performance_{self.model_label}.dill"
+        dill_result_path = (
+            dout + f".__specpipe_dill_data/.__specpipe_core_result_Classification_performance_{self.model_label}.dill"
+        )
         if not os.path.exists(os.path.dirname(dill_result_path)):
             os.makedirs(os.path.dirname(dill_result_path))
         dill.dump(metrics_df, open(dill_result_path, "wb"))
@@ -1356,8 +1359,9 @@ class ModelEva:
         # Save case report df to CSV
         task_time = self._model_time
         df_res.to_csv(dout + f"Residual_analysis_{self.model_label}.csv", index=True, index_label="Sample_ID")
-        dill_result_path = dout + \
-            f".__specpipe_dill_data/.__specpipe_core_result_Residual_analysis_{self.model_label}.dill"
+        dill_result_path = (
+            dout + f".__specpipe_dill_data/.__specpipe_core_result_Residual_analysis_{self.model_label}.dill"
+        )
         if not os.path.exists(os.path.dirname(dill_result_path)):
             os.makedirs(os.path.dirname(dill_result_path))
         dill.dump(df_res, open(dill_result_path, "wb"))
@@ -1564,8 +1568,9 @@ class ModelEva:
         # Save metrics df to CSV
         task_time = self._model_time
         influence_df.to_csv(dout + f"Influence_analysis_{self.model_label}.csv", index=True, index_label="Sample_ID")
-        dill_result_path = dout + \
-            f".__specpipe_dill_data/.__specpipe_core_result_Influence_analysis_{self.model_label}.dill"
+        dill_result_path = (
+            dout + f".__specpipe_dill_data/.__specpipe_core_result_Influence_analysis_{self.model_label}.dill"
+        )
         if not os.path.exists(os.path.dirname(dill_result_path)):
             os.makedirs(os.path.dirname(dill_result_path))
         dill.dump(influence_df, open(dill_result_path, "wb"))
@@ -1841,8 +1846,9 @@ class ModelEva:
         # Write result to file
         task_time = self._model_time
         df_val.to_csv(dout + f"Validation_results_{self.model_label}.csv", index=False)
-        dill_result_path = dout + \
-            f".__specpipe_dill_data/.__specpipe_core_result_Validation_results_{self.model_label}.dill"
+        dill_result_path = (
+            dout + f".__specpipe_dill_data/.__specpipe_core_result_Validation_results_{self.model_label}.dill"
+        )
         if not os.path.exists(os.path.dirname(dill_result_path)):
             os.makedirs(os.path.dirname(dill_result_path))
         dill.dump(df_val, open(dill_result_path, "wb"))
@@ -1921,8 +1927,9 @@ class ModelEva:
         # Save metrics df to CSV
         task_time = self._model_time
         metrics_df.to_csv(dout + f"Regression_performance_{self.model_label}.csv", index=False)
-        dill_result_path = dout + \
-            f".__specpipe_dill_data/.__specpipe_core_result_Regression_performance_{self.model_label}.dill"
+        dill_result_path = (
+            dout + f".__specpipe_dill_data/.__specpipe_core_result_Regression_performance_{self.model_label}.dill"
+        )
         if not os.path.exists(os.path.dirname(dill_result_path)):
             os.makedirs(os.path.dirname(dill_result_path))
         dill.dump(metrics_df, open(dill_result_path, "wb"))
@@ -2075,8 +2082,7 @@ class ModelEva:
         # Save figure
         task_time = self._model_time
         plt.savefig(dout + f"Scatter_plot_{self.model_label}.png", dpi=300)
-        dill_result_path = dout + \
-            f".__specpipe_dill_data/.__specpipe_core_result_Scatter_plot_{self.model_label}.dill"
+        dill_result_path = dout + f".__specpipe_dill_data/.__specpipe_core_result_Scatter_plot_{self.model_label}.dill"
         if not os.path.exists(os.path.dirname(dill_result_path)):
             os.makedirs(os.path.dirname(dill_result_path))
         dill.dump(plt.gcf(), open(dill_result_path, "wb"))
@@ -2306,8 +2312,9 @@ class ModelEva:
         # Save case report df to CSV
         task_time = self._model_time
         df_res.to_csv(dout + f"Residual_analysis_{self.model_label}.csv", index=True, index_label="Sample_ID")
-        dill_result_path = dout + \
-            f".__specpipe_dill_data/.__specpipe_core_result_Residual_analysis_{self.model_label}.dill"
+        dill_result_path = (
+            dout + f".__specpipe_dill_data/.__specpipe_core_result_Residual_analysis_{self.model_label}.dill"
+        )
         if not os.path.exists(os.path.dirname(dill_result_path)):
             os.makedirs(os.path.dirname(dill_result_path))
         dill.dump(df_res, open(dill_result_path, "wb"))
@@ -2320,7 +2327,7 @@ class ModelEva:
 
     # LOO training for data point influential analysis
     @simple_type_validator
-    def _regressor_influential_analysis(
+    def _regressor_influential_analysis(  # noqa: C901
         self, validation_method: str = 'default', random_state: Optional[int] = None
     ) -> None:
         """
@@ -2433,8 +2440,9 @@ class ModelEva:
         # Save metrics df to CSV
         task_time = self._model_time
         influence_df.to_csv(dout + f"Influence_analysis_{self.model_label}.csv", index=True, index_label="Sample_ID")
-        dill_result_path = dout + \
-            f".__specpipe_dill_data/.__specpipe_core_result_Influence_analysis_{self.model_label}.dill"
+        dill_result_path = (
+            dout + f".__specpipe_dill_data/.__specpipe_core_result_Influence_analysis_{self.model_label}.dill"
+        )
         if not os.path.exists(os.path.dirname(dill_result_path)):
             os.makedirs(os.path.dirname(dill_result_path))
         dill.dump(influence_df, open(dill_result_path, "wb"))

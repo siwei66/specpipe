@@ -1469,9 +1469,14 @@ def silent(func: Callable) -> Callable:
 # %% Robust listdir
 
 
-def lsdir_robust(
-    path: str, fetch_number_gt: int = 0, *, retry: int = 5, time_wait_min: float = 0.5, time_wait_max: float = 20,
-    include_hidden: bool = False
+def lsdir_robust(  # noqa: C901
+    path: str,
+    fetch_number_gt: int = 0,
+    *,
+    retry: int = 5,
+    time_wait_min: float = 0.5,
+    time_wait_max: float = 20,
+    include_hidden: bool = False,
 ) -> list:
     """
     Substitution of 'listdir' with retry for file-related testing using GitHub workflow actions.
@@ -1529,14 +1534,15 @@ def lsdir_robust(
         return []
 
 
-def _filepath_hiddenfilter(path_list: list[str]) -> None:
+def _filepath_hiddenfilter(path_list: list[str]) -> list:
     "'lsdir_robust' helper to filter hidden files"
     # Hidden prefix and hidden suffix
     hpref = [".", "$", "_", "#", "%", "!", "="]
     hsuff = ["~"]
     # Filtering
     result = [
-        item for item in path_list
+        item
+        for item in path_list
         if os.path.basename(str(item))[0] not in hpref and os.path.basename(str(item))[-1] not in hsuff
     ]
     return result

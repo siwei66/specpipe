@@ -1057,6 +1057,7 @@ class SpecExp:
         normalize: bool = True,
         output_path: Optional[str] = None,
         dpi: int = 150,
+        show_image: bool,
     ) -> None:
         """
         Display raster image with associated ROIs in RGB preview.
@@ -1085,6 +1086,8 @@ class SpecExp:
             Output RGB image to the path, if None, no file output. The default is None.
         dpi : int, optional
             Output RGB image DPI. The default is 150.
+        show_image : bool, optional
+            Whether show image in console. The default is True.
         """
         # Get image
         if roi_name is None:
@@ -1120,6 +1123,7 @@ class SpecExp:
             normalize=normalize,
             output_path=output_path,
             dpi=dpi,
+            show_image=show_image,
         )
 
     # Remove images by name pattern
@@ -1573,7 +1577,7 @@ class SpecExp:
 
         # Get image list
         # image list
-        imgn_list0 = [imgt[2] for imgt in self._images]
+        imgn_list0 = [imgt[2] for imgt in self._images if imgt[1] == group_name]
         imgn_list = []
         for imgn in imgn_list0:
             if imgn not in imgn_list:

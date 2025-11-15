@@ -40,29 +40,32 @@ Follow these steps to install the project:
 
 ## Usage <a name="usage"></a>
 
-### 1.  Prepare mock spectral experiment data
+### 1.  Data preparation
 
-- Create a directory for mock experiment data (The example uses a temporary directory):
+- Setup a demo directory in current working directory
     ```python
-    import tempfile
-    data_dir = tempfile.mkdtemp(prefix="specpipe_example_")
+    import os
+    demo_dir = os.getcwd() + "/SpecPipeDemo/"
     ```
 
-- Create mock data:
+- Create a data directory and download real-world demo data
     ```python
-    from specpipe import create_test_raster, create_test_roi_xml
-    create_test_raster(f"{data_dir}/example.tif")
-    create_test_roi_xml(f"{data_dir}/example_roi.xml")
+    data_dir = demo_dir + "demo_data/"
+    os.makedirs(data_dir)
+    
+    from specpipe import download_demo_data
+    download_demo_data(data_dir)
+    ```
+
+- Create a directory for pipeline results
+    ```python
+    report_dir = demo_dir + "/demo_results_classification/"
+    os.makedirs(report_dir)
     ```
 
 ### 2. Configure your experiment data
 
 #### 2.1 Create a spectral experiment instance
-
-- Here we use the same directory as report directory:
-    ```python
-    report_dir = data_dir
-    ```
 
 - Create a SpecExp instance:
     ```python
@@ -80,7 +83,7 @@ The instance stores and organizes the data loading configurations of an experime
 
 - Add experiment groups:
     ```python
-    exp.add_groups(['group_1', 'group_2'])
+    exp.add_groups(['group_1', 'group_2', 'group_3'])
     ```
 
 - Check groups:
@@ -90,7 +93,7 @@ The instance stores and organizes the data loading configurations of an experime
 
 - Remove a group:
     ```python
-    exp.rm_group('group_2')
+    exp.rm_group('group_3')
     ```
 
 
@@ -98,11 +101,11 @@ The instance stores and organizes the data loading configurations of an experime
 
 - Add raster images:
     ```python
-    exp.add_images_by_name(
-        image_name = 'example',
-        image_directory = data_dir,
-        group = 'group_1'
-        )
+    # By parameter name
+    exp.add_images_by_name(image_name="demo.", image_directory=data_dir, group="group_1")
+    
+    # By position
+    exp.add_images_by_name("demo.", data_dir, "group_2")
     ```
 
 - Check added images:
@@ -115,17 +118,26 @@ The instance stores and organizes the data loading configurations of an experime
 
 - Load image ROIs using suffix to image names:
     ```python
-    exp.add_rois_by_suffix("_roi.xml", data_dir, "group_1")
+    # By parameter name
+    exp.add_rois_by_suffix(roi_filename_suffix="_[12].xml", search_directory=data_dir, group="group_1")
+    
+    # By position
+    exp.add_rois_by_suffix("_[345].xml", data_dir, "group_2")
     ```
 
 - Remove ROIs by name:
     ```python
-    exp.rm_rois(roi_name='ROI_10')
+        exp.rm_rois(roi_name='5-5')
+    ```
+
+- Remove ROIs by source file name:
+    ```python
+    exp.rm_rois(roi_source_file_name='demo_5.xml')
     ```
 
 - Load ROIs to a image using ROI files by paths:
     ```python
-    exp.add_rois_by_file([f"{data_dir}/example_roi.xml"], image_name="example.tif", group="group_1")
+        exp.add_rois_by_file([f"{data_dir}/demo_5.xml"], image_name="example.tif", group="group_2")
     ```
 
 - Check added ROIs:

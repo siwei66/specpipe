@@ -51,6 +51,7 @@ from pathos.multiprocessing import ProcessingPool, cpu_count
 from .groupstats import sample_group_stats, performance_marginal_stats
 from .modeleva import ModelEva
 from .rasterop import croproi, pixel_apply
+from .resultcli import group_stats_report, core_chain_report
 from .roistats import ROISpec, minbbox
 from .specexp import SpecExp
 from .specio import (
@@ -87,7 +88,10 @@ class SpecPipe:
     -----------
     spec_exp : SpecExp
         Instance of SpecExp configuring spectral experiment datasets. See SpecExp for details.
-
+    process : list[tuple[str, str, str, str, int, Callable, int, int]]
+        Added process items.
+    process_chains : list[tuple[str, ...]]
+        Generated full-factorial process chains.
 
     Methods:
     --------
@@ -2565,11 +2569,12 @@ class SpecPipe:
         # Prompt "if __name__ == '__main__':" protection for windows multiprocessing
         if n_processor > 1:
             if os.name == "nt":
-                print(  # noqa: E501
-                    "\n\n >>> WARNING: Windows users must run multiprocessing within block \n\nif __name__ == '__main__':\
+                print(
+                    "\n\n\n\
+                    >>> WARNING: Windows users must run multiprocessing within block \n\nif __name__ == '__main__':\
                     \n\n Please make sure all of your main codes in the script are placed within this block. \n\n",
                     file=sys.stderr,
-                    flush=True
+                    flush=True,
                 )
                 time.sleep(2)
                 warn_msg = (
@@ -2967,10 +2972,11 @@ class SpecPipe:
         if n_processor > 1:
             if os.name == "nt":
                 print(  # noqa: E501
-                    "\n\n >>> WARNING: Windows users must run multiprocessing within block \n\nif __name__ == '__main__':\
+                    "\n\n\n\
+                    >>> WARNING: Windows users must run multiprocessing within block \n\nif __name__ == '__main__':\
                     \n\n Please make sure all of your main codes in the script are placed within this block. \n\n",
                     file=sys.stderr,
-                    flush=True
+                    flush=True,
                 )
                 time.sleep(2)
                 warnings.warn(
@@ -3197,7 +3203,8 @@ class SpecPipe:
 
         n_processor : int
             The number of processor to use in the preprocessing.
-            The default is -1, which automatically uses sequential processing for Windows and (maximum number of available CPUs - 1) processors for other OS.
+            The default is -1, which automatically uses sequential processing for Windows and (maximum available CPUs - 1) processors for other OS.
+            Set to -2 to use (maximum available CPUs - 1) processors on Windows.
 
             Windows Note: When using n_processor > 1 on Windows, all main codes in the working script must be placed within block "if __name__ == '__main__':".
             This requirement comes from 'pathos', which uses dill for object serialization and is essential for parallel execution of the package functions.
@@ -3236,7 +3243,7 @@ class SpecPipe:
 
         # Validate processor
         if n_processor < 0:
-            if os.name == "nt":
+            if os.name == "nt" and n_processor != -2:
                 n_processor = 1
             else:
                 n_processor = max(1, cpu_count() - 1)
@@ -3244,11 +3251,12 @@ class SpecPipe:
         # Prompt "if __name__ == '__main__':" protection for windows multiprocessing
         if n_processor > 1:
             if os.name == "nt":
-                print(  # noqa: E501
-                    "\n\n >>> WARNING: Windows users must run multiprocessing within block \n\nif __name__ == '__main__':\
+                print(
+                    "\n\n\n\
+                    >>> WARNING: Windows users must run multiprocessing within block \n\nif __name__ == '__main__':\
                     \n\n Please make sure all of your main codes in the script are placed within this block. \n\n",
                     file=sys.stderr,
-                    flush=True
+                    flush=True,
                 )
                 time.sleep(2)
                 warnings.warn(
@@ -3315,3 +3323,27 @@ class SpecPipe:
         print(f"\n\nPipeline running complete, result stored in:\n{result_dir}")
 
         warnings.simplefilter("default", NotGeoreferencedWarning)
+
+    # For get results in console
+    def report_agg(self) -> dict:
+        """
+        Retrieve pipeline aggregate reports, incl. performance summary and step method marginal performance analysis.
+        """
+        # Validate pipeline running completion
+        if os.path.exists(self.report_directory + "Modeling/sample_targets_stats.csv"):
+            return group_stats_report(self.report_directory)
+        else:
+            print("Unfinished or incomplete pipeline running results. Cannot retrieve summary reports.")
+            return {}
+
+    # For get results in console
+    def report_chains(self) -> list[dict]:
+        """
+        Retrieve core reports of each processing chain.
+        """
+        # Validate pipeline running completion
+        if os.path.exists(self.report_directory + "Modeling/sample_targets_stats.csv"):
+            return core_chain_report(self.report_directory)
+        else:
+            print("Unfinished or incomplete pipeline running results. Cannot retrieve chain reports.")
+            return []
