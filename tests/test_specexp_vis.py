@@ -32,7 +32,7 @@ def test_raster_rgb_preview() -> None:
         raster_rgb_preview(
             raster_path=img_path,
             rgb_band_index=(1, 2, 3),
-            display_size=(800, 600),
+            display_size=(12, 9),
             output_path=output_path,
             show_image=False,
         )
