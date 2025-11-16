@@ -107,7 +107,7 @@ class TestReadReport(unittest.TestCase):
         assert isinstance(report[expected_report_keys[2]], pd.DataFrame)
         assert isinstance(report[expected_report_keys[3]], pd.DataFrame)
         # SpecPipe method
-        assert report.keys() == TestReadReport.pipe_reg.report_agg().keys()
+        assert report.keys() == TestReadReport.pipe_reg.report_summary().keys()
 
     @staticmethod
     @silent
@@ -132,7 +132,7 @@ class TestReadReport(unittest.TestCase):
         assert isinstance(report[expected_report_keys[5]], pd.DataFrame)
         assert isinstance(report[expected_report_keys[6]], pd.DataFrame)
         # SpecPipe method
-        assert report.keys() == TestReadReport.pipe_cls.report_agg().keys()
+        assert report.keys() == TestReadReport.pipe_cls.report_summary().keys()
 
     @staticmethod
     @silent
@@ -143,7 +143,6 @@ class TestReadReport(unittest.TestCase):
         assert len(report) == 4
         expected_chain_report_keys = [
             'Chain_processes',
-            'Chain_process_info',
             'Influence_analysis',
             'Regression_performance',
             'Residual_analysis',
@@ -179,7 +178,6 @@ class TestReadReport(unittest.TestCase):
         assert len(report) == 4
         expected_chain_report_keys = [
             'Chain_processes',
-            'Chain_process_info',
             'Classification_performance',
             'Influence_analysis',
             'Residual_analysis',

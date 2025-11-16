@@ -47,7 +47,15 @@ exp.report_directory
 
 # 2.2. Experiment group management
 # Add experiment groups
-exp.add_groups(["group_1", "group_2"])
+exp.add_groups(['group_1', 'group_2', 'group_3'])
+
+# Check group
+exp.groups
+exp.ls_groups()
+
+# Remove a group
+exp.rm_group('group_3')
+
 
 # 2.3. Raster image management
 # Add raster images
@@ -69,7 +77,7 @@ exp.rm_rois(roi_name='5-5')
 exp.rm_rois(roi_source_file_name='demo_5.xml')
 
 # Load ROIs to a image using ROI files by paths
-exp.add_rois_by_file([f"{data_dir}/demo_5.xml"], image_name="example.tif", group="group_2")
+exp.add_rois_by_file([f"{data_dir}/demo_5.xml"], image_name="demo.tiff", group="group_2")
 
 # Check added ROIs
 exp.ls_rois()
@@ -89,27 +97,27 @@ exp.show_image("demo.tiff", "group_2", rgb_band_index=(19, 12, 6), output_path=r
 labels = exp.ls_labels()
 
 # Update sample labels using sample ROI names
-labels.iloc[:, 1] = exp.ls_rois_sample(return_dataframe=True)["ROI_name"]  # type: ignore
+labels.iloc[:, 1] = exp.ls_rois_sample(return_dataframe=True, print_result=False)["ROI_name"]  # type: ignore
 
 # Set sample labels using the updated label dataframe
 exp.sample_labels = labels  # type: ignore
 
 # Check new sample labels
-exp.ls_labels()
+exp.ls_labels()["Label"]
 
 # 2.5.2 Set target values
 
 # List target value dataframe
 targets = exp.ls_sample_targets()
 
-# Set the leaf order as target values
+# Set the leaf number as target values
 targets["Target_value"] = [f"leaf_{labl[0]}" for labl in targets['Label']]  # type: ignore
 
 # Load target values from updated target dataframe
 exp.sample_targets_from_df(targets)
 
 # Check target values
-exp.ls_targets()[["Sample_ID", "Target_value"]]
+exp.ls_targets()[["Label", "Target_value"]]
 
 
 # 3. Design testing pipeline
@@ -162,7 +170,27 @@ pipe.add_process(
 )
 pipe.add_process(5, 7, 0, roi_median)
 
-# 3.4 Add models to the pipeline
+
+# 3.4 Sample data wrangling
+# Create a function to remove nan and inf values
+import numpy as np
+
+
+def replace_nan(v: np.ndarray, np=np) -> np.ndarray:  # type: ignore
+    return np.nan_to_num(v, nan=0.0, posinf=0.0, neginf=0.0)  # type: ignore
+
+
+# Add the process to the pipeline
+pipe.add_process('spec1d', 'spec1d', 0, replace_nan)
+
+# Check all added processes
+pipe.ls_process()
+
+# Remove added processes from the pipeline
+pipe.rm_process(method='replace_nan')
+
+
+# 3.5 Add models to the pipeline
 # Create some models
 from sklearn.ensemble import RandomForestClassifier  # type: ignore
 from sklearn.neighbors import KNeighborsClassifier  # type: ignore
@@ -186,14 +214,36 @@ pipe.ls_chains()
 # Run pipeline
 pipe.run()
 
+# Enable resume after interruption
+# pipe.run(resume=True)
+# If the implementation is interrupted or forcibly terminated,
+# running the pipeline again with `resume=True` to continue from last completed step.
 
-# 5 Regression Case
+# 5 Check results
+# Retrieve reports in console
+result_summary = pipe.report_summary()
+chain_results = pipe.report_chains()
 
-# Create a directory for regression results
+# Check summary reports
+result_summary.keys()
+result_summary['Macro_avg_performance_summary']
+result_summary['Marginal_macro_avg_AUC_stats_step_0']
+
+# Check processing chain reports
+len(chain_results)
+chain_results[0].keys()
+chain_results[0]['ROC_curve']
+
+
+# 6 Regression Case
+
+# 6.1 Create a directory for regression results
 report_dir_reg = demo_dir + "/demo_results_regression/"
 if not os.path.exists(report_dir_reg):
     os.makedirs(report_dir_reg)
 
+
+# 6.2 Copy and update the pipeline data manager to regression
 # Copy SpecExp and SpecPipe
 import copy
 
@@ -214,6 +264,8 @@ exp_reg.sample_targets_from_df(targets_reg)
 # Check target values
 exp_reg.ls_targets()[["Sample_ID", "Target_value"]]
 
+
+# 6.3 Update the pipeline models to regressors
 # Check and remove classification models
 pipe_reg.ls_model()
 pipe_reg.rm_model()
@@ -229,14 +281,32 @@ rf_regressor = RandomForestRegressor(n_estimators=10)
 knn_regressor = KNeighborsRegressor(n_neighbors=3)
 
 # Add models
-pipe_reg.add_model(knn_regressor, validation_method="2-fold")
-pipe_reg.add_model(rf_regressor, validation_method="2-fold")
+# Skip time-consuming influence analysis
+pipe_reg.add_model(knn_regressor, validation_method="2-fold", influence_analysis_config=None)
+pipe_reg.add_model(rf_regressor, validation_method="2-fold", influence_analysis_config=None)
 
 # Check models
 pipe_reg.ls_model()
 
+# 6.4 Check and run new pipeline
 # Check processing chains and run the pipeline
 pipe_reg.ls_chains()
 
 # Run regression pipeline
 pipe_reg.run()
+
+
+# 6.5 Check results of a regression pipeline
+
+# Retrieve reports in console
+result_summary_reg = pipe_reg.report_summary()
+chain_results_reg = pipe_reg.report_chains()
+
+# Check summary reports
+result_summary_reg.keys()
+result_summary_reg['Performance_summary'].columns
+
+
+# Check processing chain reports
+chain_results_reg[0].keys()
+chain_results_reg[0]['Scatter_plot']

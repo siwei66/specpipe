@@ -78,6 +78,10 @@ The instance stores and organizes the data loading configurations of an experime
     ```python
     exp.report_directory
     ```
+    Output:
+    ```text
+    '~/SpecPipeDemo/demo_results_classification/'
+    ```
 
 #### 2.2. Experiment group management
 
@@ -88,29 +92,59 @@ The instance stores and organizes the data loading configurations of an experime
 
 - Check groups:
     ```python
-    exp.ls_groups()
+    exp.groups
+    ```
+    Output:
+    ```text
+    ['group_1', 'group_2', 'group_3']
     ```
 
 - Remove a group:
     ```python
     exp.rm_group('group_3')
     ```
+    Output:
+    ```text
+    Following group is removed:
+    group_3
+    ```
 
 
 #### 2.3. Raster image management
 
 - Add raster images:
+
+    Use parameter name:
     ```python
-    # By parameter name
     exp.add_images_by_name(image_name="demo.", image_directory=data_dir, group="group_1")
-    
-    # By position
+    ```
+    Output:
+    ```text
+    Following image items are added:
+        Group    Image    Mask
+    0   group_1  demo.tiff
+    ```
+
+    Or use parameter position:
+    ```python
     exp.add_images_by_name("demo.", data_dir, "group_2")
+    ```
+    Output:
+    ```text
+    Following image items are added:
+         Group    Image    Mask
+    0    group_2  demo.tiff     
     ```
 
 - Check added images:
     ```python
     exp.ls_images()
+    ```
+    Output:
+    ```text
+        Group    Image    Mask
+    0   group_1  demo.tiff     
+    1   group_2  demo.tiff     
     ```
 
 
@@ -120,14 +154,22 @@ The instance stores and organizes the data loading configurations of an experime
     ```python
     # By parameter name
     exp.add_rois_by_suffix(roi_filename_suffix="_[12].xml", search_directory=data_dir, group="group_1")
-    
-    # By position
+    # Or by parameter position
     exp.add_rois_by_suffix("_[345].xml", data_dir, "group_2")
+    ```
+    Output:
+    ```text
+    Following ROI items loaded:
+       Group    Image    ROI_name    ROI_type    ROI_source_file
+    0  group_1  demo.tiff      1-1   sample      demo_1.xml
+    1  group_1  demo.tiff      1-2   sample      demo_1.xml
+    ...
+    9  group_1  demo.tiff      2-5   sample      demo_2.xml
     ```
 
 - Remove ROIs by name:
     ```python
-        exp.rm_rois(roi_name='5-5')
+    exp.rm_rois(roi_name='5-5')
     ```
 
 - Remove ROIs by source file name:
@@ -137,19 +179,43 @@ The instance stores and organizes the data loading configurations of an experime
 
 - Load ROIs to a image using ROI files by paths:
     ```python
-        exp.add_rois_by_file([f"{data_dir}/demo_5.xml"], image_name="example.tif", group="group_2")
+    exp.add_rois_by_file([f"{data_dir}/demo_5.xml"], image_name="example.tif", group="group_2")
     ```
 
 - Check added ROIs:
     ```python
     exp.ls_rois()
     ```
-The example xml ROI file contains 10 ROIs.
-
-- Check sample ROIs:
-    ```python
-    exp.ls_rois_sample()
+    ```text
+        Group    Image    ROI_name    ROI_type
+    0   group_1  demo.tiff      1-1   sample
+    1   group_1  demo.tiff      1-2   sample
+    ...
+    24  group_2  demo.tiff      5-5   sample
     ```
+
+- Show raster RGB preview with associated ROIs:
+    ```python
+    exp.show_image("demo.tiff", "group_1", rgb_band_index=(19, 12, 6), output_path=report_dir + "demo_rast_rgb1.png")
+    ```
+    Output:
+    <div align="center">
+    <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/demo/demo_results_classification/demo_rast_rgb1.png"
+         alt="SpecPipe SpecExp RGB preview 1"
+         width="400"
+         style="max-width: 100%;">
+    </div>
+          
+    ```python
+    exp.show_image("demo.tiff", "group_2", rgb_band_index=(19, 12, 6), output_path=report_dir + "demo_rast_rgb2.png")
+    ```
+    Output:
+    <div align="center">
+    <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/demo/demo_results_classification/demo_rast_rgb2.png"
+         alt="SpecPipe SpecExp RGB preview 2"
+         width="400"
+         style="max-width: 100%;">
+    </div>
 
 
 #### 2.5. Sample labels and target values
@@ -162,19 +228,27 @@ The example xml ROI file contains 10 ROIs.
     ```
 
 - Set new sample labels in the dataframe:
-Here we use sample_1, sample_2 ... sample_10
+
+Here we use sample ROI names as sample labels
     ```python
-    labels.iloc[:,1] = [f'sample_{str(i+1)}' for i in range(len(labels))]
+    labels.iloc[:, 1] = exp.ls_rois_sample(return_dataframe=True, print_result=False)["ROI_name"]
     ```
 
-- Update sample labels using the updated dataframe:
+- Update sample labels:
     ```python
     exp.sample_labels = labels
     ```
 
 - Check sample labels:
     ```python
-    exp.ls_labels()
+    exp.ls_labels()["Label"]
+    ```
+    Output:
+    ```text
+    0     1-1
+    1     1-2
+    ...
+    24    5-5
     ```
 
 ##### 2.5.2 Set target values
@@ -185,9 +259,10 @@ Here we use sample_1, sample_2 ... sample_10
     ```
 
 - Create mock target values for regression and update target dataframe:
-Here we use 1 to 10
+
+Here we use leaf number
     ```python
-    targets['Target_value'] = [i for i in range(len(targets))]
+    targets["Target_value"] = [f"leaf_{labl[0]}" for labl in targets['Label']]
     ```
 
 - Load target values from updated target dataframe:
@@ -197,7 +272,15 @@ Here we use 1 to 10
 
 - Check target values:
     ```python
-    exp.ls_targets()
+    exp.ls_targets()[["Label", "Target_value"]]
+    ```
+    Output:
+    ```text
+        Label Target_value
+    0    1-1       leaf_1
+    1    1-2       leaf_1
+    ...
+    24   5-5       leaf_5
     ```
 
 
@@ -255,7 +338,6 @@ Parallel processes can be added with identical "data level" and "application seq
 - Create processing pipeline from SpecExp instance configured above:
     ```python
     from specpipe import SpecPipe
-    
     pipe = SpecPipe(exp)
     ```
 
@@ -265,13 +347,14 @@ Parallel processes can be added with identical "data level" and "application seq
 
 - Standard normal variate: 
     ```python
-    import numpy as np
     def snv(v):
+        import numpy as np
         vmean = np.mean(v, axis=1, keepdims=True)
         vstd = np.std(v, axis=1, keepdims=True)
         snv = (v - vmean) / vstd
         return snv
     ```
+    **TIP**: Import working function dependency inside for multiprocessing.
 
 - Raw data for performance comparison:
     ```python
@@ -282,11 +365,11 @@ Parallel processes can be added with identical "data level" and "application seq
 - Add these processing functions to the pipeline:
     ```python
     pipe.add_process(
-        input_data_level = 'pixel_specs_array', 
-        output_data_level = 'pixel_specs_array', 
-        application_sequence = 0, 
-        method = snv
-        )
+        input_data_level="pixel_specs_array",
+        output_data_level="pixel_specs_array",
+        application_sequence=0,
+        method=snv,
+    )
     ```
 
 - Or we can specify the data level using the corresponding number:
@@ -299,21 +382,22 @@ Parallel processes can be added with identical "data level" and "application seq
 
 - Import some ROI spectral statistic metrics:
     ```python
-    from specpipe import roi_mean
-    from specpipe import roi_median
+    from specpipe import roi_mean, roi_median
     ```
 
-- Add these process to the pipeline:
+- Add these processes to the pipeline:
+
+    Specify data level using name:
     ```python
     pipe.add_process(
-        input_data_level = 'image_roi', 
-        output_data_level = 'spec1d', 
-        application_sequence = 0, 
-        method = roi_mean
+        input_data_level='image_roi', 
+        output_data_level='spec1d', 
+        application_sequence=0, 
+        method=roi_mean
         )
     ```
 
-- Or specify data level using number:
+    Or specify data level using number:
     ```python
     pipe.add_process(5, 7, 0, roi_median)
     ```
@@ -323,52 +407,55 @@ Parallel processes can be added with identical "data level" and "application seq
 
 - Create a function to remove nan and inf values:
     ```python
-    def replace_nan(v: np.ndarray) -> np.ndarray:
+    import numpy as np
+    def replace_nan(v: np.ndarray, np=np) -> np.ndarray:
         return np.nan_to_num(v, nan=0.0, posinf=0.0, neginf=0.0)
     ```
+    **TIP**: Instead of import inside, you can also passing working function dependencies as parameters with default values for multiprocessing.
 
 - Add the process to the pipeline:
     ```python
     pipe.add_process('spec1d', 'spec1d', 0, replace_nan)
     ```
 
-- Check all added processes:
+- Check all added preprocessing processes:
     ```python
     pipe.ls_process()
+    ```
+    Output:
+    ```text
+       ID        Process_label       Input_data_level    Output_data_level    Application_sequence    Method
+    0  2_0_%#1                       pixel_specs_array  pixel_specs_array     0                       snv
+    1  2_0_%#2                       pixel_specs_array  pixel_specs_array     0                       raw
+    2  5_0_%#1                       image_roi          spec1d                0                       roi_mean
+    3  5_0_%#2                       image_roi          spec1d                0                       roi_median
+    4  7_0_%#1                       spec1d             spec1d                0                       replace_nan
     ```
 
 - To remove added processes from the pipeline:
     ```python
-    pipe.rm_process(method='raw')
+    pipe.rm_process(method='replace_nan')
     ```
-Processes can be removed by various criteria, the example removes the function 'raw' by its name.
+Processes can be removed by various criteria, the example removes the function 'replace_nan' by its name.
 
 
 #### 3.5 Add models to the pipeline
 
 - Create some models:
     ```python
-    from sklearn.linear_model import LinearRegression
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.neighbors import KNeighborsRegressor
-    from sklearn.svm import SVR
-    
-    linear_regressor = LinearRegression()
-    rf_regressor = RandomForestRegressor(n_estimators=10)
-    knn_regressor = KNeighborsRegressor(n_neighbors=3)
-    svr = SVR()
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.svm import SVC
+
+    rf_classifier = RandomForestRegressor(n_estimators=10)
+    knn_classifier = KNeighborsRegressor(n_neighbors=3)
+    svc = SVC()
     ```
 
-- Add model using "add_process":
+- Add models to the pipeline:
     ```python
-    pipe.add_process('spec1d', 'model', 1, linear_regressor, validation_method = '10-fold')
-    pipe.add_process(7, 8, 1, rf_regressor, validation_method = '10-fold')
-    ```
-
-- Add model using add_model:
-    ```python
-    pipe.add_model(knn_regressor, validation_method = '10-fold')
-    pipe.add_model(svr, validation_method = '10-fold')
+    pipe.add_model(knn_classifier, validation_method="2-fold")
+    pipe.add_model(rf_classifier, validation_method="2-fold")
     ```
 
 - Check added models:
@@ -380,6 +467,12 @@ Processes can be removed by various criteria, the example removes the function '
     ```python
     pipe.ls_process()
     ```
+    Output:
+    ```text
+       ID Process_label    Input_data_level    Output_data_level    Application_sequence    Method
+    0  7_0_%#1             spec1d              model                0                       KNeighborsClassifier
+    1  7_0_%#2             spec1d              model                0                       RandomForestClassifier
+    ```
 
 
 ### 4 Run pipeline
@@ -388,23 +481,29 @@ Processes can be removed by various criteria, the example removes the function '
     ```python
     pipe.ls_chains()
     ```
-
-- Manually test all added processes:
-    ```python
-    pipe.test_run()
+    Output:
+    ```text
+         Step_0    Step_1         Step_2
+    0    snv       roi_mean       KNeighborsClassifier
+    1    snv       roi_mean       RandomForestClassifier
+    2    snv       roi_median     KNeighborsClassifier
+    3    snv       roi_median     RandomForestClassifier
+    4    raw       roi_mean       KNeighborsClassifier
+    5    raw       roi_mean       RandomForestClassifier
+    6    raw       roi_median     KNeighborsClassifier
+    7    raw       roi_median     RandomForestClassifier
     ```
-The added processes are also automatically tested before formal run.
 
 - Run pipeline:
     ```python
     pipe.run()
     ```
 
-- Set resume True to enable resuming:
+- Enable resume after interruption:
     ```python
     pipe.run(resume=True)
     ```
-If the implementation is interrupted or forcibly terminated, running the pipeline again will automatically resume from the last completed step.
+If the implementation is interrupted or forcibly terminated, running the pipeline again with `resume=True` to continue from last completed step.
 
 
 ### 5 Running results
@@ -431,6 +530,199 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ├── Your_rasters.tif
     └── Your_ROIs.xml
     ```
+
+- For classification tasks, the pipeline generates:
+    ```text
+    report_directory/
+    ├── Modeling/
+    │    └── Model_evaluation_reports/
+    │        ├── Data_chain_Preprocessing_#0_Model_(model label 0)/
+    │        │   ├── Model_for_application/
+    │        │   ├── Model_in_validation/
+    │        │   ├── Classification_performance.csv
+    │        │   ├── Validation_results.csv
+    │        │   ├── Residual_analysis.csv
+    │        │   ├── Influence_analysis.csv
+    │        │   └── ROC_curve.png
+    │        ├── Data_chain_Preprocessing_#0_Model_(model label 1)/
+    │        ├── Data_chain_Preprocessing_#1_Model_(model label 0)/
+    │        ├── Data_chain_Preprocessing_#1_Model_(model label 1)/
+    │        ├── Macro_avg_performance_summary.csv
+    │        ├── Micro_avg_performance_summary.csv
+    │        ├── Marginal_macro_avg_AUC_stats_(process step).csv
+    │        ├── Marginal_micro_avg_AUC_stats_(process step).csv
+    │        ├── Preprocessing_#0.txt
+    │        └── Preprocessing_#1.txt
+    ├── Pre_execution_test_data/
+    ├── Preprocessing/
+    │    ├── Step_results/
+    │    ├── PreprocessingChainResult_chain_0.csv
+    │    ├── PreprocessingChainResult_chain_0_X_(stats metrics).csv
+    │    └── PreprocessingChainResult_chain_1.csv
+    ├── SpecPipe_configuration/
+    └── test_run/
+    ```
+
+- Retrieve reports in console
+    ```python
+    result_summary = pipe.report_summary()
+    chain_results = pipe.report_chains()
+    ```
+
+- Check summary reports
+    ```python
+    result_summary.keys()
+    ```
+    Output:
+    ```text
+    dict_keys([
+        'Macro_avg_performance_summary',
+        'Marginal_macro_avg_AUC_stats_step_0',
+        'Marginal_macro_avg_AUC_stats_step_1',
+        'Marginal_macro_avg_AUC_stats_step_2',
+        'Marginal_micro_avg_AUC_stats_step_0',
+        'Marginal_micro_avg_AUC_stats_step_1',
+        'Marginal_micro_avg_AUC_stats_step_2',
+        'Micro_avg_performance_summary',
+        'sample_targets_stats'])
+    ```
+    ```python
+    result_summary['Macro_avg_performance_summary']
+    ```
+    Output:
+    ```text
+        Step_0   Step_1   Step_2  Precision  Recall  F1_Score  Accuracy    AUC
+    0  2_0_%#1  5_0_%#1  7_0_%#1   0.860000    0.84  0.842828     0.936  0.947
+    ...
+    7  2_0_%#2  5_0_%#2  7_0_%#2   0.769524    0.72  0.684242     0.888  0.829
+    ```
+    ```python
+    result_summary['Marginal_macro_avg_AUC_stats_step_0']
+    ```
+    Output:
+    ```text
+             Process_ID       All   2_0_%#1   2_0_%#2
+    0     Process_label       All       snv       raw
+    1         n_records         8         4         4
+    2    Mean_AUC_macro   0.85425   0.95275   0.75575
+    3     Min_AUC_macro     0.631     0.942     0.631
+    4  Median_AUC_macro     0.906    0.9495     0.761
+    5     Max_AUC_macro      0.97      0.97      0.87
+    6               All       1.0  0.199557  0.199557
+    7           2_0_%#1  0.199557       1.0  0.028571
+    8           2_0_%#2  0.199557  0.028571       1.0
+    ```
+
+- Check processing chain reports
+    ```python
+    len(chain_results)
+    ```
+    Output:
+    ```text
+    8
+    ```
+    ```python
+    chain_results[0].keys()
+    ```
+    Output:
+    ```text
+    dict_keys([
+        'Chain_processes',
+        'Classification_performance',
+        'Influence_analysis',
+        'Residual_analysis',
+        'ROC_curve',
+        'Validation_results'])
+    ```
+    ```python
+    chain_results[0]['ROC_curve']
+    ```
+    Output:
+    <div align="center">
+    <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/demo/demo_results_classification/Modeling/Model_evaluation_reports/Data_chain_Preprocessing_%230_Model_KNeighborsClassifier/ROC_curve_KNeighborsClassifier.png"
+         alt="Demo receiver operating characteristic curve"
+         width="400"
+         style="max-width: 100%;">
+    </div>
+
+
+### 6 Regression demonstration
+
+#### 6.1 Create a directory for regression results
+    ```python
+    report_dir_reg = demo_dir + "/demo_results_regression/"
+    os.makedirs(report_dir_reg)
+    ```
+
+
+#### 6.2 Copy and update the pipeline data manager to regression
+- Copy and update SpecExp and SpecPipe instances
+    ```python
+    import copy
+
+    exp_reg = copy.deepcopy(exp)
+    pipe_reg = copy.deepcopy(pipe)
+    targets_reg = copy.deepcopy(targets)
+    ```
+
+- Update report directory of SpecExp
+    ```python
+    exp_reg.report_directory = report_dir_reg
+    ```
+
+- Modify targets to numeric, here the numbers approaximate the age of the leaves
+    ```python
+    targets_reg["Target_value"] = [(5 - int(labl[0])) for labl in targets['Label']]  # type: ignore
+    exp_reg.sample_targets_from_df(targets_reg)
+    ```
+
+- Check target values
+    ```python
+    exp_reg.ls_targets()[["Sample_ID", "Target_value"]]
+    ```
+
+
+#### 6.3 Update the pipeline models to regressors
+- Check and remove classification models
+    ```python
+    pipe_reg.ls_model()
+    pipe_reg.rm_model()
+    ```
+
+- Update the data manager
+    ```python
+    pipe_reg.spec_exp = exp_reg
+    ```
+
+- Add regressors to the pipeline
+    ```python
+    from sklearn.ensemble import RandomForestRegressor  # type: ignore
+    from sklearn.neighbors import KNeighborsRegressor  # type: ignore
+
+    rf_regressor = RandomForestRegressor(n_estimators=10)
+    knn_regressor = KNeighborsRegressor(n_neighbors=3)
+    ```
+    Let's skip the time-consuming influence analysis.
+    ```python
+    pipe_reg.add_model(knn_regressor, validation_method="2-fold", influence_analysis_config=None)
+    pipe_reg.add_model(rf_regressor, validation_method="2-fold", influence_analysis_config=None)
+    ```
+    **TIP**: Influence analysis adopts leave-one-out approach, which is often the slowest step of model evaluation.
+
+
+#### 6.4 Check and run new pipeline
+- Check processing chains
+    ```python
+    pipe_reg.ls_chains()
+    ```
+
+- Run regression pipeline
+    ```python
+    pipe_reg.run()
+    ```
+
+
+#### 6.5 Check results of a regression pipeline
 
 - For regression tasks, the pipeline generates:
     ```text
@@ -466,37 +758,67 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     └── test_run/
     ```
 
-- For classification tasks, the pipeline generates:
-    ```text
-    report_directory/
-    ├── Modeling/
-    │    └── Model_evaluation_reports/
-    │        ├── Data_chain_Preprocessing_#0_Model_(model label 0)/
-    │        │   ├── Model_for_application/
-    │        │   ├── Model_in_validation/
-    │        │   ├── Classification_performance.csv
-    │        │   ├── Validation_results.csv
-    │        │   ├── Residual_analysis.csv
-    │        │   ├── Influence_analysis.csv
-    │        │   └── ROC_curve.png
-    │        ├── Data_chain_Preprocessing_#0_Model_(model label 1)/
-    │        ├── Data_chain_Preprocessing_#1_Model_(model label 0)/
-    │        ├── Data_chain_Preprocessing_#1_Model_(model label 1)/
-    │        ├── Macro_avg_performance_summary.csv
-    │        ├── Micro_avg_performance_summary.csv
-    │        ├── Marginal_macro_avg_AUC_stats_(process step).csv
-    │        ├── Marginal_micro_avg_AUC_stats_(process step).csv
-    │        ├── Preprocessing_#0.txt
-    │        └── Preprocessing_#1.txt
-    ├── Pre_execution_test_data/
-    ├── Preprocessing/
-    │    ├── Step_results/
-    │    ├── PreprocessingChainResult_chain_0.csv
-    │    ├── PreprocessingChainResult_chain_0_X_(stats metrics).csv
-    │    └── PreprocessingChainResult_chain_1.csv
-    ├── SpecPipe_configuration/
-    └── test_run/
+- Retrieve reports in console
+    ```python
+    result_summary_reg = pipe_reg.report_summary()
+    chain_results_reg = pipe_reg.report_chains()
     ```
+
+- Check summary reports
+    ```python
+    result_summary_reg.keys()
+    ```
+    Output:
+    ```text
+    dict_keys([
+        'Marginal_R2_stats_step_0',
+        'Marginal_R2_stats_step_1',
+        'Marginal_R2_stats_step_2',
+        'Performance_summary',
+        'sample_targets_stats'])
+    ```
+
+    ```python
+    result_summary_reg['Performance_summary'].columns
+    ```
+    Output:
+    ```text
+    Index([
+        'Step_0', 'Step_1', 'Step_2',
+        'Mean_Error', 'Standard_Deviation_of_Error', 'Mean_Absolute_Error',
+        'Normalized_MAE', 'CV_MAE',
+        'Mean_Squared_Error', 'Root_Mean_Squared_Error',
+        'Normalized_RMSE', 'CV_RMSE',
+        'Residual_Prediction_Deviation', 'R2'
+    ], dtype='object')
+    ```
+
+- Check processing chain reports
+    ```python
+    chain_results_reg[0].keys()
+    ```
+    Output:
+    ```text
+    dict_keys([
+        'Chain_processes',
+        'Regression_performance',
+        'Residual_analysis',
+        'Residual_plot',
+        'Scatter_plot',
+        'Validation_results'])
+    ```
+    The influence analysis is absent, because we skip it in model addition.
+
+    ```python
+    chain_results_reg[0]['Scatter_plot']
+    ```
+    Output:
+    <div align="center">
+    <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/demo/demo_results_regression/Modeling/Model_evaluation_reports/Data_chain_Preprocessing_%230_Model_KNeighborsRegressor/Scatter_plot_KNeighborsRegressor.png"
+         alt="Demo receiver operating characteristic curve"
+         width="400"
+         style="max-width: 100%;">
+    </div>
 
 
 ## Contributing <a name="contributing"></a>

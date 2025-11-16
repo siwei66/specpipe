@@ -148,6 +148,11 @@ class SpecPipe:
         Run pipeline of given processes on SpecExp instance (corresponding manager of spectral experiment data).
         Full-factorial test is applied to multiple processes of identical sequence.
 
+    - report_summary :
+        Retrieve summary of reports in the console, including performance summary and marginal performances among processes.
+
+    - report_chain :
+        Retrieve major model evaluation reports of every processing chain in the console.
     """  # noqa: E501
 
     @simple_type_validator
@@ -3325,10 +3330,17 @@ class SpecPipe:
         warnings.simplefilter("default", NotGeoreferencedWarning)
 
     # For get results in console
-    def report_agg(self) -> dict:
+    def report_summary(self) -> dict:
         """
-        Retrieve pipeline aggregate reports, incl. performance summary and step method marginal performance analysis.
-        """
+        Retrieve summary of reports in the console, including performance summary and marginal performances among processes.
+        The output is a dictionary of report dataframes, includes:
+            For regression:
+                - Performance summary
+                - Marginal R2 of the steps with multiple processes.
+            For classification:
+                - Macro- and micro-average performance summary
+                - Marginal macro- and micro-average AUC of the steps with multiple processes.
+        """  # noqa: E501
         # Validate pipeline running completion
         if os.path.exists(self.report_directory + "Modeling/sample_targets_stats.csv"):
             return group_stats_report(self.report_directory)
@@ -3339,7 +3351,22 @@ class SpecPipe:
     # For get results in console
     def report_chains(self) -> list[dict]:
         """
-        Retrieve core reports of each processing chain.
+        Retrieve major model evaluation reports of every processing chain in the console.
+        The output is a list of dictionaries. Each dictionary of processing chain includes:
+            For regression:
+                - Processes of the chain
+                - Validation results
+                - Performance metrics
+                - Residual analysis
+                - Influence analysis (if available)
+                - Scatter plot
+                - Residual plot
+            For classification:
+                - Processes of the chain
+                - Validation results
+                - Residual analysis
+                - Influence analysis
+                - ROC curves
         """
         # Validate pipeline running completion
         if os.path.exists(self.report_directory + "Modeling/sample_targets_stats.csv"):

@@ -2352,7 +2352,7 @@ class ModelEva:
         itr1 = 0
         for train_ind, test_ind in dsps:
             if not self.silent_all:
-                print(f"\rTraining Cook's distance fold: {itr1 + 1}/{len(dsps)}", end="", flush=True)
+                print(f"\rTraining influence analysis fold: {itr1 + 1}/{len(dsps)}", end="", flush=True)
             ## Get data
             # Sample ids of target values in validation
             sid_test = sid[test_ind]

@@ -1057,7 +1057,7 @@ class SpecExp:
         normalize: bool = True,
         output_path: Optional[str] = None,
         dpi: int = 150,
-        show_image: bool,
+        show_image: bool = True,
     ) -> None:
         """
         Display raster image with associated ROIs in RGB preview.

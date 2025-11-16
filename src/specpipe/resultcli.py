@@ -108,8 +108,9 @@ def core_chain_report(specpipe_report_dir: str) -> list[dict]:
             data_name = str(os.path.basename(data_path)).replace(".__specpipe_core_result_", "").replace(".dill", "")
             # Remove model name
             data_name = data_name.replace("_" + model_name, "")
-            with open(data_path, 'rb') as f:
-                chain_report[data_name] = dill.load(f)
+            if data_name != 'Chain_process_info':
+                with open(data_path, 'rb') as f:
+                    chain_report[data_name] = dill.load(f)
 
         resulting_report.append(chain_report)
 
