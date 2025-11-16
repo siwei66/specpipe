@@ -229,7 +229,8 @@ The instance stores and organizes the data loading configurations of an experime
 
 - Set new sample labels in the dataframe:
 
-Here we use sample ROI names as sample labels
+    Here we use sample ROI names as sample labels:
+
     ```python
     labels.iloc[:, 1] = exp.ls_rois_sample(return_dataframe=True, print_result=False)["ROI_name"]
     ```
@@ -260,7 +261,8 @@ Here we use sample ROI names as sample labels
 
 - Create mock target values for regression and update target dataframe:
 
-Here we use leaf number
+    Here we use leaf number:
+
     ```python
     targets["Target_value"] = [f"leaf_{labl[0]}" for labl in targets['Label']]
     ```
@@ -570,6 +572,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ```
 
 - Check summary reports
+    The summary reports include:
     ```python
     result_summary.keys()
     ```
@@ -586,6 +589,8 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
         'Micro_avg_performance_summary',
         'sample_targets_stats'])
     ```
+
+    Demonstration of macro-average performance metrics of classification:
     ```python
     result_summary['Macro_avg_performance_summary']
     ```
@@ -596,6 +601,8 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ...
     7  2_0_%#2  5_0_%#2  7_0_%#2   0.769524    0.72  0.684242     0.888  0.829
     ```
+
+    Demonstration of marginal macro-average performance metrics of classification:
     ```python
     result_summary['Marginal_macro_avg_AUC_stats_step_0']
     ```
@@ -612,8 +619,10 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     7           2_0_%#1  0.199557       1.0  0.028571
     8           2_0_%#2  0.199557  0.028571       1.0
     ```
+    The processes of the step (here raw image and standard normal variates) are compared using non-parametric Mann-Whitney-U test.
 
 - Check processing chain reports
+    It's reports of every processing chains:
     ```python
     len(chain_results)
     ```
@@ -621,6 +630,8 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ```text
     8
     ```
+
+    For each chain, the reports include:
     ```python
     chain_results[0].keys()
     ```
@@ -634,6 +645,8 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
         'ROC_curve',
         'Validation_results'])
     ```
+
+    Demonstration of Receiver-Operating-Characteristic curve:
     ```python
     chain_results[0]['ROC_curve']
     ```
@@ -649,6 +662,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
 ### 6 Regression demonstration
 
 #### 6.1 Create a directory for regression results
+- Create a directory for regression results
     ```python
     report_dir_reg = demo_dir + "/demo_results_regression/"
     os.makedirs(report_dir_reg)
@@ -672,7 +686,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
 
 - Modify targets to numeric, here the numbers approaximate the age of the leaves
     ```python
-    targets_reg["Target_value"] = [(5 - int(labl[0])) for labl in targets['Label']]  # type: ignore
+    targets_reg["Target_value"] = [(5 - int(labl[0])) for labl in targets['Label']]
     exp_reg.sample_targets_from_df(targets_reg)
     ```
 
@@ -695,14 +709,17 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ```
 
 - Add regressors to the pipeline
+    Create some regressors:
     ```python
-    from sklearn.ensemble import RandomForestRegressor  # type: ignore
-    from sklearn.neighbors import KNeighborsRegressor  # type: ignore
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.neighbors import KNeighborsRegressor
 
     rf_regressor = RandomForestRegressor(n_estimators=10)
     knn_regressor = KNeighborsRegressor(n_neighbors=3)
     ```
-    Let's skip the time-consuming influence analysis.
+    The pipeline supports sklearn-style models, wrap into the style for arbitrary models.
+
+    Let's skip the time-consuming influence analysis:
     ```python
     pipe_reg.add_model(knn_regressor, validation_method="2-fold", influence_analysis_config=None)
     pipe_reg.add_model(rf_regressor, validation_method="2-fold", influence_analysis_config=None)
@@ -765,6 +782,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ```
 
 - Check summary reports
+    The summary reports include:
     ```python
     result_summary_reg.keys()
     ```
@@ -778,6 +796,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
         'sample_targets_stats'])
     ```
 
+    Demonstration of performance summary content:
     ```python
     result_summary_reg['Performance_summary'].columns
     ```
@@ -794,6 +813,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ```
 
 - Check processing chain reports
+    For each chain, the reports include:
     ```python
     chain_results_reg[0].keys()
     ```
@@ -809,6 +829,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ```
     The influence analysis is absent, because we skip it in model addition.
 
+    Demonstration of the scatter plot of the processing chain:
     ```python
     chain_results_reg[0]['Scatter_plot']
     ```
