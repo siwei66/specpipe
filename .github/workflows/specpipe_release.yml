@@ -6,7 +6,9 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-# User note: Do not change the file name as it is fixed on PyPI.
+# User note:
+# Do not change the file name as it is fixed on PyPI.
+# Do not change workflow file name on GitHub, delete and recreate it to rename to rebuild links.
 
 name: Build and Release
 
