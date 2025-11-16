@@ -6,6 +6,8 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
+# User note: Do not change the file name as it is fixed on PyPI.
+
 name: Build and Release
 
 on:
