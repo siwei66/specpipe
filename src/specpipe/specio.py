@@ -230,18 +230,21 @@ def arraylike_validator(  # noqa: C901
         # Validate conversion
         if isinstance(v, np.ndarray):
             arr = v
-        elif isinstance(v, list) or isinstance(v, tuple) or isinstance(v, pd.DataFrame) or isinstance(v, pd.Series):
+        elif isinstance(v, torch.Tensor):
+            arr = v.detach().cpu().numpy()
+        elif isinstance(v, dict) or isinstance(v, set):
+            raise TypeError(f"{type(v)} \n{v}\n cannot be directly converted to numpy.ndarray.")
+        elif v is None:
+            raise TypeError("None cannot be converted to numpy.ndarray.")
+        elif callable(v):
+            raise TypeError("Callable cannot be converted to numpy.ndarray.")
+        else:
             try:
                 arr = np.array(v)
             except Exception as e:
-                raise ValueError(f"Given data '{v}' cannot be converted to numpy.ndarray\nGot error: {e}\n") from e
-        elif isinstance(v, torch.Tensor):
-            arr = v.detach().cpu().numpy()
-        else:
-            raise TypeError(
-                f"Given data \n{v}\n with data type \n'{type(v)}'\n cannot be \
-                            converted to numpy.ndarray."
-            )
+                raise ValueError(
+                    f"Given data \n{v}\n with data type \n'{type(v)}'\n cannot be converted to numpy.ndarray."
+                ) from e
 
         # Validate ndim
         if ndim is not None:

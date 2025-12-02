@@ -834,17 +834,40 @@ class TestNDeriv:
         assert np.isnan(result[:, -2:]).all()
 
     @staticmethod
-    def test_custom_edge_value() -> None:
-        """Test derivative with custom edge value."""
+    def test_padding() -> None:
+        """Test derivative with different padding methods."""
         data = np.array([[1, 4, 9, 16, 25]], dtype=float)  # y = x^2
 
-        result = nderiv(data, n=1, axis=1, edge=999.0)
-
+        # Padding with custom value
+        result = nderiv(data, n=1, axis=1, padding=999.0)
         # Check that edges have the custom value
+        assert result.shape == data.shape
         assert result[0, 0] == 999.0
         assert result[0, -1] == 999.0
         # Check central values are calculated correctly
         assert np.allclose(result[:, 1:-1], [[4.0, 6.0, 8.0]])
+
+        # Padding method names
+        result = nderiv(data, n=1, axis=1, padding='nan')
+        assert result.shape == data.shape
+        # Check central values are calculated correctly
+        assert np.allclose(result[:, 1:-1], [[4.0, 6.0, 8.0]])
+
+        result = nderiv(data, n=1, axis=1, padding='edge')
+        assert result.shape == data.shape
+        # Check central values are calculated correctly
+        assert np.allclose(result[:, 1:-1], [[4.0, 6.0, 8.0]])
+
+        # No padding
+        result = nderiv(data, n=1, axis=1, padding=None)
+        assert result.shape == (data.shape[0], data.shape[1] - 2)
+        # Check central values are calculated correctly
+        assert np.allclose(result, [[4.0, 6.0, 8.0]])
+
+        data = np.array([[1, 4, 9, 16, 25, 36, 49]], dtype=float)  # y = x^2
+        result = nderiv(data, n=2, axis=1, padding=None)
+        assert result.shape == (data.shape[0], data.shape[1] - 4)
+        assert np.allclose(result, [[2.0, 2.0, 2.0]])
 
     @staticmethod
     def test_zero_derivative() -> None:

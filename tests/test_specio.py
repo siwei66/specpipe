@@ -542,17 +542,17 @@ class TestArraylikeValidator:
         """Test that unsupported types raise TypeError."""
         validator = arraylike_validator()
 
-        with pytest.raises(TypeError):
-            validator("string_data")
-
-        with pytest.raises(TypeError):
-            validator(123)
-
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="cannot be directly converted to numpy.ndarray"):
             validator({"a": 1, "b": 2, "c": 3})
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="cannot be directly converted to numpy.ndarray"):
             validator({1, 2, 3})
+
+        with pytest.raises(TypeError, match="cannot be converted to numpy.ndarray"):
+            validator(None)
+
+        with pytest.raises(TypeError, match="cannot be converted to numpy.ndarray"):
+            validator(sum)
 
     @staticmethod
     def test_ndim_validation() -> None:

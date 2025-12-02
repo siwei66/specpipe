@@ -31,23 +31,24 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
 dependencies = [
-    "pydantic>=2.11.7", 
-    "pandas>=1.5.2", 
-    "numpy>=1.24.3", 
-    "tqdm>=4.65.0", 
-    "rasterio>=1.4.2", 
-    "pathos>=0.3.4", 
-    "torch>=2.0.0", 
-    "scikit-learn>=1.6.1", 
-    "scipy>=1.13.1", 
-    "dill>=0.4.0", 
-    "matplotlib>=3.9.4", 
-    "beautifulsoup4>=4.12.2", 
-    "lxml>=4.9.3", 
-    "geopandas>=1.0.1", 
-    "pyproj>=3.5.0", 
+    "pydantic>=2.11.7",
+    "pandas>=1.5.2",
+    "numpy>=1.24.3",
+    "tqdm>=4.65.0",
+    "rasterio>=1.4.2",
+    "pathos>=0.3.4",
+    "torch>=2.0.0",
+    "scikit-learn>=1.6.1",
+    "scipy>=1.13.1",
+    "dill>=0.4.0",
+    "matplotlib>=3.9.4",
+    "beautifulsoup4>=4.12.2",
+    "lxml>=4.9.3",
+    "geopandas>=1.0.1",
+    "pyproj>=3.5.0",
     "shapely>=2.0.1",
-    "zstandard>=0.23.0"
+    "zstandard>=0.23.0",
+    "pywt>=1.6.0"
 ]
 
 [project.urls]
@@ -114,17 +115,17 @@ exclude = '''
 [tool.ruff]
 line-length = 120
 extend-exclude = [
-    "*.pyc", 
-    "*.egg-info", 
-    "__pycache__", 
-    ".git", 
-    ".mypy_cache", 
-    ".pytest_cache", 
-    ".ruff_cache", 
-    ".venv", 
-    "build", 
-    "dist", 
-    "local_tests", 
+    "*.pyc",
+    "*.egg-info",
+    "__pycache__",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "build",
+    "dist",
+    "local_tests",
     "demo",
     "example_code.py",
     "demo_script.py"
@@ -140,7 +141,7 @@ select = [
     "C"    # McCabe complexity
 ]
 ignore = [
-    "E203", 
-    "E266", 
+    "E203",
+    "E266",
     "I001"
 ]

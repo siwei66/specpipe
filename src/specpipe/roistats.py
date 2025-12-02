@@ -257,11 +257,11 @@ def minbbox(
 
 # Derivative calculator for 2d-array
 @simple_type_validator
-def nderiv(
+def nderiv(  # noqa: C901
     data: Annotated[Any, arraylike_validator(ndim=2)],
     n: int,
     axis: int = 1,
-    edge: Union[int, float, None] = None,
+    padding: Union[int, float, str, None] = 'nan',
 ) -> Annotated[Any, arraylike_validator(ndim=2)]:
     """
     Compute arbitrary n-th derivatives of 1D data series in 2D data array.
@@ -280,8 +280,14 @@ def nderiv(
         - 1: Calculate column-wise (treat each column as a variable, while each row as a sample)
         The default is 1.
 
-    edge : optional
-        Unavailable edge values of dervatives vectors. The default is nan.
+    padding : Union[int, float, str, None], optional
+        Boundary padding strategy for derivative arrays, choose between:
+            'nan' - pad with NaN.
+            'edge' - pad with edge values.
+            numeric - pad with specified number.
+            None - no padding.
+        If None, or nth order derivatives, the output length will be reduced by 2n along the computation axis.
+        The default is 'nan'.
 
     Returns
     -------
@@ -321,15 +327,24 @@ def nderiv(
                 derivative[:, i] = (data[:, i + 1] - data[:, i - 1]) / 2
             data = derivative
 
-        # Edge value
-        if edge is None:
-            ed = np.nan
-        elif (type(edge) is int) or (type(edge) is float):
-            ed = edge
+        # Padding
+        if padding is None:
+            derivative = derivative[:, od : dlen - od]
+        elif type(padding) is str:
+            if padding is None or padding.lower() == 'nan':
+                ed = np.nan
+                derivative[:, 0:od] = ed
+                derivative[:, dlen - od : dlen] = ed
+            elif padding.lower() == 'edge':
+                derivative[:, 0:od] = np.repeat(derivative[:, od : (od + 1)], od, axis=1)
+                derivative[:, (dlen - od) : dlen] = np.repeat(derivative[:, (dlen - od - 1) : (dlen - od)], od, axis=1)
+            else:
+                raise ValueError(f"Invalid padding method name '{padding}'. Choose from 'nan' or 'edge'.")
         else:
-            raise TypeError(f"edge value must be int or float, got: {type(edge)}")
-        derivative[:, 0:od] = ed
-        derivative[:, dlen - od : dlen] = ed
+            assert isinstance(padding, float) or isinstance(padding, int)
+            ed = padding
+            derivative[:, 0:od] = ed
+            derivative[:, dlen - od : dlen] = ed
 
     if axis == 0:
         derivative = derivative.T

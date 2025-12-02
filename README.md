@@ -523,14 +523,19 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
 
 - For input data:
     ```text
-    data_directory/
+    report_directory/
     ├── SpecExp_configuration/
     │    ├── Loading_history/
     │    │   ├── Loaded_images.csv
     │    │   └── Loaded_ROIs.csv
     │    └── SpecExp_data_configuration.dill
-    ├── Your_rasters.tif
-    └── Your_ROIs.xml
+    └── SpecPipe_configuration/
+         ├── SpecPipe_added_process.csv
+         ├── SpecPipe_exec_chains_in_ID.csv
+         ├── SpecPipe_exec_chains_in_label.csv
+         ├── SpecPipe_full_factorial_chains_in_ID.csv
+         ├── SpecPipe_full_factorial_chains_in_label.csv
+         └── SpecPipe_pipeline_configuration.dill
     ```
 
 - For classification tasks, the pipeline generates:
