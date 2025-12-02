@@ -48,7 +48,7 @@ dependencies = [
     "pyproj>=3.5.0",
     "shapely>=2.0.1",
     "zstandard>=0.23.0",
-    "pywt>=1.6.0"
+    "PyWavelets>=1.6.0"
 ]
 
 [project.urls]
