@@ -384,7 +384,7 @@ class LocalPolynomial(RollWindow):
     ) -> np.ndarray:
         """Cosine kernel function mapping distances from focus to weights."""
         fdist = sample_distances_to_focal
-        data_boundary = max(abs(fdist))
+        data_boundary = float(max(abs(fdist)))
         if data_boundary == 0:  # Return uniform weights for perfectly smooth data
             return np.full(fdist.shape, 1.0)
         if s == -1:
