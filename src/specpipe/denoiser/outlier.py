@@ -645,7 +645,7 @@ class ArrayOutlier:
             # Append replaced results
             replaced_result = np.array(data_series).reshape(-1, 1).astype(self.numtype)
             if i == 0:
-                result = replaced_result
+                result: np.ndarray = replaced_result
             else:
                 result = np.append(result, replaced_result, axis=1)
 
