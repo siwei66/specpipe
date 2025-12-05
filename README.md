@@ -1,7 +1,3 @@
-<div align="left">
-<img src="https://raw.githubusercontent.com/siwei66/specpipe/master/assets/docs/SpecPipeLogo.png" alt="SpecPipeLogo" width="125" height="125">
-</div>
-
 # SpecPipe
 
 ## A high-performance, file-based pipeline for batch processing and modeling of hyperspectral images.
