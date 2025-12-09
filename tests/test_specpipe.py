@@ -713,7 +713,7 @@ class TestSpecPipe(unittest.TestCase):
         assert pipe.sample_data == []
 
         plt.close("all")
-        pipe.test_run(test_modeling=False, dump_result=False)
+        pipe.test_run(test_modeling=False, dump_result=False, save_preprocessed_images=True)
         time.sleep(0.1)
 
         assert pipe.tested is False
@@ -825,7 +825,7 @@ class TestSpecPipe(unittest.TestCase):
         assert pipe.sample_data == []
 
         plt.close("all")
-        pipe.test_run(test_modeling=False, dump_result=False)
+        pipe.test_run(test_modeling=False, dump_result=False, save_preprocessed_images=True)
         time.sleep(0.1)
 
         assert pipe.tested is False

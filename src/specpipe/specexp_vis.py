@@ -15,7 +15,7 @@ from typing import Optional, Union
 import numpy as np
 
 # Local
-from .specio import simple_type_validator
+from .specio import simple_type_validator, unc_path
 
 # Raster
 import rasterio
@@ -67,13 +67,13 @@ def raster_rgb_preview(  # noqa: C901
         Output RGB image DPI. The default is 150.
     """
     # Validate path
-    if not os.path.exists(raster_path):
+    if not os.path.exists(unc_path(raster_path)):
         raise ValueError(f"Invalid image path: {raster_path}")
     raster_dir, raster_name = os.path.split(raster_path)
 
     # Read image
     try:
-        with rasterio.open(raster_path) as src:
+        with rasterio.open(unc_path(raster_path)) as src:
             bands = src.count
             for bid in rgb_band_index:
                 if bid > bands or bid < 1:
@@ -121,10 +121,10 @@ def raster_rgb_preview(  # noqa: C901
     # Save image
     if output_path is not None:
         output_dir = os.path.dirname(output_path)
-        if not os.path.exists(output_dir):
+        if not os.path.exists(unc_path(output_dir)):
             raise ValueError(f"Output directory not found: {output_dir}")
         output_path = os.path.splitext(output_path)[0] + ".png"
-        plt.savefig(output_path, dpi=dpi, bbox_inches='tight', pad_inches=0)
+        plt.savefig(unc_path(output_path), dpi=dpi, bbox_inches='tight', pad_inches=0)
         print(f"RGB image saved as: {output_path}")
 
     # Show plot and clear plt

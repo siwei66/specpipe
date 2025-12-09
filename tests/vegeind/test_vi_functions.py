@@ -11,6 +11,8 @@ import sys
 
 from specpipe.vegeind.demo_data import create_vegeind_demo_data
 
+from specpipe.vegeind.vegeind_summary import vegeind_summary
+
 from specpipe.vegeind.ndvi import ndvi
 from specpipe.vegeind.sr import sr
 from specpipe.vegeind.dvi import dvi
@@ -569,6 +571,27 @@ class TestVegetationIndex:
         assert list(vidata.columns) == ["SWSI3"]
         assert not vidata.isna().any().any()
         assert not (vidata == 0).any().any()
+
+    @staticmethod
+    def test_vegeind_summary() -> None:
+        """Test vegeind_summary functionality"""
+        # Test full band range coveragy
+        specdata = create_vegeind_demo_data(nband=12000, seed=66)
+        # Test basic
+        vidata = vegeind_summary(specdata, wavelength=specdata.columns)
+        assert isinstance(vidata, pd.DataFrame)
+        assert vidata.shape[0] == 20
+        assert not vidata.isna().any().any()
+        assert not (vidata == 0).any().any()
+        # Test partial band range coverage making some index not work
+        specdata1 = create_vegeind_demo_data(nband=462, seed=66)
+        # Test basic
+        vidata1 = vegeind_summary(specdata1, wavelength=specdata1.columns)
+        assert isinstance(vidata1, pd.DataFrame)
+        assert vidata1.shape[0] <= 20
+        assert vidata1.shape[1] < vidata.shape[1]
+        assert not vidata1.isna().any().any()
+        assert not (vidata1 == 0).any().any()
 
 
 # %% Test main

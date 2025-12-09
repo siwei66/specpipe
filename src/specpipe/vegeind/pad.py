@@ -85,7 +85,7 @@ def padvi(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute PAD (Derivative Pseudo-Absorption) vegetation indices of 2D arraylike of 1D spectra data series.
+    Compute PAD vegetation indices (Derivative Pseudo-Absorption Vegetation Indices) of 2D arraylike of 1D spectra data series.
     The calculation is based on:
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,

@@ -100,6 +100,7 @@ class TestReadReport(unittest.TestCase):
             'Marginal_R2_stats_step_2',
             'Performance_summary',
             'sample_targets_stats',
+            'Marginal_R2_stats_model_step_1',
         ]
         assert set(report.keys()) == set(expected_report_keys)
         assert isinstance(report[expected_report_keys[0]], pd.DataFrame)
@@ -120,6 +121,8 @@ class TestReadReport(unittest.TestCase):
             'Marginal_macro_avg_AUC_stats_step_2',
             'Marginal_micro_avg_AUC_stats_step_1',
             'Marginal_micro_avg_AUC_stats_step_2',
+            'Marginal_macro_avg_AUC_stats_model_step_1',
+            'Marginal_micro_avg_AUC_stats_model_step_1',
             'Micro_avg_performance_summary',
             'sample_targets_stats',
         ]

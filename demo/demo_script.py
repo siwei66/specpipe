@@ -35,6 +35,7 @@ report_dir = demo_dir + "/demo_results_classification/"
 os.makedirs(report_dir)
 
 
+# %%
 # 2. Configure your experiment data
 # 2.1 Create a spectral experiment
 # Create a SpecExp instance for experiment data
@@ -191,16 +192,35 @@ pipe.rm_process(method='replace_nan')
 
 
 # 3.5 Add models to the pipeline
-# Create some models
+# Fittable feature engineering models
+from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import SelectKBest, f_classif
+from specpipe.modelconnector import IdentityTransformer
+
+# Test feature selection
+selector1 = SelectKBest(f_classif, k=5)  # Select 5 features
+selector2 = IdentityTransformer()  # For passthrough (no selection)
+
+# Create some estimators
 from sklearn.ensemble import RandomForestClassifier  # type: ignore
 from sklearn.neighbors import KNeighborsClassifier  # type: ignore
 
-rf_classifier = RandomForestClassifier(n_estimators=10)
-knn_classifier = KNeighborsClassifier(n_neighbors=3)
+rf = RandomForestClassifier(n_estimators=10)
+knn = KNeighborsClassifier(n_neighbors=3)
+
+# Compose transformers and estimators to full factorial chains
+from specpipe import factorial_transformer_chains
+
+models = factorial_transformer_chains(
+    [StandardScaler()],
+    {'feat5': selector1, 'feat_all': selector2},  # Specify custom model labels in dictionary
+    estimators=[knn, rf],
+    is_regression=False
+)
 
 # Add models
-pipe.add_model(knn_classifier, validation_method="2-fold")
-pipe.add_model(rf_classifier, validation_method="2-fold")
+for model in models:
+    pipe.add_model(model, validation_method="2-fold")
 
 # Check added models
 pipe.ls_model()
@@ -235,6 +255,7 @@ chain_results[0].keys()
 chain_results[0]['ROC_curve']
 
 
+# %%
 # 6 Regression Case
 
 # 6.1 Create a directory for regression results
@@ -273,17 +294,31 @@ pipe_reg.rm_model()
 # Update the pipeline
 pipe_reg.spec_exp = exp_reg
 
+# Fittable feature engineering models
+from sklearn.feature_selection import f_regression  # type: ignore
+
+selector1_reg = SelectKBest(f_regression, k=5)  # Select 5 features
+
 # Add regressors to the pipeline
 from sklearn.ensemble import RandomForestRegressor  # type: ignore
 from sklearn.neighbors import KNeighborsRegressor  # type: ignore
 
-rf_regressor = RandomForestRegressor(n_estimators=10)
-knn_regressor = KNeighborsRegressor(n_neighbors=3)
+knn_reg = KNeighborsRegressor(n_neighbors=3)
+rf_reg = RandomForestRegressor(n_estimators=10)
+
+# Compose transformers and estimators to full factorial chains
+models_reg = factorial_transformer_chains(
+    [StandardScaler()],
+    {'feat5': selector1_reg, 'feat_all': selector2},  # Specify custom model labels in dictionary
+    estimators=[knn_reg, rf_reg],
+    is_regression=True
+)
+
 
 # Add models
 # Skip time-consuming influence analysis
-pipe_reg.add_model(knn_regressor, validation_method="2-fold", influence_analysis_config=None)
-pipe_reg.add_model(rf_regressor, validation_method="2-fold", influence_analysis_config=None)
+for model in models_reg:
+    pipe_reg.add_model(model, validation_method="2-fold", influence_analysis_config=None)
 
 # Check models
 pipe_reg.ls_model()

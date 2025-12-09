@@ -28,7 +28,7 @@ from shapely.geometry import Polygon
 import torch
 
 # Local
-from .specio import simple_type_validator
+from .specio import simple_type_validator, unc_path
 
 
 # %% Crop ROI
@@ -55,7 +55,7 @@ def croproi(
     polygons = [Polygon(poly_coords) for poly_coords in roi_coordinates]
 
     # Open the raster file
-    with rasterio.open(raster_path) as src:
+    with rasterio.open(unc_path(raster_path)) as src:
         # Crop the raster
         out_image, out_transform = mask(
             src,
@@ -75,7 +75,7 @@ def croproi(
         )
 
         # Save the cropped raster
-        with rasterio.open(output_path, "w", **out_meta) as dst:
+        with rasterio.open(unc_path(output_path), "w", **out_meta) as dst:
             dst.write(out_image)
 
 
@@ -439,13 +439,13 @@ def pixel_spec_apply(  # noqa: C901
     # Validate dtype
     dtype = dtype_mapper(dtype)
 
-    with rasterio.open(image_path) as src:
+    with rasterio.open(unc_path(image_path)) as src:
         # Validate dst raster
         if override:
-            if os.path.exists(output_path):
-                os.remove(output_path)
+            if os.path.exists(unc_path(output_path)):
+                os.remove(unc_path(output_path))
         else:
-            if os.path.exists(output_path):
+            if os.path.exists(unc_path(output_path)):
                 return
 
         # Get output number of bands
@@ -465,7 +465,7 @@ def pixel_spec_apply(  # noqa: C901
                 meta.update({'compress': 'lzw'})
 
         # Create dst raster
-        with rasterio.open(output_path, "w", **meta) as dst:
+        with rasterio.open(unc_path(output_path), "w", **meta) as dst:
             # Get image dimensions
             height, width = src.height, src.width
 
@@ -526,13 +526,13 @@ def pixel_array_apply(  # noqa: C901
     # Validate dtype
     dtype = dtype_mapper(dtype)
 
-    with rasterio.open(image_path) as src:
+    with rasterio.open(unc_path(image_path)) as src:
         # Validate dst raster
         if override:
-            if os.path.exists(output_path):
-                os.remove(output_path)
+            if os.path.exists(unc_path(output_path)):
+                os.remove(unc_path(output_path))
         else:
-            if os.path.exists(output_path):
+            if os.path.exists(unc_path(output_path)):
                 return
 
         # Get output number of bands
@@ -554,7 +554,7 @@ def pixel_array_apply(  # noqa: C901
                 meta.update({'compress': 'lzw'})
 
         # Create dst raster
-        with rasterio.open(output_path, "w", **meta) as dst:
+        with rasterio.open(unc_path(output_path), "w", **meta) as dst:
             # Get image dimensions
             height, width = src.height, src.width
 
@@ -627,13 +627,13 @@ def pixel_tensor_apply(  # noqa: C901
     # Use CUDA Stream
     stream = torch.cuda.Stream() if "cuda" in str(device) else None
 
-    with rasterio.open(image_path) as src:
+    with rasterio.open(unc_path(image_path)) as src:
         # Validate dst raster
         if override:
-            if os.path.exists(output_path):
-                os.remove(output_path)
+            if os.path.exists(unc_path(output_path)):
+                os.remove(unc_path(output_path))
         else:
-            if os.path.exists(output_path):
+            if os.path.exists(unc_path(output_path)):
                 return
 
         # Data for test running of given function
@@ -664,7 +664,7 @@ def pixel_tensor_apply(  # noqa: C901
                 meta.update({'compress': 'lzw'})
 
         # Create output file with same number of bands
-        with rasterio.open(output_path, "w", **meta) as dst:
+        with rasterio.open(unc_path(output_path), "w", **meta) as dst:
             # Get image dimensions
             height, width = src.height, src.width
 
@@ -763,13 +763,13 @@ def pixel_tensor_hyper_apply(  # noqa: C901
 
     # Validate dst raster
     if override:
-        if os.path.exists(output_path):
-            os.remove(output_path)
+        if os.path.exists(unc_path(output_path)):
+            os.remove(unc_path(output_path))
     else:
-        if os.path.exists(output_path):
+        if os.path.exists(unc_path(output_path)):
             return
 
-    with rasterio.open(image_path) as src:
+    with rasterio.open(unc_path(image_path)) as src:
         # Data for test running of given function
         test_data = src.read(window=Window(0, 0, src.width, row_chunk))
 
@@ -799,7 +799,7 @@ def pixel_tensor_hyper_apply(  # noqa: C901
             else:
                 meta.update({'compress': 'lzw'})
 
-        with rasterio.open(output_path, "w", **meta) as dst:
+        with rasterio.open(unc_path(output_path), "w", **meta) as dst:
             for row_start in tqdm(range(0, src.height, row_chunk), disable=not progress):
                 # Read entire row chunk [C, row_chunk, W]
                 window = Window(0, row_start, src.width, min(row_chunk, src.height - row_start))
@@ -918,10 +918,10 @@ def pixel_apply(
         output_path = ptx[0] + "_px_app_" + spectral_function.__name__ + ptx[1]
 
     # Validate path
-    if not os.path.exists(image_path):
+    if not os.path.exists(unc_path(image_path)):
         raise ValueError(f"\nInvalid image_path: {image_path} \nImage file does not exist.")
     output_dir_path = os.path.dirname(output_path)
-    if not os.path.exists(output_dir_path):
+    if not os.path.exists(unc_path(output_dir_path)):
         raise ValueError(f"\nInvalid output directory: {output_dir_path} \nDirectory does not exist.")
 
     # Validate tile size and batch size

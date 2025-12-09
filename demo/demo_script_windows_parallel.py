@@ -34,7 +34,7 @@ if __name__ == '__main__':
     download_demo_data(data_dir)
 
     # Create a directory for pipeline results
-    report_dir = demo_dir + "/demo_results_classification/"
+    report_dir = demo_dir + "/demo_results_classification_parallel/"
 
     os.makedirs(report_dir)
 
@@ -175,7 +175,7 @@ if __name__ == '__main__':
     # 5 Regression Case
 
     # Create a directory for regression results
-    report_dir_reg = demo_dir + "/demo_results_regression/"
+    report_dir_reg = demo_dir + "/demo_results_regression_parallel/"
     if not os.path.exists(report_dir_reg):
         os.makedirs(report_dir_reg)
 

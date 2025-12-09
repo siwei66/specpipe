@@ -7,6 +7,8 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 
 # OS
 import os
+import sys
+import winreg
 import glob
 import fnmatch
 import dill
@@ -862,7 +864,7 @@ def envi_roi_coords(roi_xml_path: str) -> list[dict[str, Any]]:
 
     """
     # Read ENVI ROI xml file
-    with open(roi_xml_path, "r") as f:
+    with open(unc_path(roi_xml_path), "r") as f:
         roi_data = f.read()
     soup = BeautifulSoup(roi_data, "xml")
     sroi = soup.find_all("Region")
@@ -977,7 +979,7 @@ def dump_vars(target_file_path: str, var_dict: dict[str, Any], backup: bool = Tr
 
     # Dill dump
     temp_path = target_file_path1 + ".tmp"
-    with open(temp_path, "wb") as f:
+    with open(unc_path(temp_path), "wb") as f:
         dill.dump(var_dict, f)
     os.replace(temp_path, target_file_path1)
 
@@ -987,7 +989,7 @@ def dump_vars(target_file_path: str, var_dict: dict[str, Any], backup: bool = Tr
         cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         target_file_path_b = os.path.splitext(target_file_path1)[0] + "_" + cts + ".dill"
         # Dill dump
-        with open(target_file_path_b, "wb") as f:
+        with open(unc_path(target_file_path_b), "wb") as f:
             dill.dump(var_dict, f)
 
 
@@ -1016,6 +1018,7 @@ def load_vars(source_file_path: str) -> dict[str, Any]:
         Stored python variables.
 
     """
+    source_file_path = unc_path(source_file_path)
     # Validate extension
     if os.path.splitext(source_file_path)[1] != ".dill":
         raise ValueError(f"The specified source file must be a 'dill' file, got source_file_path: \n{source_file_path}")
@@ -1089,6 +1092,7 @@ def df_to_csv(  # type: ignore[no-untyped-def]
     accepted_params = sig.parameters.keys()
     # Filter kwargs and only allow accepted parameters
     filtered_params = {k: v for k, v in kwargs.items() if k in accepted_params}
+    path = unc_path(path)
     filtered_params["path_or_buf"] = path
     filtered_params["compression"] = compression_format
     filtered_params["index"] = index
@@ -1133,6 +1137,7 @@ def df_from_csv(path: str, **kwargs) -> pd.DataFrame:  # type: ignore[no-untyped
     accepted_params = sig.parameters.keys()
     # Filter kwargs and only allow accepted parameters
     filtered_params = {k: v for k, v in kwargs.items() if k in accepted_params}
+    path = unc_path(path)
     filtered_params["filepath_or_buffer"] = path
     filtered_params["compression"] = compression_format
 
@@ -1221,13 +1226,13 @@ def roi_to_envi_xml(  # noqa: C901
     # Validate path
     file_path = str(file_path).replace("\\", "/")
     path_dir = os.path.dirname(file_path)
-    if not os.path.exists(path_dir):
+    if not os.path.exists(unc_path(path_dir)):
         warnings.warn(
             f"The specified path directory does not exist, the directory is created: {path_dir}",
             UserWarning,
             stacklevel=2,
         )
-        os.makedirs(path_dir)
+        os.makedirs(unc_path(path_dir))
     file_path = os.path.splitext(file_path)[0] + ".xml"
 
     # ROI type current version fixed to 'polygon'
@@ -1272,7 +1277,7 @@ def roi_to_envi_xml(  # noqa: C901
                 raise ValueError(f"At least 3 vertices must be defined for a polygon geometry, but got: {poly}")
 
     # Write ROI xml file
-    with open(file_path, "w") as f:
+    with open(unc_path(file_path), "w") as f:
         f.write('<?xml version="1.0" encoding="UTF-8"?>' + "\n")
         f.write('<RegionsOfInterest version="1.1">' + "\n")
         for roi in roi_list:
@@ -1374,13 +1379,13 @@ def roi_to_shp(  # noqa: C901
     # Validate path
     file_path = str(file_path).replace("\\", "/")
     path_dir = os.path.dirname(file_path)
-    if not os.path.exists(path_dir):
+    if not os.path.exists(unc_path(path_dir)):
         warnings.warn(
             f"The specified path directory does not exist, the directory is created: {path_dir}",
             UserWarning,
             stacklevel=2,
         )
-        os.makedirs(path_dir)
+        os.makedirs(unc_path(path_dir))
     file_path = os.path.splitext(file_path)[0] + ".shp"
 
     # Validate ROI parameters
@@ -1428,7 +1433,7 @@ def roi_to_shp(  # noqa: C901
     gdf = gpd.GeoDataFrame(attributes, geometry=geometries, crs=crs)
 
     # Save to shapefile
-    gdf.to_file(file_path, driver="ESRI Shapefile")
+    gdf.to_file(unc_path(file_path), driver="ESRI Shapefile")
 
     if return_path:
         return file_path
@@ -1484,6 +1489,7 @@ def lsdir_robust(  # noqa: C901
     """
     Substitution of 'listdir' with retry for file-related testing using GitHub workflow actions.
     """
+    path = unc_path(path)
     # Validate configs
     retry = max(int(retry), 1)
     time_wait_min = max(time_wait_min, 0.1)
@@ -1568,3 +1574,57 @@ class RealNumberMeta(type(Protocol)):  # type: ignore[misc]
 class RealNumber(Protocol, metaclass=RealNumberMeta):
     def __mul__(self, v: Any) -> Any: ...
     def __lt__(self, v: Any) -> bool: ...
+
+
+# %% Convert to UNC path to support long path in Windows
+
+
+def _is_long_path_supported() -> bool:
+    """Check for long path support."""
+    if sys.platform != 'win32':
+        return True
+    try:
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\FileSystem")
+        value, _ = winreg.QueryValueEx(key, "LongPathsEnabled")
+        winreg.CloseKey(key)
+        return bool(value == 1)
+    except Exception:
+        return False
+
+
+@simple_type_validator
+def unc_path(path: str) -> str:
+    """Convert long paths to UNC long path format on Windows."""
+    if sys.platform != 'win32':
+        # Check dir path trailing slash for join
+        end_slash = ""
+        if path.endswith("\\") or path.endswith("/"):
+            end_slash = "/"
+        return os.path.normpath(path).rstrip("/") + end_slash  # Unchanged if not Windows
+    elif len(os.path.normpath(path)) <= 255:
+        # Check dir path trailing slash for join
+        end_slash = ""
+        if path.endswith("\\") or path.endswith("/"):
+            end_slash = "\\"
+        return os.path.normpath(path).rstrip("\\") + end_slash  # Unchanged if not Windows
+    else:
+        # Check dir path trailing slash for join
+        end_slash = ""
+        if path.endswith("\\") or path.endswith("/"):
+            end_slash = "\\"
+        # To windows format
+        path = os.path.normpath(path)
+        # To absolute path
+        if not os.path.isabs(path):
+            path = os.path.abspath(path)
+        # Check length support
+        if len(path) > 255 and not _is_long_path_supported():
+            raise ValueError("Windows does not enable long path, long path must be enabled.")
+        # Unchange for UNC path
+        if path.startswith('\\\\?\\'):
+            return path.rstrip("\\") + end_slash
+        # Convert to UNC path format to support long path if not UNC path
+        if path.startswith('\\\\'):  # Network path
+            return '\\\\?\\UNC\\' + path[2:].rstrip("\\") + end_slash
+        else:  # Local path
+            return '\\\\?\\' + path.rstrip("\\") + end_slash

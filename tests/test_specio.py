@@ -21,6 +21,7 @@ import warnings
 # Test
 import pytest
 import unittest
+from unittest.mock import patch
 
 # Typing
 from typing import Annotated, Any, Callable, Optional, Union
@@ -53,6 +54,7 @@ from specpipe.specio import (
     shp_roi_coords,
     simple_type_validator,
     lsdir_robust,
+    unc_path,
 )
 
 
@@ -2531,7 +2533,7 @@ class TestDfToCsv(unittest.TestCase):
 
             result = df_to_csv(test_df, output_path, compression_format="infer")
 
-            assert result == output_path
+            assert unc_path(result) == unc_path(output_path)
             assert os.path.exists(output_path)
             assert os.path.getsize(output_path) > 0
 
@@ -2549,7 +2551,7 @@ class TestDfToCsv(unittest.TestCase):
 
             result = df_to_csv(test_df, output_path, compression_format="zstd")
 
-            assert result == output_path
+            assert unc_path(result) == unc_path(output_path)
             assert os.path.exists(output_path)
             # Should not have compression extension for small data
             assert not output_path.endswith(".zst")
@@ -2568,7 +2570,7 @@ class TestDfToCsv(unittest.TestCase):
             result = df_to_csv(test_df, output_path, compress_nvalue_threshold=1000, compression_format="zstd")
 
             expected_path = output_path + ".zst"
-            assert result == expected_path
+            assert unc_path(result) == unc_path(expected_path)
             assert os.path.exists(expected_path)
             assert os.path.getsize(expected_path) > 0
 
@@ -2586,7 +2588,7 @@ class TestDfToCsv(unittest.TestCase):
                 result = df_to_csv(test_df, output_path, compress_nvalue_threshold=1000, compression_format=fmt)
 
                 expected_path = output_path + ext
-                assert result == expected_path
+                assert unc_path(result) == unc_path(expected_path)
                 assert os.path.exists(expected_path)
 
     @staticmethod
@@ -2605,7 +2607,7 @@ class TestDfToCsv(unittest.TestCase):
 
             # Should not raise error when overwrite=True (default)
             result = df_to_csv(test_df, output_path, overwrite=True)
-            assert result == output_path
+            assert unc_path(result) == unc_path(output_path)
             # File should be overwritten (size might be different)
             assert os.path.exists(output_path)
 
@@ -2651,7 +2653,7 @@ class TestDfToCsv(unittest.TestCase):
             # Test with custom separator and no header
             result = df_to_csv(test_df, output_path, sep="|", header=False, index=True)
 
-            assert result == output_path
+            assert unc_path(result) == unc_path(output_path)
             assert os.path.exists(output_path)
 
             # Verify the file was written with custom parameters
@@ -2674,7 +2676,7 @@ class TestDfToCsv(unittest.TestCase):
             output_path = os.path.join(temp_dir, "test.csv.gz")
             result = df_to_csv(test_df, output_path, compress_nvalue_threshold=1000, compression_format="gzip")
 
-            assert result == output_path
+            assert unc_path(result) == unc_path(output_path)
             assert os.path.exists(output_path)
 
     @staticmethod
@@ -2693,7 +2695,9 @@ class TestDfToCsv(unittest.TestCase):
             # With high threshold, should not compress
             output_path2 = os.path.join(temp_dir, "test2.csv")
             result2 = df_to_csv(test_df, output_path2, compress_nvalue_threshold=1000000, compression_format="zstd")
-            assert result2 == output_path2
+            assert unc_path(result2) == unc_path(output_path2)
+            assert result2 is not None
+            assert isinstance(result2, str)
             assert not result2.endswith(".zst")
             assert os.path.exists(result2)
 
@@ -2730,9 +2734,9 @@ class TestDfToCsv(unittest.TestCase):
             result2 = df_to_csv(test_df, specified_path, compression_format="infer", overwrite=True)
 
             # Validate both calls return the same path
-            assert result1 == specified_path
-            assert result2 == specified_path
-            assert result1 == result2
+            assert unc_path(result1) == unc_path(specified_path)
+            assert unc_path(result2) == unc_path(specified_path)
+            assert unc_path(result1) == unc_path(result2)
 
 
 # %% Test - df_to_csv
@@ -3626,6 +3630,170 @@ class TestLsdirRobust:
 
 # TestLsdirRobust.test_basic_functionality()
 # TestLsdirRobust.test_minimal_required_num_of_fetch_results()
+
+
+# %% test functions : unc_path
+
+
+class TestUncPathStatic(unittest.TestCase):
+    """Static test methods for unc_path function with minimal mocking"""
+
+    @staticmethod
+    def create_long_path(base: str, length: int = 260) -> str:
+        """Create a path longer than 255 characters"""
+        # Calculate how many chars to add to exceed 255
+        chars_needed = max(0, length - len(base))
+        return base + 'x' * chars_needed
+
+    @staticmethod
+    def test_non_windows_unchanged() -> None:
+        """Test that paths are unchanged on non-Windows platforms"""
+        with patch('sys.platform', 'linux'):
+            test_paths = [
+                "/home/user/test",
+                "/home/user/test/",
+                "C:\\Users\\test",  # Even Windows-style paths on Linux
+                "",
+            ]
+
+            for path in test_paths:
+                result = unc_path(path)
+                # Should return normalized path + slash if input had trailing slash
+                expected = os.path.normpath(path)
+                if path.endswith(('\\', '/')):
+                    expected += '/'
+                assert result == expected, f"Failed for: {path}"
+
+    @staticmethod
+    def test_windows_short_paths() -> None:
+        """Test short paths on Windows (<= 255 chars)"""
+        with patch('sys.platform', 'win32'):
+            test_cases = [
+                ("C:\\test", "C:\\test"),
+                ("C:\\test\\", "C:\\test\\"),
+                ("\\\\server\\share", "\\\\server\\share"),
+                ("\\\\server\\share\\", "\\\\server\\share\\"),
+                ("relative\\path", os.path.normpath("relative\\path")),
+                ("C:/mixed/slashes\\test", os.path.normpath("C:/mixed/slashes\\test")),
+            ]
+
+            for input_path, expected in test_cases:
+                result = unc_path(input_path)
+                assert result == expected, f"Failed for: {input_path}"
+
+    @staticmethod
+    def test_windows_long_paths_with_support() -> None:
+        """Test long paths on Windows with long path support enabled"""
+        with patch('sys.platform', 'win32'):
+            # Mock long path support
+            with patch('specpipe.specio._is_long_path_supported', return_value=True):
+                # Test local long path
+                long_local = TestUncPathStatic.create_long_path(r"C:\test")
+                result = unc_path(long_local)
+                assert result.startswith(r'\\?\C:\test')
+                assert 'x' in result  # Contains long part
+
+                # Test network long path
+                long_network = TestUncPathStatic.create_long_path(r"\\server\share\test")
+                result = unc_path(long_network)
+                assert result.startswith(r'\\?\UNC\server\share\test')
+                assert 'x' in result
+
+                # Test with trailing slash
+                result = unc_path(f'{long_local}\\')
+                assert result.endswith('\\')
+                assert result.startswith('\\\\?\\')
+
+    @staticmethod
+    def test_windows_long_paths_without_support() -> None:
+        """Test that long paths raise ValueError without long path support"""
+        with patch('sys.platform', 'win32'):
+            # Mock NO long path support
+            with patch('specpipe.specio._is_long_path_supported', return_value=False):
+                long_path = TestUncPathStatic.create_long_path(r"C:\test")
+                with pytest.raises(ValueError, match="Windows does not enable long path"):
+                    unc_path(long_path)
+
+    @staticmethod
+    def test_existing_unc_paths() -> None:
+        """Test that already UNC-formatted paths are preserved"""
+        with patch('sys.platform', 'win32'):
+            with patch('specpipe.specio._is_long_path_supported', return_value=True):
+                # Test existing UNC local path
+                existing_unc_local = r"\\?\C:\Users\test"
+                result = unc_path(existing_unc_local)
+                assert result == existing_unc_local
+
+                # Test existing UNC network path
+                existing_unc_network = r"\\?\UNC\server\share\test"
+                result = unc_path(existing_unc_network)
+                assert result == existing_unc_network
+
+                # Test with trailing slash
+                result = unc_path(existing_unc_local + '\\')
+                assert result == existing_unc_local + '\\'
+
+    @staticmethod
+    def test_path_normalization() -> None:
+        """Test that path normalization is always applied"""
+        with patch('sys.platform', 'win32'):
+            test_cases = [
+                (r"C:/Users/../Users/test", r"C:\Users\test"),
+                (r"C:\Users\.\test\..\file", r"C:\Users\file"),
+                (r"\\server/share\path/..", r"\\server\share"),
+            ]
+
+            for input_path, expected in test_cases:
+                result = unc_path(input_path)
+                assert result == expected, f"Failed for: {input_path}"
+
+    @staticmethod
+    def test_edge_cases() -> None:
+        """Test various edge cases"""
+        with patch('sys.platform', 'win32'):
+            with patch('specpipe.specio._is_long_path_supported', return_value=True):
+                # Test empty string
+                result = unc_path("")
+                assert result == "."
+
+                # Test single dot
+                result = unc_path(".")
+                assert result == "."
+
+                # Test root paths
+                result = unc_path(r"C:\\")
+                assert result == "C:\\"
+
+                # Test exactly 255 characters (should not convert to UNC)
+                exact_255 = "C:\\" + 'x' * 252
+                result = unc_path(exact_255)
+                assert not result.startswith('\\\\?\\')
+
+    @staticmethod
+    def test_relative_paths() -> None:
+        """Test that relative paths are converted to absolute for UNC"""
+        with patch('sys.platform', 'win32'):
+            with patch('specpipe.specio._is_long_path_supported', return_value=True):
+                test_cases = [
+                    (r"relative\path", os.path.normpath(r"relative\path")),
+                    (r".\current", os.path.normpath(r".\current")),
+                    (r"..\parent", os.path.normpath(r"..\parent")),
+                ]
+                for input_path, expected in test_cases:
+                    result = unc_path(input_path)
+                    assert os.path.normpath(result.replace('\\\\?\\', '')) == expected
+
+
+# %% Test - unc_path
+
+# TestUncPathStatic.test_non_windows_unchanged()
+# TestUncPathStatic.test_windows_short_paths()
+# TestUncPathStatic.test_windows_long_paths_with_support()
+# TestUncPathStatic.test_windows_long_paths_without_support()
+# TestUncPathStatic.test_existing_unc_paths()
+# TestUncPathStatic.test_path_normalization()
+# TestUncPathStatic.test_edge_cases()
+# TestUncPathStatic.test_relative_paths()
 
 
 # %% Test main

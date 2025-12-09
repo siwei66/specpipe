@@ -56,7 +56,7 @@ import dill
 
 # Local
 from .roistats import round_digit
-from .specio import arraylike_validator, simple_type_validator
+from .specio import arraylike_validator, simple_type_validator, unc_path
 
 
 # %% Validate data types - for regression and classification distinguishing
@@ -130,7 +130,7 @@ class ModelEva:
         Model to evaluate. Must implement:
         - fit()
         - predict()
-        - predict_proba() (for classifiers)
+        - predict_proba() and classes_ (for classifiers)
 
     validation_method : str
         Validation method, Choose between:
@@ -848,6 +848,12 @@ class ModelEva:
             # Fit
             model.fit(X_train, y_train.flatten())  # type: ignore[attr-defined]
 
+            # Validate classes_ (must available after fit)
+            if not hasattr(model, 'classes_'):
+                raise ValueError(
+                    "Missing attribute 'classes_' in given classifier, 'classes_' must be available after fitting."
+                )
+
             # Predict
             y_test_pred = model.predict(X_test).reshape(-1, 1)  # type: ignore[attr-defined]
             y_test_pred_proba = model.predict_proba(X_test)  # type: ignore[attr-defined]
@@ -930,8 +936,8 @@ class ModelEva:
 
         # Report directory
         dout = self._report_directory + f"Model_evaluation_reports/Data_{self.data_label}_Model_{self.model_label}/"
-        if not os.path.exists(dout):
-            os.makedirs(dout)
+        if not os.path.exists(unc_path(dout)):
+            os.makedirs(unc_path(dout))
 
         # Result dataframe for write to file
         assert ynames is not None
@@ -944,15 +950,38 @@ class ModelEva:
 
         # Write result to file
         task_time = self._model_time
-        df_val.to_csv(dout + f"Validation_results_{self.model_label}.csv", index=False)
-        dill_result_path = (
+        df_val.to_csv(unc_path(dout + f"Validation_results_{self.model_label}.csv"), index=False)
+        dill_result_path = unc_path(
             dout + f".__specpipe_dill_data/.__specpipe_core_result_Validation_results_{self.model_label}.dill"
         )
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
         dill.dump(df_val, open(dill_result_path, "wb"))
         if self.result_backup:
-            df_val.to_csv(dout + f"Validation_results_{self.model_label}_{task_time}.csv", index=False)
+            df_val.to_csv(unc_path(dout + f"Validation_results_{self.model_label}_{task_time}.csv"), index=False)
+
+        # Write transformer and estimator info if a combined transformer-estimator model
+        if hasattr(model, "_is_trans_classifier"):
+            assert hasattr(model, 'data_transformers')
+            assert hasattr(model, 'classifier')
+            assert hasattr(model, '_transformer_labels')
+            assert hasattr(model, '_classifier_label')
+            model_transformers = model.data_transformers
+            model_estimator = model.classifier
+            model_transformer_labels = model._transformer_labels
+            model_estimator_label = model._classifier_label
+            combined_model_info_path = unc_path(dout + ".__specpipe_dill_data/.__specpipe_Combined_model_info.dill")
+            if not os.path.exists(unc_path(os.path.dirname(combined_model_info_path))):
+                os.makedirs(unc_path(os.path.dirname(combined_model_info_path)))
+            dill.dump(
+                {
+                    'model_transformers': model_transformers,
+                    'model_estimator': model_estimator,
+                    'model_transformer_labels': model_transformer_labels,
+                    'model_estimator_label': model_estimator_label,
+                },
+                open(combined_model_info_path, "wb"),
+            )
 
     # Classifier metrics
     @simple_type_validator
@@ -1098,20 +1127,22 @@ class ModelEva:
 
         # Report directory
         dout = self._report_directory + f"Model_evaluation_reports/Data_{self.data_label}_Model_{self.model_label}/"
-        if not os.path.exists(dout):
-            os.makedirs(dout)
+        if not os.path.exists(unc_path(dout)):
+            os.makedirs(unc_path(dout))
 
         # Save metrics df to CSV
         task_time = self._model_time
-        metrics_df.to_csv(dout + f"Classification_performance_{self.model_label}.csv", index=False)
-        dill_result_path = (
+        metrics_df.to_csv(unc_path(dout + f"Classification_performance_{self.model_label}.csv"), index=False)
+        dill_result_path = unc_path(
             dout + f".__specpipe_dill_data/.__specpipe_core_result_Classification_performance_{self.model_label}.dill"
         )
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
         dill.dump(metrics_df, open(dill_result_path, "wb"))
         if self.result_backup:
-            metrics_df.to_csv(dout + f"Classification_performance_{self.model_label}_{task_time}.csv", index=False)
+            metrics_df.to_csv(
+                unc_path(dout + f"Classification_performance_{self.model_label}_{task_time}.csv"), index=False
+            )
 
     # Class ROC plots of classification performance
     @simple_type_validator
@@ -1257,15 +1288,17 @@ class ModelEva:
 
         # Report directory
         dout = self._report_directory + f"Model_evaluation_reports/Data_{self.data_label}_Model_{self.model_label}/"
-        if not os.path.exists(dout):
-            os.makedirs(dout)
+        if not os.path.exists(unc_path(dout)):
+            os.makedirs(unc_path(dout))
 
         # Save plot to PNG
         task_time = self._model_time
-        plt.savefig(dout + f"ROC_curve_{self.model_label}.png", dpi=300)
-        dill_result_path = dout + f".__specpipe_dill_data/.__specpipe_core_result_ROC_curve_{self.model_label}.dill"
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
+        plt.savefig(unc_path(dout + f"ROC_curve_{self.model_label}.png"), dpi=300)
+        dill_result_path = unc_path(
+            dout + f".__specpipe_dill_data/.__specpipe_core_result_ROC_curve_{self.model_label}.dill"
+        )
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
         dill.dump(plt.gcf(), open(dill_result_path, "wb"))
         if self.result_backup:
             plt.savefig(dout + f"ROC_curve_{self.model_label}_{task_time}.png", dpi=300)
@@ -1353,21 +1386,21 @@ class ModelEva:
 
         # Report directory
         dout = self._report_directory + f"Model_evaluation_reports/Data_{self.data_label}_Model_{self.model_label}/"
-        if not os.path.exists(dout):
-            os.makedirs(dout)
+        if not os.path.exists(unc_path(dout)):
+            os.makedirs(unc_path(dout))
 
         # Save case report df to CSV
         task_time = self._model_time
-        df_res.to_csv(dout + f"Residual_analysis_{self.model_label}.csv", index=True, index_label="Sample_ID")
-        dill_result_path = (
+        df_res.to_csv(unc_path(dout + f"Residual_analysis_{self.model_label}.csv"), index=True, index_label="Sample_ID")
+        dill_result_path = unc_path(
             dout + f".__specpipe_dill_data/.__specpipe_core_result_Residual_analysis_{self.model_label}.dill"
         )
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
         dill.dump(df_res, open(dill_result_path, "wb"))
         if self.result_backup:
             df_res.to_csv(
-                dout + f"Residual_analysis_{self.model_label}_{task_time}.csv",
+                unc_path(dout + f"Residual_analysis_{self.model_label}_{task_time}.csv"),
                 index=True,
                 index_label="Sample_ID",
             )
@@ -1562,21 +1595,23 @@ class ModelEva:
 
         # Report directory
         dout = self._report_directory + f"Model_evaluation_reports/Data_{self.data_label}_Model_{self.model_label}/"
-        if not os.path.exists(dout):
-            os.makedirs(dout)
+        if not os.path.exists(unc_path(dout)):
+            os.makedirs(unc_path(dout))
 
         # Save metrics df to CSV
         task_time = self._model_time
-        influence_df.to_csv(dout + f"Influence_analysis_{self.model_label}.csv", index=True, index_label="Sample_ID")
-        dill_result_path = (
+        influence_df.to_csv(
+            unc_path(dout + f"Influence_analysis_{self.model_label}.csv"), index=True, index_label="Sample_ID"
+        )
+        dill_result_path = unc_path(
             dout + f".__specpipe_dill_data/.__specpipe_core_result_Influence_analysis_{self.model_label}.dill"
         )
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
         dill.dump(influence_df, open(dill_result_path, "wb"))
         if self.result_backup:
             influence_df.to_csv(
-                dout + f"Influence_analysis_{self.model_label}_{task_time}.csv",
+                unc_path(dout + f"Influence_analysis_{self.model_label}_{task_time}.csv"),
                 index=True,
                 index_label="Sample_ID",
             )
@@ -1833,8 +1868,8 @@ class ModelEva:
 
         # Report directory
         dout = self._report_directory + f"Model_evaluation_reports/Data_{self.data_label}_Model_{self.model_label}/"
-        if not os.path.exists(dout):
-            os.makedirs(dout)
+        if not os.path.exists(unc_path(dout)):
+            os.makedirs(unc_path(dout))
 
         # Result dataframe for write to file
         coln_val = ["Sample_ID", "y_true", "y_predicted"]
@@ -1845,15 +1880,38 @@ class ModelEva:
 
         # Write result to file
         task_time = self._model_time
-        df_val.to_csv(dout + f"Validation_results_{self.model_label}.csv", index=False)
-        dill_result_path = (
+        df_val.to_csv(unc_path(dout + f"Validation_results_{self.model_label}.csv"), index=False)
+        dill_result_path = unc_path(
             dout + f".__specpipe_dill_data/.__specpipe_core_result_Validation_results_{self.model_label}.dill"
         )
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
         dill.dump(df_val, open(dill_result_path, "wb"))
         if self.result_backup:
-            df_val.to_csv(dout + f"Validation_results_{self.model_label}_{task_time}.csv", index=False)
+            df_val.to_csv(unc_path(dout + f"Validation_results_{self.model_label}_{task_time}.csv"), index=False)
+
+        # Write transformer and estimator info if a combined transformer-estimator model
+        if hasattr(model, "_is_trans_regressor"):
+            assert hasattr(model, 'data_transformers')
+            assert hasattr(model, 'regressor')
+            assert hasattr(model, '_transformer_labels')
+            assert hasattr(model, '_regressor_label')
+            model_transformers = model.data_transformers
+            model_estimator = model.regressor
+            model_transformer_labels = model._transformer_labels
+            model_estimator_label = model._regressor_label
+            combined_model_info_path = unc_path(dout + ".__specpipe_dill_data/.__specpipe_Combined_model_info.dill")
+            if not os.path.exists(unc_path(os.path.dirname(combined_model_info_path))):
+                os.makedirs(unc_path(os.path.dirname(combined_model_info_path)))
+            dill.dump(
+                {
+                    'model_transformers': model_transformers,
+                    'model_estimator': model_estimator,
+                    'model_transformer_labels': model_transformer_labels,
+                    'model_estimator_label': model_estimator_label,
+                },
+                open(combined_model_info_path, "wb"),
+            )
 
     # Regressor metrics
     @simple_type_validator
@@ -1921,20 +1979,22 @@ class ModelEva:
 
         # Report directory
         dout = self._report_directory + f"Model_evaluation_reports/Data_{self.data_label}_Model_{self.model_label}/"
-        if not os.path.exists(dout):
-            os.makedirs(dout)
+        if not os.path.exists(unc_path(dout)):
+            os.makedirs(unc_path(dout))
 
         # Save metrics df to CSV
         task_time = self._model_time
-        metrics_df.to_csv(dout + f"Regression_performance_{self.model_label}.csv", index=False)
-        dill_result_path = (
+        metrics_df.to_csv(unc_path(dout + f"Regression_performance_{self.model_label}.csv"), index=False)
+        dill_result_path = unc_path(
             dout + f".__specpipe_dill_data/.__specpipe_core_result_Regression_performance_{self.model_label}.dill"
         )
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
         dill.dump(metrics_df, open(dill_result_path, "wb"))
         if self.result_backup:
-            metrics_df.to_csv(dout + f"Regression_performance_{self.model_label}_{task_time}.csv", index=False)
+            metrics_df.to_csv(
+                unc_path(dout + f"Regression_performance_{self.model_label}_{task_time}.csv"), index=False
+            )
 
     # Scatter plots for regression performance evaluation
     @simple_type_validator
@@ -2076,18 +2136,20 @@ class ModelEva:
 
         # Report directory
         dout = self._report_directory + f"Model_evaluation_reports/Data_{self.data_label}_Model_{self.model_label}/"
-        if not os.path.exists(dout):
-            os.makedirs(dout)
+        if not os.path.exists(unc_path(dout)):
+            os.makedirs(unc_path(dout))
 
         # Save figure
         task_time = self._model_time
-        plt.savefig(dout + f"Scatter_plot_{self.model_label}.png", dpi=300)
-        dill_result_path = dout + f".__specpipe_dill_data/.__specpipe_core_result_Scatter_plot_{self.model_label}.dill"
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
+        plt.savefig(unc_path(dout + f"Scatter_plot_{self.model_label}.png"), dpi=300)
+        dill_result_path = unc_path(
+            dout + f".__specpipe_dill_data/.__specpipe_core_result_Scatter_plot_{self.model_label}.dill"
+        )
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
         dill.dump(plt.gcf(), open(dill_result_path, "wb"))
         if self.result_backup:
-            plt.savefig(dout + f"Scatter_plot_{self.model_label}_{task_time}.png", dpi=300)
+            plt.savefig(unc_path(dout + f"Scatter_plot_{self.model_label}_{task_time}.png"), dpi=300)
         if show_plot:
             if not self.silent_all:
                 plt.show()
@@ -2250,18 +2312,20 @@ class ModelEva:
 
         # Report directory
         dout = self._report_directory + f"Model_evaluation_reports/Data_{self.data_label}_Model_{self.model_label}/"
-        if not os.path.exists(dout):
-            os.makedirs(dout)
+        if not os.path.exists(unc_path(dout)):
+            os.makedirs(unc_path(dout))
 
         # Save figure
         task_time = self._model_time
-        plt.savefig(dout + f"Residual_plot_{self.model_label}.png", dpi=300)
-        dill_result_path = dout + f".__specpipe_dill_data/.__specpipe_core_result_Residual_plot_{self.model_label}.dill"
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
+        plt.savefig(unc_path(dout + f"Residual_plot_{self.model_label}.png"), dpi=300)
+        dill_result_path = unc_path(
+            dout + f".__specpipe_dill_data/.__specpipe_core_result_Residual_plot_{self.model_label}.dill"
+        )
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
         dill.dump(plt.gcf(), open(dill_result_path, "wb"))
         if self.result_backup:
-            plt.savefig(dout + f"Residual_plot_{self.model_label}_{task_time}.png", dpi=300)
+            plt.savefig(unc_path(dout + f"Residual_plot_{self.model_label}_{task_time}.png"), dpi=300)
         if show_plot:
             if not self.silent_all:
                 plt.show()
@@ -2306,21 +2370,21 @@ class ModelEva:
 
         # Report directory
         dout = self._report_directory + f"Model_evaluation_reports/Data_{self.data_label}_Model_{self.model_label}/"
-        if not os.path.exists(dout):
-            os.makedirs(dout)
+        if not os.path.exists(unc_path(dout)):
+            os.makedirs(unc_path(dout))
 
         # Save case report df to CSV
         task_time = self._model_time
-        df_res.to_csv(dout + f"Residual_analysis_{self.model_label}.csv", index=True, index_label="Sample_ID")
-        dill_result_path = (
+        df_res.to_csv(unc_path(dout + f"Residual_analysis_{self.model_label}.csv"), index=True, index_label="Sample_ID")
+        dill_result_path = unc_path(
             dout + f".__specpipe_dill_data/.__specpipe_core_result_Residual_analysis_{self.model_label}.dill"
         )
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
         dill.dump(df_res, open(dill_result_path, "wb"))
         if self.result_backup:
             df_res.to_csv(
-                dout + f"Residual_analysis_{self.model_label}_{task_time}.csv",
+                unc_path(dout + f"Residual_analysis_{self.model_label}_{task_time}.csv"),
                 index=True,
                 index_label="Sample_ID",
             )
@@ -2434,21 +2498,23 @@ class ModelEva:
 
         # Report directory
         dout = self._report_directory + f"Model_evaluation_reports/Data_{self.data_label}_Model_{self.model_label}/"
-        if not os.path.exists(dout):
-            os.makedirs(dout)
+        if not os.path.exists(unc_path(dout)):
+            os.makedirs(unc_path(dout))
 
         # Save metrics df to CSV
         task_time = self._model_time
-        influence_df.to_csv(dout + f"Influence_analysis_{self.model_label}.csv", index=True, index_label="Sample_ID")
-        dill_result_path = (
+        influence_df.to_csv(
+            unc_path(dout + f"Influence_analysis_{self.model_label}.csv"), index=True, index_label="Sample_ID"
+        )
+        dill_result_path = unc_path(
             dout + f".__specpipe_dill_data/.__specpipe_core_result_Influence_analysis_{self.model_label}.dill"
         )
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
         dill.dump(influence_df, open(dill_result_path, "wb"))
         if self.result_backup:
             influence_df.to_csv(
-                dout + f"Influence_analysis_{self.model_label}_{task_time}.csv",
+                unc_path(dout + f"Influence_analysis_{self.model_label}_{task_time}.csv"),
                 index=True,
                 index_label="Sample_ID",
             )
@@ -2697,10 +2763,10 @@ class ModelEva:
                 self._report_directory
                 + f"Model_evaluation_reports/Data_{self.data_label}_Model_{self.model_label}/Model_for_application/"
             )
-            if not os.path.exists(dout):
-                os.makedirs(dout)
-            dump_path = dout + dump_name + ".dill"
-            dump_path1 = dout + dump_name1 + ".dill"
+            if not os.path.exists(unc_path(dout)):
+                os.makedirs(unc_path(dout))
+            dump_path = unc_path(dout + dump_name + ".dill")
+            dump_path1 = unc_path(dout + dump_name1 + ".dill")
             # Dump model
             with open(dump_path, "wb") as f:
                 dill.dump(dump_dict, f)
@@ -2778,8 +2844,8 @@ class ModelEva:
             self._report_directory
             + f"Model_evaluation_reports/Data_{self.data_label}_Model_{self.model_label}/Model_in_validation/"
         )
-        if not os.path.exists(dout):
-            os.makedirs(dout)
+        if not os.path.exists(unc_path(dout)):
+            os.makedirs(unc_path(dout))
 
         ## Dump fold model
         # Construct saving dict of data config
@@ -2788,8 +2854,8 @@ class ModelEva:
         dump_dict = {dump_name: fold_model}
 
         # Dump path
-        dump_path = dout + dump_name + ".dill"
-        dump_path1 = dout + dump_name1 + ".dill"
+        dump_path = unc_path(dout + dump_name + ".dill")
+        dump_path1 = unc_path(dout + dump_name1 + ".dill")
 
         # Dump model
         with open(dump_path, "wb") as f:
@@ -2801,25 +2867,25 @@ class ModelEva:
         # Write fold data to file
         if dump_associated_data:
             wname_X0 = f"val_X-train_fold-{fold_i}_{self._model_label}"  # noqa: N806
-            wpath_X0 = dout + wname_X0 + ".csv"  # noqa: N806
+            wpath_X0 = unc_path(dout + wname_X0 + ".csv")  # noqa: N806
             df_X0.to_csv(wpath_X0, header=True, index=True, index_label="Sample_ID")
             wname_X1 = f"val_X-test_fold-{fold_i}_{self._model_label}"  # noqa: N806
-            wpath_X1 = dout + wname_X1 + ".csv"  # noqa: N806
+            wpath_X1 = unc_path(dout + wname_X1 + ".csv")  # noqa: N806
             df_X1.to_csv(wpath_X1, header=True, index=True, index_label="Sample_ID")
             wname_y = f"val_y_fold-{fold_i}_{self._model_label}"
-            wpath_y = dout + wname_y + ".csv"
+            wpath_y = unc_path(dout + wname_y + ".csv")
             dfr.to_csv(wpath_y, header=True, index=True, index_label="Sample_ID")
 
         # Write backup
         if self.result_backup:
             wname_X0 = f"val_X-train_fold-{fold_i}_{self._model_label}_{self._model_time}"  # noqa: N806
-            wpath_X0 = dout + wname_X0 + ".csv"  # noqa: N806
+            wpath_X0 = unc_path(dout + wname_X0 + ".csv")  # noqa: N806
             df_X0.to_csv(wpath_X0, header=True, index=True, index_label="Sample_ID")
             wname_X1 = f"val_X-test_fold-{fold_i}_{self._model_label}_{self._model_time}"  # noqa: N806
-            wpath_X1 = dout + wname_X1 + ".csv"  # noqa: N806
+            wpath_X1 = unc_path(dout + wname_X1 + ".csv")  # noqa: N806
             df_X1.to_csv(wpath_X1, header=True, index=True, index_label="Sample_ID")
             wname_y = f"val_y_fold-{fold_i}_{self._model_label}_{self._model_time}"
-            wpath_y = dout + wname_y + ".csv"
+            wpath_y = unc_path(dout + wname_y + ".csv")
             dfr.to_csv(wpath_y, header=True, index=True, index_label="Sample_ID")
 
 

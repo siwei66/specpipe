@@ -1,9 +1,0 @@
-Step_0,Step_1,Step_2
-snv,roi_mean,KNeighborsClassifier
-snv,roi_mean,RandomForestClassifier
-snv,roi_median,KNeighborsClassifier
-snv,roi_median,RandomForestClassifier
-raw,roi_mean,KNeighborsClassifier
-raw,roi_mean,RandomForestClassifier
-raw,roi_median,KNeighborsClassifier
-raw,roi_median,RandomForestClassifier

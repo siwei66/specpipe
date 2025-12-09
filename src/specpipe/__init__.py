@@ -23,6 +23,10 @@ __all__ = [
     ### Raster operation
     "croproi",
     "pixel_apply",
+    ### Model combiners
+    "combine_transformer_classifier",
+    "combine_transformer_regressor",
+    "factorial_transformer_chains",
     ## Spectral statistics tools
     ### ROI statistics
     "round_digit",
@@ -52,6 +56,9 @@ from .example_data import create_example_raster, create_example_roi_xml, create_
 
 ## Model Evaluator
 from .modeleva import ModelEva
+
+## Model combiners
+from .modelconnector import factorial_transformer_chains, combine_transformer_classifier, combine_transformer_regressor
 
 ## Raster operation
 from .rasterop import croproi, pixel_apply

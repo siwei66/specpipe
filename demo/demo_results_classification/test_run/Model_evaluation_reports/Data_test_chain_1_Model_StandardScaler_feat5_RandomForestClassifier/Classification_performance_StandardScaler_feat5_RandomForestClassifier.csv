@@ -1,0 +1,6 @@
+Class,TP,TN,FP,FN,Precision,Recall,F1_Score,Accuracy,AUC
+a,5,5,0,0,1.0,1.0,1.0,1.0,1.0
+b,5,5,0,0,1.0,1.0,1.0,1.0,1.0
+Micro_avg,10,10,0,0,1.0,1.0,1.0,1.0,1.0
+Macro_avg,-,-,-,-,1.0,1.0,1.0,1.0,1.0
+StandardScaler_feat5_RandomForestClassifier model classification performance report,,,,,,,,,

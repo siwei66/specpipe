@@ -32,6 +32,11 @@ from .specio import (
     dump_vars,
     load_vars,
     simple_type_validator,
+    unc_path,
+)
+from .specpipe_validator import (
+    _target_type_validation_for_serialization,
+    _dl_val,
 )
 
 # For multiprocessing
@@ -39,66 +44,6 @@ global ModelEva
 
 
 # %% Static functions for SpecPipe
-
-
-# Target value type fixing after serialization
-@simple_type_validator
-def _target_type_validation_for_serialization(
-    pc_sample_list: list[tuple[str, tuple[int], Any, Annotated[Any, arraylike_validator(ndim=1)]]],
-) -> list[tuple[str, tuple[int], Union[str, int, bool, float], Annotated[Any, arraylike_validator(ndim=1)]]]:
-    """Fix typing for integer after dill serialization."""
-    for loaded_i, loaded_sample in enumerate(pc_sample_list):
-        loaded_y = loaded_sample[2]
-        # Behavior check to fix type
-        test_value_y = loaded_y
-        try:
-            _ = test_value_y + 1
-            if "." in str(loaded_y):
-                loaded_y = float(loaded_y)
-            elif str(loaded_y) in ["True", "False"]:
-                loaded_y = bool(loaded_y)
-            else:
-                loaded_y = int(loaded_y)
-        except Exception:
-            loaded_y = str(loaded_y)
-        # Update target value
-        pc_sample_list[loaded_i] = (loaded_sample[0], loaded_sample[1], loaded_y, loaded_sample[3])
-    return pc_sample_list
-
-
-# Data_level validator
-# Data_level: 0 - image (path), \
-# 1 - pixel_spec (1D), 2 - pixel_specs_array (2D), 3 - pixel_specs_tensor (3D), 4 - pixel_hyperspecs_tensor (3D), \
-# 5 - image_ROI (img_path + ROI coords), 6 - ROI_specs (2D), 7 - spec1d (1D spec stats)
-@simple_type_validator
-def _dl_val(data_level: Union[str, int]) -> tuple[int, str]:
-    """
-    Data level validator, input data level name or index number, return (data level index, data level name).
-    """
-    # Validate data_level
-    data_levels = [
-        "image",
-        "pixel_spec",
-        "pixel_specs_array",
-        "pixel_specs_tensor",
-        "pixel_hyperspecs_tensor",
-        "image_roi",
-        "roi_specs",
-        "spec1d",
-        "model",
-    ]
-    data_level_n = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-    if type(data_level) is str:
-        if data_level not in data_levels:
-            raise ValueError(f"data_level must be one of {data_levels}, but got: {data_level}")
-        else:
-            dlind = data_levels.index(data_level)
-    elif type(data_level) is int:
-        if data_level not in data_level_n:
-            raise ValueError(f"data_level number must be one of {data_level_n}, but got: {data_level}")
-        else:
-            dlind = data_level
-    return (dlind, data_levels[dlind])
 
 
 # Preprocessing of single sample using all chains
@@ -124,6 +69,7 @@ def _preprocessing_sample(
     _dl_val: Callable = _dl_val,
     pixel_apply: Callable = pixel_apply,
     dump_vars: Callable = dump_vars,
+    unc_path: Callable = unc_path,
     # Dependencies for multiprocessing
     copy: ModuleType = copy,
     os: ModuleType = os,
@@ -156,6 +102,7 @@ def _preprocessing_sample(
     _dl_val: Callable = _dl_val,
     pixel_apply: Callable = pixel_apply,
     dump_vars: Callable = dump_vars,
+    unc_path: Callable = unc_path,
     # Dependencies for multiprocessing
     copy: ModuleType = copy,
     os: ModuleType = os,
@@ -188,6 +135,7 @@ def _preprocessing_sample(
     _dl_val: Callable = _dl_val,
     pixel_apply: Callable = pixel_apply,
     dump_vars: Callable = dump_vars,
+    unc_path: Callable = unc_path,
     # Dependencies for multiprocessing
     copy: ModuleType = copy,
     os: ModuleType = os,
@@ -220,6 +168,7 @@ def _preprocessing_sample(
     _dl_val: Callable = _dl_val,
     pixel_apply: Callable = pixel_apply,
     dump_vars: Callable = dump_vars,
+    unc_path: Callable = unc_path,
     # Dependencies for multiprocessing
     copy: ModuleType = copy,
     os: ModuleType = os,
@@ -252,6 +201,7 @@ def _preprocessing_sample(
     _dl_val: Callable = _dl_val,
     pixel_apply: Callable = pixel_apply,
     dump_vars: Callable = dump_vars,
+    unc_path: Callable = unc_path,
     # Dependencies for multiprocessing
     copy: ModuleType = copy,
     os: ModuleType = os,
@@ -294,6 +244,7 @@ def _preprocessing_sample(  # noqa: C901
     _dl_val: Callable = _dl_val,
     pixel_apply: Callable = pixel_apply,
     dump_vars: Callable = dump_vars,
+    unc_path: Callable = unc_path,
     # Dependencies for multiprocessing
     copy: ModuleType = copy,
     os: ModuleType = os,
@@ -405,13 +356,13 @@ def _preprocessing_sample(  # noqa: C901
         # Formal run
         if not is_test_run:
             preprocessed_img_dir = specpipe_report_directory + "Preprocessing/Preprocessed_images/"
-            if not os.path.exists(preprocessed_img_dir):
+            if not os.path.exists(unc_path(preprocessed_img_dir)):
                 raise ValueError(f"Invalid preprocessed image directory path: {preprocessed_img_dir}")
         # Test run
         else:
             preprocessed_img_dir = specpipe_report_directory + "test_run/Preprocessed_images/"
-            if not os.path.exists(preprocessed_img_dir):
-                os.makedirs(preprocessed_img_dir)
+            if not os.path.exists(unc_path(preprocessed_img_dir)):
+                os.makedirs(unc_path(preprocessed_img_dir))
 
         # Implement processing pipeline for every chain of chains
         status_results = _chain_step_processor(
@@ -447,8 +398,8 @@ def _preprocessing_sample(  # noqa: C901
             sdir = dump_directory
         else:
             sdir = specpipe_report_directory + f"{dir_name}/Step_results/"
-        if not os.path.exists(sdir):
-            os.makedirs(sdir)
+        if not os.path.exists(unc_path(sdir)):
+            os.makedirs(unc_path(sdir))
         if dump_result:
             chain_result_path = sdir + f"{file_name}.dill"
             dump_vars(chain_result_path, status_results_out, backup=dump_backup)
@@ -458,10 +409,10 @@ def _preprocessing_sample(  # noqa: C901
         log_dir_path = step_dir + "Preprocess_progress_logs/"
         log_fp = log_dir_path + sample_data["ID"]
         if update_progress_log:
-            if not os.path.exists(log_dir_path):
-                os.makedirs(log_dir_path)
-            if not os.path.exists(log_fp):
-                with open(log_fp, "w") as f:
+            if not os.path.exists(unc_path(log_dir_path)):
+                os.makedirs(unc_path(log_dir_path))
+            if not os.path.exists(unc_path(log_fp)):
+                with open(unc_path(log_fp), "w") as f:
                     f.write("")
 
         # Return result file path and step results if required
@@ -494,8 +445,8 @@ def _preprocessing_sample(  # noqa: C901
         else:
             dir_name = "Preprocessing"
         errdir = specpipe_report_directory + f"{dir_name}/Step_results/Error_logs/"
-        if not os.path.exists(errdir):
-            os.makedirs(errdir)
+        if not os.path.exists(unc_path(errdir)):
+            os.makedirs(unc_path(errdir))
         assert hasattr(datetime, 'now')
         cts: str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         # PID for multiprocessing
@@ -508,7 +459,7 @@ def _preprocessing_sample(  # noqa: C901
             sample_data_label = sample_data["label"]
         # Write error log
         err_msg = f"Failed in the preprocessing of '{sample_data_label}', error message: \n\n{str(e)}"
-        with open(error_log_path, "w") as f:
+        with open(unc_path(error_log_path), "w") as f:
             f.write(err_msg)
         raise ValueError(e) from e
 
@@ -666,6 +617,7 @@ def _image_processing_step(
     datetime: type = datetime,
     np: ModuleType = np,
     torch: ModuleType = torch,
+    unc_path: Callable = unc_path,
 ) -> str:
     """
     Multiprocessing compatible image processing step with shared status for operation control on a same file.
@@ -695,8 +647,8 @@ def _image_processing_step(
         start_status.append(output_image_path)
         # Initialize output image - remove if exists before run
         if output_image_path not in processed_image_init:
-            if os.path.exists(output_image_path):
-                os.remove(output_image_path)
+            if os.path.exists(unc_path(output_image_path)):
+                os.remove(unc_path(output_image_path))
             processed_image_init.append(output_image_path)
 
     # Image processing
@@ -862,6 +814,7 @@ class _ModelMethod:
         """  # noqa: E501
         if report_directory is None:
             report_directory = self.report_dir
+        # Model Evaluation
         model_eva = modeleva(
             sample_list=sample_list,
             model=self.method,
@@ -920,6 +873,7 @@ def _model_evaluator(  # noqa: C901
     update_progress_log: bool = False,
     # Import applied functions and modules
     _dl_val: Callable = _dl_val,
+    unc_path: Callable = unc_path,
     load_vars: Callable = load_vars,
     dump_vars: Callable = dump_vars,
     _target_type_validation_for_serialization: Callable = _target_type_validation_for_serialization,
@@ -955,8 +909,8 @@ def _model_evaluator(  # noqa: C901
     if result_directory == "":
         result_directory = specpipe_report_directory
     model_result_dir = result_directory + "Modeling/"
-    if not os.path.exists(model_result_dir):
-        os.makedirs(model_result_dir)
+    if not os.path.exists(unc_path(model_result_dir)):
+        os.makedirs(unc_path(model_result_dir))
 
     # Validate sample_list_label - Absolutely unique number if label not provided (commonly it should be given)
     if sample_list_label == "":
@@ -979,12 +933,12 @@ def _model_evaluator(  # noqa: C901
 
     # Save preprocess chain info for the sample_list
     model_report_dir = model_result_dir + "Model_evaluation_reports/"
-    if not os.path.exists(model_report_dir):
-        os.makedirs(model_report_dir)
+    if not os.path.exists(unc_path(model_report_dir)):
+        os.makedirs(unc_path(model_report_dir))
     # Chain file name
     chain_label_file_path = model_report_dir + f"{preprocess_chain_label}.txt"
     # Save chain process file
-    with open(chain_label_file_path, "w") as f:
+    with open(unc_path(chain_label_file_path), "w") as f:
         for pci, pproc in enumerate(preprocess_chain):
             if pci < (len(preprocess_chain) - 1):
                 f.write(f"{pproc}\n")
@@ -1037,7 +991,7 @@ def _model_evaluator(  # noqa: C901
 
     # Update progress
     log_path = model_report_dir + "modeling_progress_log.dill"
-    if os.path.exists(log_path):
+    if os.path.exists(unc_path(log_path)):
         modeling_progress_log = load_vars(log_path)["modeling_progress_log"]
         if preprocess_chain not in modeling_progress_log:
             modeling_progress_log.append(preprocess_chain)
@@ -1064,6 +1018,7 @@ def _model_evaluator_mp(
     # Import applied functions and modules
     _model_evaluator: Callable = _model_evaluator,
     _dl_val: Callable = _dl_val,
+    unc_path: Callable = unc_path,
     load_vars: Callable = load_vars,
     dump_vars: Callable = dump_vars,
     _target_type_validation_for_serialization: Callable = _target_type_validation_for_serialization,
@@ -1109,15 +1064,15 @@ def _model_evaluator_mp(
         if result_directory == "":
             result_directory = specpipe_report_directory
         model_result_dir = result_directory + "Modeling/"
-        if not os.path.exists(model_result_dir):
-            os.makedirs(model_result_dir)
+        if not os.path.exists(unc_path(model_result_dir)):
+            os.makedirs(unc_path(model_result_dir))
         errdir = model_result_dir + "Error_logs/"
-        if not os.path.exists(errdir):
-            os.makedirs(errdir)
+        if not os.path.exists(unc_path(errdir)):
+            os.makedirs(unc_path(errdir))
         cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         pid = os.getpid()
         error_log_path = errdir + f"error_{cts}_pid_{pid}.log"
         err_msg = f"\nFailed in the modeling of preprocessing chain from path '{cdp}', error message: \n\n{str(e)}\n"
-        with open(error_log_path, "w") as f:
+        with open(unc_path(error_log_path), "w") as f:
             f.write(err_msg)
         raise ValueError(e) from e

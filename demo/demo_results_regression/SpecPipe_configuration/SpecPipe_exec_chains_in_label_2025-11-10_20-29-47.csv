@@ -1,9 +1,0 @@
-Step_0,Step_1,Step_2
-snv,roi_mean,KNeighborsRegressor
-snv,roi_mean,RandomForestRegressor
-snv,roi_median,KNeighborsRegressor
-snv,roi_median,RandomForestRegressor
-raw,roi_mean,KNeighborsRegressor
-raw,roi_mean,RandomForestRegressor
-raw,roi_median,KNeighborsRegressor
-raw,roi_median,RandomForestRegressor

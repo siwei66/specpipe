@@ -62,14 +62,25 @@ from .specio import (
     load_vars,
     RealNumber,
     simple_type_validator,
+    unc_path,
 )
-from .specpipe_processor import (
+from .specpipe_validator import (
     _target_type_validation_for_serialization,
     _dl_val,
+    _data_level_seq_validator,
+    _spec_exp_validator,
+    _process_validator,
+    _classifier_validator,
+    _regressor_validator,
+)
+from .specpipe_processor import (
     _preprocessing_sample,
     _ModelMethod,
     _model_evaluator,
     _model_evaluator_mp,
+)
+from .modelconnector import (
+    combined_model_marginal_stats,
 )
 
 # For multiprocessing
@@ -159,7 +170,7 @@ class SpecPipe:
     def __init__(self, spec_exp: SpecExp) -> None:  # noqa: C901
         ## Experiment data manager - SpecExp
         # Validate SpecExp integrity
-        self._spec_exp_validator(spec_exp)
+        _spec_exp_validator(spec_exp)
 
         # SpecExp
         # SpecExp._groups: [0 group]
@@ -219,7 +230,7 @@ class SpecPipe:
 
     @report_directory.setter
     def report_directory(self, value: str) -> None:
-        if os.path.exists(value):
+        if os.path.exists(unc_path(value)):
             warning_msg = (
                 "The current report_directory is shared with the SpecExp's report_directory. "
                 "It is recommended to set the report_directory directly in SpecExp instead. "
@@ -367,67 +378,6 @@ class SpecPipe:
     def create_time(self, value: str) -> None:
         raise ValueError("create_time is immutable and cannot be modified")
 
-    # SpecExp validation
-    @simple_type_validator
-    def _spec_exp_validator(self, spec_exp: SpecExp) -> None:  # noqa: C901
-        # Validate SpecExp
-        if type(spec_exp) is not SpecExp:
-            raise TypeError(f"spec_exp must be a SpecExp object, but got: {type(spec_exp)}")
-
-        # Validate report diretory
-        if not os.path.isdir(spec_exp._report_directory):
-            raise ValueError(f"\nReport directory of given SpecExp is invalid: \n'{spec_exp._report_directory}'")
-
-        # Validate group
-        if len(spec_exp.groups) == 0:
-            raise ValueError("No group is found in given SpecExp")
-
-        # Validate sample data configs
-        if len(spec_exp.standalone_specs_sample) == 0:
-            if len(spec_exp.images) == 0:
-                raise ValueError("Neither image path nor standalone spectrum is found in given SpecExp")
-            elif len(spec_exp.rois_sample) == 0:
-                raise ValueError("Neither sample ROI nor standalone spectrum is found in given SpecExp")
-            for g in spec_exp.groups:
-                group_images = spec_exp.ls_images(group=g, return_dataframe=True, print_result=False)
-                group_rois = spec_exp.ls_rois(group=g, roi_type="sample", return_dataframe=True, print_result=False)
-                if len(group_images) == 0:
-                    raise ValueError(f"Neither image nor standalone spectrum is found in group: '{g}'")
-                elif len(group_rois) == 0:
-                    raise ValueError(f"Neither image sample ROI nor standalone spectrum is found in group: '{g}'")
-        else:
-            if len(spec_exp.images) > 0 or len(spec_exp.rois_sample) > 0:
-                raise ValueError(
-                    "Hybrid samples from both standalone spectra and spectral images \
-                        is not allowed by SpecPipe pipeline.\
-                        \nPlease provide either pure image samples or standalone spectrum samples"
-                )
-            for g in spec_exp.groups:
-                if (
-                    len(
-                        spec_exp.ls_standalone_specs(
-                            group=g,
-                            use_type="sample",
-                            print_result=False,
-                            return_dataframe=True,
-                        )
-                    )
-                    == 0
-                ):
-                    raise ValueError(f"No spectrum is found in group: '{g}'")
-
-        # Validate sample target values
-        sample_target_values = [spt[2] for spt in spec_exp.sample_targets]
-        if len(spec_exp.sample_targets) == 0 or sample_target_values == [None] * len(sample_target_values):
-            raise ValueError("No sample target value is found in given SpecExp")
-        for stt in spec_exp.sample_targets:
-            if stt[2] is None or stt[2] == np.nan:
-                raise ValueError(
-                    "Sample target value with ID '{stt[0]}', label '{stt[1]}' and group '{stt[3]}'\
-                    is missing. Got sample target value: {stt[2]}"
-                )
-        return None
-
     # SpecExp target value numeric validator
     @staticmethod
     @simple_type_validator
@@ -448,7 +398,7 @@ class SpecPipe:
         spec_exp_old = copy.deepcopy(self.spec_exp)
         # Update data and test
         try:
-            self._spec_exp_validator(spec_exp)
+            _spec_exp_validator(spec_exp)
         except Exception as e:
             raise ValueError("Given SpecExp instance is invalid") from e
         try:
@@ -525,12 +475,12 @@ class SpecPipe:
             ## Save to file
             # Output path
             sdir = self._spec_exp.report_directory + "Pre_execution_test_data/"
-            if not os.path.exists(sdir):
-                os.makedirs(sdir)
+            if not os.path.exists(unc_path(sdir)):
+                os.makedirs(unc_path(sdir))
 
             # Save test image
             test_img_path = sdir + "test_images." + img_path.split(".")[-1]
-            with open(sdir + "pre_execution_data.json", "w") as f:
+            with open(unc_path(sdir + "pre_execution_data.json"), "w") as f:
                 # Save test image
                 croproi(img_path, bdmin, test_img_path)
                 # Convert np.float32 to native float for json dump
@@ -547,7 +497,7 @@ class SpecPipe:
 
             # Testing spectrum table
             td2 = pd.DataFrame(roitable, columns=[("Band_" + str(i + 1)) for i in range(roitable.shape[1])])
-            td2.to_csv(sdir + "Pre_execution_data_roi_specs.csv", index=False)
+            td2.to_csv(unc_path(sdir + "Pre_execution_data_roi_specs.csv"), index=False)
 
             # Output for pre-execution testing data
             test_data_pre = {
@@ -578,12 +528,12 @@ class SpecPipe:
             ## Save to file
             # Output path
             sdir = self._spec_exp.report_directory + "Pre_execution_test_data/"
-            if not os.path.exists(sdir):
-                os.makedirs(sdir)
+            if not os.path.exists(unc_path(sdir)):
+                os.makedirs(unc_path(sdir))
 
             # Testing spectrum table
             td2 = pd.DataFrame([list(spec1d)], columns=[("Band_" + str(i + 1)) for i in range(len(spec1d))])
-            td2.to_csv(sdir + "Pre_execution_data_standalone_specs.csv", index=False)
+            td2.to_csv(unc_path(sdir + "Pre_execution_data_standalone_specs.csv"), index=False)
 
             # Output for pre-execution testing data
             test_data_pre = {
@@ -728,7 +678,7 @@ class SpecPipe:
             # For raster image path and image file output
             if dl_out <= 4:
                 # Raster file validation
-                if os.path.exists(result):
+                if os.path.exists(unc_path(result)):
                     # Open raster validation
                     try:
                         with rasterio.open(result) as src:
@@ -1361,105 +1311,46 @@ class SpecPipe:
         dl_in = _dl_val(input_data_level)
         dl_in_name = dl_in[1]
         dl_in_ind = dl_in[0]
-        if dl_in_ind >= 8:
-            raise ValueError("Input data level cannot be 'model' or 8 (corresponding index).")
+
         dl_out = _dl_val(output_data_level)
         dl_out_name = dl_out[1]
         dl_out_ind = dl_out[0]
-        if dl_out_name == "image_roi":
-            raise ValueError(
-                f"Output data level '{dl_out_name}' is not supported, \
-                    as dynamic ROIs are not supported currently. \
-                    Please write the generated ROIs to files and start a new SpecPipe \
-                    using SpecExp with the resulting ROI files."
-            )
-        if dl_out_ind < dl_in_ind:
-            raise ValueError(
-                f"Output_data_level cannot precede the input_data_level in the processing pipeline, \
-                    got input data level: '{input_data_level}', output data level: '{output_data_level}'"
-            )
-
-        # Validate sequence
-        if (application_sequence < 0) | (application_sequence > 999999):
-            raise ValueError(
-                f"Application sequence must be within [0, 1,000,000), \
-                    got: {application_sequence}"
-            )
 
         # Full application sequence
         fapp_seq = 1000000 * dl_in_ind + application_sequence
 
-        # Validate existed process labels
-        # [0 Process_ID, 1 Process_label, 2 Input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
+        # Validate data levels and data level sequence
+        _data_level_seq_validator(
+            input_data_level=input_data_level,
+            output_data_level=output_data_level,
+            application_sequence=application_sequence,
+            full_application_sequence=fapp_seq,
+            existed_process=self.process,
+        )
+
+        # Generate process number
         existed_proc_num = [0]
-        f_fapp_seq, l_fapp_seq = 0, np.inf
-        f_out_dl = None
-        l_in_dl = None
-        if len(self._process) > 0:
-            for pr in self._process:
-                # Previous process
-                if (pr[6] < fapp_seq) & (pr[6] > f_fapp_seq):
-                    f_fapp_seq = pr[6]
-                    f_out_dl = pr[3]
-                # Subsequent process
-                if (pr[6] > fapp_seq) & (pr[6] < l_fapp_seq):
-                    l_fapp_seq = pr[6]
-                    l_in_dl = pr[2]
-                # Validate consistency of output with identical input data level and application sequence
-                if pr[6] == fapp_seq:
-                    if dl_out_name != pr[3]:
-                        raise ValueError(
-                            f"Methods with identical input data level (here: '{dl_in_name}') \
-                                and application sequence (here: '{application_sequence}') \
-                                must have identical output data levels. \nGot output data level: \
-                                '{dl_out_name}' \nconflicted with process item: \nProcess ID: {pr[0]}\
-                                \nOutput data level: '{pr[3]}'"
-                        )
+        if len(self.process) > 0:
+            for pr in self.process:
                 # Get existed process number (repeat number)
                 if (pr[2] == dl_in_name) & (pr[4] == application_sequence):
                     existed_proc_num.append(pr[7])
-
-        # Validate I/O data level of previous and subsequent processes
-        if f_out_dl is not None:
-            if dl_in_ind <= 4:
-                if _dl_val(f_out_dl)[0] > 4:
-                    raise ValueError(
-                        f"The specified input data level '{dl_in_name}' of added process \
-                            is inconsistent with the output data level '{f_out_dl}' of the previous process, \
-                            the input data level of added process must be image levels (0~4)."
-                    )
-            else:
-                if dl_in_ind >= 6 and dl_in_ind != _dl_val(f_out_dl)[0]:
-                    raise ValueError(
-                        f"The specified input data level '{dl_in_name}' of added process \
-                            is inconsistent with the output data level '{f_out_dl}' of the previous process, \
-                            they must be identical."
-                    )
-        if l_in_dl is not None:
-            if _dl_val(l_in_dl)[0] <= 4:
-                if dl_out_ind > 4:
-                    raise ValueError(
-                        f"The specified output data level '{dl_out_name}' of added process \
-                            is inconsistent with the input data level '{l_in_dl}' of the subsequent process, \
-                            the output data level of added process must be image levels (0~4)."
-                    )
-            if _dl_val(l_in_dl)[0] >= 6 and dl_out_ind != _dl_val(l_in_dl)[0]:
-                raise ValueError(
-                    f"The specified output data level '{dl_out_name}' of added process \
-                        is inconsistent with the input data level '{l_in_dl}' of the subsequent process, \
-                        they must be identical."
-                )
-
-        # Generate process number
         proc_num_new = max(existed_proc_num) + 1
 
         # Build process ID
         proc_id = str(dl_in_ind) + "_" + str(application_sequence) + "_%#" + str(proc_num_new)
 
-        # Validate Process
+        # Add preprocess - validate preprocess method
         if dl_out_ind < 8:
             try:
-                proc_method = self._process_validator(method, input_data_level, output_data_level)
+                proc_method = _process_validator(
+                    method=method,
+                    input_data_level=input_data_level,
+                    output_data_level=output_data_level,
+                    pretest_data=self.pretest_data,
+                    standalone_specs_sample=self.spec_exp.standalone_specs_sample,
+                    report_directory=self.report_directory,
+                )
             except Exception as e:
                 if test_error_raise:
                     raise ValueError(f"Method testing fails: \n{e}") from e
@@ -1468,7 +1359,7 @@ class SpecPipe:
                         f"Method fails on '{input_data_level}' testing data: \n{e}", UserWarning, stacklevel=2
                     )
 
-        # Model method constructor
+        # Add model - model method constructor
         else:
             # Get report dir
             report_dir = self.report_directory
@@ -1501,6 +1392,13 @@ class SpecPipe:
                     is_regression = True
                 except Exception:
                     is_regression = False
+
+            # Validate model instance
+            if is_regression:
+                _regressor_validator(method)
+            else:
+                _classifier_validator(method)
+
             # Generate process method for model evaluation
             proc_method = _ModelMethod(
                 model_label=model_label,
@@ -1720,8 +1618,8 @@ class SpecPipe:
         """
         # Create save dir
         report_dir = self.report_directory + "SpecPipe_configuration/"
-        if not os.path.exists(report_dir):
-            os.makedirs(report_dir)
+        if not os.path.exists(unc_path(report_dir)):
+            os.makedirs(unc_path(report_dir))
 
         # Get configs
         df_process = self.ls_process(print_result=False, return_result=True)
@@ -1729,14 +1627,14 @@ class SpecPipe:
         df_exec_chains, df_exec_chains_label = self.ls_chains(print_label=False, return_label=True)
 
         # Save configs
-        df_process.to_csv(report_dir + "SpecPipe_added_process.csv", index=False)
-        df_full_chains.to_csv(report_dir + "SpecPipe_full_factorial_chains_in_ID.csv", index=False)
-        df_full_chains_label.to_csv(report_dir + "SpecPipe_full_factorial_chains_in_label.csv", index=False)
-        df_exec_chains.to_csv(report_dir + "SpecPipe_exec_chains_in_ID.csv", index=False)
-        df_exec_chains_label.to_csv(report_dir + "SpecPipe_exec_chains_in_label.csv", index=False)
+        df_process.to_csv(unc_path(report_dir + "SpecPipe_added_process.csv"), index=False)
+        df_full_chains.to_csv(unc_path(report_dir + "SpecPipe_full_factorial_chains_in_ID.csv"), index=False)
+        df_full_chains_label.to_csv(unc_path(report_dir + "SpecPipe_full_factorial_chains_in_label.csv"), index=False)
+        df_exec_chains.to_csv(unc_path(report_dir + "SpecPipe_exec_chains_in_ID.csv"), index=False)
+        df_exec_chains_label.to_csv(unc_path(report_dir + "SpecPipe_exec_chains_in_label.csv"), index=False)
 
         # Save SpecPipe
-        with open(f"{report_dir}SpecPipe_pipeline_configuration_{self.create_time}.dill", 'wb') as f:
+        with open(unc_path(f"{report_dir}SpecPipe_pipeline_configuration_{self.create_time}.dill"), 'wb') as f:
             dill.dump(self, f)
 
         # Save copies
@@ -1745,12 +1643,16 @@ class SpecPipe:
             time.sleep(1.0)
             # Dump copy
             cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            df_process.to_csv(report_dir + f"SpecPipe_added_process_{cts}.csv", index=False)
-            df_full_chains.to_csv(report_dir + f"SpecPipe_full_factorial_chains_in_ID_{cts}.csv", index=False)
-            df_full_chains_label.to_csv(report_dir + f"SpecPipe_full_factorial_chains_in_label_{cts}.csv", index=False)
-            df_exec_chains.to_csv(report_dir + f"SpecPipe_exec_chains_in_ID_{cts}.csv", index=False)
-            df_exec_chains_label.to_csv(report_dir + f"SpecPipe_exec_chains_in_label_{cts}.csv", index=False)
-            with open(report_dir + f"SpecPipe_pipeline_configuration_{self.create_time}_copy_at_{cts}.dill", 'wb') as f:
+            df_process.to_csv(unc_path(report_dir + f"SpecPipe_added_process_{cts}.csv"), index=False)
+            df_full_chains.to_csv(unc_path(report_dir + f"SpecPipe_full_factorial_chains_in_ID_{cts}.csv"), index=False)
+            df_full_chains_label.to_csv(
+                unc_path(report_dir + f"SpecPipe_full_factorial_chains_in_label_{cts}.csv"), index=False
+            )
+            df_exec_chains.to_csv(unc_path(report_dir + f"SpecPipe_exec_chains_in_ID_{cts}.csv"), index=False)
+            df_exec_chains_label.to_csv(unc_path(report_dir + f"SpecPipe_exec_chains_in_label_{cts}.csv"), index=False)
+            with open(
+                unc_path(report_dir + f"SpecPipe_pipeline_configuration_{self.create_time}_copy_at_{cts}.dill"), 'wb'
+            ) as f:
                 dill.dump(self, f)
 
         # Save SpecExp
@@ -1792,7 +1694,7 @@ class SpecPipe:
             dump_path0 = config_file_path
 
         # Load to instance
-        with open(dump_path0, 'rb') as f:
+        with open(unc_path(dump_path0), 'rb') as f:
             loaded_instance = dill.load(f)
         self.__dict__.update(loaded_instance.__dict__)
 
@@ -2327,6 +2229,7 @@ class SpecPipe:
         return_result: bool = False,
         dump_result: bool = True,
         dump_backup: bool = False,
+        save_preprocessed_images: bool = False,
     ) -> Optional[dict]:
         """
         Run the pipeline of all processing chains using simplified test data. This method is executed automatically prior to each formal run.
@@ -2366,8 +2269,8 @@ class SpecPipe:
 
         # Preprocessed test image dir
         preprocessed_img_dir = self._spec_exp.report_directory + "test_run/Preprocessed_images/"
-        if not os.path.exists(preprocessed_img_dir):
-            os.makedirs(preprocessed_img_dir)
+        if not os.path.exists(unc_path(preprocessed_img_dir)):
+            os.makedirs(unc_path(preprocessed_img_dir))
 
         # Preprocessing test
         status_results: dict = _preprocessing_sample(  # type: ignore[call-overload]
@@ -2385,6 +2288,10 @@ class SpecPipe:
             is_test_run=True,
         )
         # Multiple dynamic bool switches passed to '_preprocessing_sample' that fails for type 'Literal' in overloads
+
+        # If not save preprocessed images, remove after test
+        if not save_preprocessed_images:
+            shutil.rmtree(preprocessed_img_dir)
 
         # Modeling test
         if test_modeling:
@@ -2452,7 +2359,7 @@ class SpecPipe:
                         )
 
                     # Save preprocess chain of sample_list
-                    with open(specpipe_report_directory + f"test_run/Preprocess_chain_#{pci}.txt", "w") as f:
+                    with open(unc_path(specpipe_report_directory + f"test_run/Preprocess_chain_#{pci}.txt"), "w") as f:
                         for ppci, pproc in enumerate(status_result[1]):
                             if ppci < (len(status_result[1]) - 1):
                                 f.write(f"{pproc}\n")
@@ -2466,8 +2373,8 @@ class SpecPipe:
                         test_data_range: float = float(np.nanmax(tsample) - np.nanmin(tsample))
                         # Model report dir
                         model_report_dir = specpipe_report_directory + "test_run/"
-                        if not os.path.exists(model_report_dir):
-                            os.makedirs(model_report_dir)
+                        if not os.path.exists(unc_path(model_report_dir)):
+                            os.makedirs(unc_path(model_report_dir))
                         # Build testing sample list
                         assert hasattr(model_methodi, 'is_regression')
                         if model_methodi.is_regression:
@@ -2528,6 +2435,7 @@ class SpecPipe:
         save_config: bool = True,
         summary: bool = True,
         geo_reference_warning: bool = False,
+        skip_test: bool = False,
     ) -> None:
         """
         Implement preprocessing steps of all processing chains on the entire dataset and output modeling-ready sample_list data to files.
@@ -2570,6 +2478,9 @@ class SpecPipe:
 
         geo_reference_warning: bool, optional
             Whether to suppress GeoReferenceWarning, if False, the warning is suppressed. The default is False.
+
+        skip_test: bool, optional
+            Whether skip test execution completely. Test execution valiates every processing chain and serves as a safeguard against runtime errors in a long formal execution.
         """  # noqa: E501
         # Prompt "if __name__ == '__main__':" protection for windows multiprocessing
         if n_processor > 1:
@@ -2597,16 +2508,16 @@ class SpecPipe:
             self.save_pipe_config(copy=True)
 
         # Added chain testing
-        if not self.tested:
-            self.test_run(test_modeling=True, return_result=False, dump_result=False, dump_backup=False)
+        if not self.tested and not skip_test:
+            self.test_run(test_modeling=False, return_result=False, dump_result=False, dump_backup=False)
 
         # Default result_directory
         if result_directory == "":
             result_directory = self._spec_exp.report_directory
         # Preprocessed image dir for data level 0~4
         preprocessed_img_dir = result_directory + "Preprocessing/Preprocessed_images/"
-        if not os.path.exists(preprocessed_img_dir):
-            os.makedirs(preprocessed_img_dir)
+        if not os.path.exists(unc_path(preprocessed_img_dir)):
+            os.makedirs(unc_path(preprocessed_img_dir))
 
         # Preprocessing
         self._preprocessor(
@@ -2676,23 +2587,25 @@ class SpecPipe:
         # Validate result_directory / report_directory
         # Step dir for chain results
         step_dir = result_directory + "Preprocessing/Step_results/"
-        if not os.path.exists(step_dir):
-            os.makedirs(step_dir)
+        if not os.path.exists(unc_path(step_dir)):
+            os.makedirs(unc_path(step_dir))
         # log dir for resume
         log_dir_path = step_dir + "Preprocess_progress_logs/"
-        if not os.path.exists(log_dir_path):
-            os.makedirs(log_dir_path)
+        if not os.path.exists(unc_path(log_dir_path)):
+            os.makedirs(unc_path(log_dir_path))
 
         # Check running log and subset sample data
         if not resume:
             rest_sample_data = self.sample_data
         else:
-            if not os.path.exists(log_dir_path):
-                os.makedirs(log_dir_path)
+            if not os.path.exists(unc_path(log_dir_path)):
+                os.makedirs(unc_path(log_dir_path))
                 finished_samples = []
             else:
                 finished_samples = [
-                    f.split(".")[0] for f in os.listdir(log_dir_path) if os.path.isfile(log_dir_path + f)
+                    f.split(".")[0]
+                    for f in os.listdir(unc_path(log_dir_path))
+                    if os.path.isfile(unc_path(log_dir_path + f))
                 ]
                 existed_samples = [sd["ID"] for sd in self.sample_data]
                 finished_samples = [sdid for sdid in finished_samples if sdid in existed_samples]
@@ -2739,8 +2652,8 @@ class SpecPipe:
         else:
             # Initialize errorlogs dir for err handling in parallel computing
             errorlog_path = result_directory + "Preprocessing/Step_results/Error_logs/"
-            if os.path.exists(errorlog_path):
-                shutil.rmtree(errorlog_path)
+            if os.path.exists(unc_path(errorlog_path)):
+                shutil.rmtree(unc_path(errorlog_path))
             # Validate number of processors to use
             ncpu_max = max(cpu_count() - 1, 1)
             ncpu = min(n_processor, ncpu_max)
@@ -2777,7 +2690,7 @@ class SpecPipe:
                     )
                 )
             # Collect and print errors if exist
-            if os.path.exists(errorlog_path):
+            if os.path.exists(unc_path(errorlog_path)):
                 raise ValueError(
                     f"\nPreprocessing errors, please check error logs in the following path:\n{errorlog_path}"
                 )
@@ -2790,14 +2703,14 @@ class SpecPipe:
             for pti in preprocess_result_paths:
                 if type(pti) is not str:
                     raise TypeError(f"\nResult file path must be str, got path: {pti}, with type: {type(pti)}")
-                elif not os.path.exists(pti):
+                elif not os.path.exists(unc_path(pti)):
                     raise ValueError(f"\nGot invalid path: {pti}")
             # Update preprocess result file paths
             self._preprocess_result_path = preprocess_result_paths
 
         # Clear log after finishing whole preprocessing
-        if os.path.exists(log_dir_path):
-            shutil.rmtree(log_dir_path)
+        if os.path.exists(unc_path(log_dir_path)):
+            shutil.rmtree(unc_path(log_dir_path))
 
     # Step results to modeling-ready sample_list data
     @simple_type_validator
@@ -2811,8 +2724,8 @@ class SpecPipe:
         if result_directory == "":
             result_directory = self._spec_exp.report_directory
         preprocess_result_dir = result_directory + "Preprocessing/"
-        if not os.path.exists(preprocess_result_dir):
-            os.makedirs(preprocess_result_dir)
+        if not os.path.exists(unc_path(preprocess_result_dir)):
+            os.makedirs(unc_path(preprocess_result_dir))
 
         # Validate preprocessing result file paths
         sd_paths = [
@@ -2820,7 +2733,7 @@ class SpecPipe:
             for sd in self.sample_data
         ]
         for sdp in sd_paths:
-            if not os.path.exists(sdp):
+            if not os.path.exists(unc_path(sdp)):
                 raise ValueError(f"\nPreprocessing step result file path not found : \n{sdp}\n")
 
         ## Chain results to sample_list data
@@ -2837,7 +2750,7 @@ class SpecPipe:
             pchain = pchains[pci]
             pre_results = []
             for spath in sd_paths:
-                sdata = load_vars(spath)
+                sdata = load_vars(unc_path(spath))
                 status_results = sdata["status_results"][-1]
                 # Sample ID and sample target value
                 sample_id = sdata["ID"]
@@ -2866,7 +2779,7 @@ class SpecPipe:
             # Sample_list item: (0 - Sample id, 1 - Original shape, 2 - Target value, 3 - Sample predictor value)
             # Typing: list[tuple[str, tuple[int], Union[str,int,bool,float], Annotated[Any,arraylike_validator(ndim=1)]]]  # noqa: E501
             res_path_dill = preprocess_result_dir + chain_name1 + ".dill"
-            dump_vars(res_path_dill, {"chain_ind": pci, "chain_procs": pchain, "chain_res": pre_results})
+            dump_vars(unc_path(res_path_dill), {"chain_ind": pci, "chain_procs": pchain, "chain_res": pre_results})
 
             # Save results to CSV
             if to_csv:
@@ -2900,12 +2813,12 @@ class SpecPipe:
     def _cl_step_result(self, result_directory: str) -> None:
         # Step dir for chain results
         step_dir = result_directory + "Preprocessing/Step_results/"
-        if os.path.exists(step_dir):
+        if os.path.exists(unc_path(step_dir)):
             for item in os.listdir(step_dir):
                 if "PreprocessingChainResult_" in str(item):
                     item_path = os.path.join(step_dir, item)
                     try:
-                        if os.path.isfile(item_path):
+                        if os.path.isfile(unc_path(item_path)):
                             os.remove(item_path)
                     except Exception as e:
                         print(f"Error in removing '{item_path}': \n{e}")
@@ -3004,12 +2917,12 @@ class SpecPipe:
             result_directory = self._spec_exp.report_directory
         # Preprocessing dir
         preprocess_result_dir = result_directory + "Preprocessing/"
-        if not os.path.exists(preprocess_result_dir):
+        if not os.path.exists(unc_path(preprocess_result_dir)):
             raise ValueError(f"\nPreprocessing result directory not found, got path:\n{preprocess_result_dir}")
         # Modeling dir
         model_result_dir = result_directory + "Modeling/"
-        if not os.path.exists(model_result_dir):
-            os.makedirs(model_result_dir)
+        if not os.path.exists(unc_path(model_result_dir)):
+            os.makedirs(unc_path(model_result_dir))
 
         # Validate models
         model_procs = [proc for proc in self.process if proc[3] == "model"]
@@ -3029,9 +2942,9 @@ class SpecPipe:
         ]
         pchains_f = []
         for pci, cdp in enumerate(cd_paths):
-            if not os.path.exists(cdp):
+            if not os.path.exists(unc_path(cdp)):
                 raise ValueError(f"\nPreprocessing result file of chain {pchains[pci]} not found, path : \n{cdp}\n")
-            cprocs = load_vars(cdp)["chain_procs"]
+            cprocs = load_vars(unc_path(cdp))["chain_procs"]
             pchains_f.append(cprocs)
         spcs = set(pchains)
         spcf = set(pchains_f)
@@ -3048,13 +2961,13 @@ class SpecPipe:
             # Clear log
             self._clear_model_log(log_path)
         else:
-            if not os.path.exists(log_path):
+            if not os.path.exists(unc_path(log_path)):
                 rest_cd_paths = cd_paths
             else:
-                modeling_progress_log = load_vars(log_path)["modeling_progress_log"]
+                modeling_progress_log = load_vars(unc_path(log_path))["modeling_progress_log"]
                 rest_cd_paths = []
                 for cdp in cd_paths:
-                    cprocs = load_vars(cdp)["chain_procs"]
+                    cprocs = load_vars(unc_path(cdp))["chain_procs"]
                     if cprocs not in modeling_progress_log:
                         rest_cd_paths.append(cdp)
             if len(rest_cd_paths) == 0:
@@ -3068,7 +2981,7 @@ class SpecPipe:
                     # Progress
                     if show_progress:
                         print(f"\nModeling preprocessing result {pci + 1}/{len(rest_cd_paths)} :")
-                    pc_it = load_vars(cdp)
+                    pc_it = load_vars(unc_path(cdp))
                     pc_sample_list = pc_it["chain_res"]
                     pc_sample_list = _target_type_validation_for_serialization(pc_sample_list)
                     pchain = pc_it["chain_procs"]
@@ -3088,17 +3001,17 @@ class SpecPipe:
                 except Exception as e:
                     # Validate report directory
                     model_result_dir = result_directory + "Modeling/"
-                    if not os.path.exists(model_result_dir):
-                        os.makedirs(model_result_dir)
+                    if not os.path.exists(unc_path(model_result_dir)):
+                        os.makedirs(unc_path(model_result_dir))
                     errdir = model_result_dir + "Error_logs/"
-                    if not os.path.exists(errdir):
-                        os.makedirs(errdir)
+                    if not os.path.exists(unc_path(errdir)):
+                        os.makedirs(unc_path(errdir))
                     cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                     pid = os.getpid()
                     error_log_path = errdir + f"error_{cts}_pid_{pid}.log"
                     err_msg = f"\nFailed in the modeling of preprocessing chain from path '{cdp}', \
                                 error message: \n\n{str(e)}\n"
-                    with open(error_log_path, "w") as f:
+                    with open(unc_path(error_log_path), "w") as f:
                         f.write(err_msg)
                     raise ValueError(e) from e
 
@@ -3106,8 +3019,8 @@ class SpecPipe:
         else:
             # Initialize errorlogs dir for err handling in parallel computing
             errorlog_path = model_result_dir + "Error_logs/"
-            if os.path.exists(errorlog_path):
-                shutil.rmtree(errorlog_path)
+            if os.path.exists(unc_path(errorlog_path)):
+                shutil.rmtree(unc_path(errorlog_path))
             # Validate number of processors to use
             ncpu_max = max(cpu_count() - 1, 1)
             ncpu = min(n_processor, ncpu_max)
@@ -3122,6 +3035,7 @@ class SpecPipe:
                 # Assign applied functions
                 _model_evaluator=_model_evaluator,
                 _dl_val=_dl_val,
+                unc_path=unc_path,
                 load_vars=load_vars,
                 dump_vars=dump_vars,
                 _target_type_validation_for_serialization=_target_type_validation_for_serialization,
@@ -3137,7 +3051,7 @@ class SpecPipe:
                 ):
                     pass
             # Collect and print errors if exist
-            if os.path.exists(errorlog_path):
+            if os.path.exists(unc_path(errorlog_path)):
                 raise ValueError(
                     f"\nPreprocessing errors, please check error logs in the following path:\n{errorlog_path}"
                 )
@@ -3156,13 +3070,14 @@ class SpecPipe:
         # Performance summary and marginal performance stats
         if summary:
             _ = performance_marginal_stats(self.report_directory)
+            _ = combined_model_marginal_stats(self.report_directory)
 
     @staticmethod
     def _clear_model_log(log_path: str) -> None:
         # Clear log when finished
-        if os.path.exists(log_path):
+        if os.path.exists(unc_path(log_path)):
             try:
-                os.remove(log_path)
+                os.remove(unc_path(log_path))
             except PermissionError as e:
                 raise PermissionError(f"\nNo permission to clear existed running log : \n'{log_path}'.\n") from e
             except Exception as e:
@@ -3172,18 +3087,19 @@ class SpecPipe:
         # Save dir
         save_dir = f"{result_dir}/Modeling/".replace("//", "/")
         # Validate save dir
-        if os.path.exists(save_dir):
-            self.spec_exp.sample_targets_to_csv(save_dir + "sample_targets.csv")
+        if os.path.exists(unc_path(save_dir)):
+            self.spec_exp.sample_targets_to_csv(unc_path(save_dir + "sample_targets.csv"))
         else:
-            os.makedirs(save_dir)
-            self.spec_exp.sample_targets_to_csv(save_dir + "sample_targets.csv")
+            os.makedirs(unc_path(save_dir))
+            self.spec_exp.sample_targets_to_csv(unc_path(save_dir + "sample_targets.csv"))
             # raise ValueError(f"Invalid modeling result directory: {save_dir}")
 
     @simple_type_validator
-    def run(
+    def run(  # noqa: C901
         self,
         result_directory: str = "",
         n_processor: int = -1,
+        test_model: bool = True,
         pipe_parallel_for_modeling: bool = False,
         dump_backup: bool = False,
         step_result: bool = True,
@@ -3194,6 +3110,7 @@ class SpecPipe:
         save_config: bool = True,
         summary: bool = True,
         geo_reference_warning: bool = False,
+        skip_test: bool = False,
     ) -> None:
         """
         Run pipeline of given processes on SpecExp instance (corresponding manager of spectral experiment data).
@@ -3213,6 +3130,10 @@ class SpecPipe:
 
             Windows Note: When using n_processor > 1 on Windows, all main codes in the working script must be placed within block "if __name__ == '__main__':".
             This requirement comes from 'pathos', which uses dill for object serialization and is essential for parallel execution of the package functions.
+
+        test_model : bool, optional
+            Whether tests added models, if False, the model testing will be skipped. The default is True.
+            The tests use minimal sample sizes, this can cause error for some models.
 
         pipe_parallel_for_modeling : bool
             If True, the pipeline-level parallel computing is not applied to modeling.
@@ -3244,6 +3165,9 @@ class SpecPipe:
 
         geo_reference_warning: bool, optional
             Whether to suppress GeoReferenceWarning, if False, the warning is suppressed. The default is False.
+
+        skip_test: bool, optional
+            Whether skip test execution completely. Test execution valiates every processing chain and serves as a safeguard against runtime errors in a long formal execution.
         """  # noqa: E501
 
         # Validate processor
@@ -3280,8 +3204,9 @@ class SpecPipe:
             self.save_pipe_config(copy=True)
 
         # Test process
-        print("\n========= Test added chains =========\n")
-        self.test_run()
+        if not skip_test:
+            print("\n========= Test added chains =========\n")
+            self.test_run(test_modeling=test_model)
 
         # Preprocessing
         print("\n========= Preprocessing samples =========\n")
@@ -3298,6 +3223,7 @@ class SpecPipe:
             save_config=False,
             summary=summary,
             geo_reference_warning=geo_reference_warning,
+            skip_test=skip_test,
         )
 
         # Model evaluation
@@ -3342,8 +3268,10 @@ class SpecPipe:
                 - Marginal macro- and micro-average AUC of the steps with multiple processes.
         """  # noqa: E501
         # Validate pipeline running completion
-        if os.path.exists(self.report_directory + "Modeling/sample_targets_stats.csv"):
-            return group_stats_report(self.report_directory)
+        if os.path.exists(unc_path(self.report_directory + "Modeling/sample_targets_stats.csv")):
+            result = group_stats_report(self.report_directory)
+            assert isinstance(result, dict)
+            return result
         else:
             print("Unfinished or incomplete pipeline running results. Cannot retrieve summary reports.")
             return {}
@@ -3369,8 +3297,10 @@ class SpecPipe:
                 - ROC curves
         """
         # Validate pipeline running completion
-        if os.path.exists(self.report_directory + "Modeling/sample_targets_stats.csv"):
-            return core_chain_report(self.report_directory)
+        if os.path.exists(unc_path(self.report_directory + "Modeling/sample_targets_stats.csv")):
+            result = core_chain_report(self.report_directory)
+            assert isinstance(result, list)
+            return result
         else:
             print("Unfinished or incomplete pipeline running results. Cannot retrieve chain reports.")
             return []

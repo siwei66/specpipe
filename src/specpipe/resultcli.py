@@ -14,6 +14,9 @@ import dill
 # Plot
 import matplotlib.pyplot as plt
 
+# Local
+from .specio import simple_type_validator, unc_path
+
 # CLI requirements
 # ------
 # Decoupled from SpecPipe for isolated access e.g. cross-console usage
@@ -32,26 +35,28 @@ import matplotlib.pyplot as plt
 
 
 # Get file paths
+@simple_type_validator
 def _get_file_path(target_dir_path: str, match_string: str = "") -> list[str]:
     """Get file path within a target_dir_path matching filename and the 'match_string'."""
     file_paths = []
-    for root, _, files in os.walk(target_dir_path):
+    for root, _, files in os.walk(unc_path(target_dir_path)):
         for file in files:
             if match_string in str(file):
-                file_path = str(os.path.join(root, file)).replace("\\", "/")
-                file_paths.append(file_path)
+                file_path = str(os.path.join(root, file))
+                file_paths.append(unc_path(file_path))
     return file_paths
 
 
 # Get dir paths
+@simple_type_validator
 def _get_dir_path(target_dir_path: str, match_string: str = "") -> list[str]:
     """Get directory path within a target_dir_path matching directory name and the 'match_string'."""
     dir_paths = []
-    for root, dirs, _ in os.walk(target_dir_path):
+    for root, dirs, _ in os.walk(unc_path(target_dir_path)):
         for directory in dirs:
             if match_string == str(directory):
-                dir_path = str(os.path.join(root, directory)).replace("\\", "/")
-                dir_paths.append(dir_path)
+                dir_path = str(os.path.join(root, directory))
+                dir_paths.append(unc_path(dir_path))
     return dir_paths
 
 
@@ -59,18 +64,20 @@ def _get_dir_path(target_dir_path: str, match_string: str = "") -> list[str]:
 
 
 # Reading group statistics
+@simple_type_validator
 def group_stats_report(specpipe_report_dir: str) -> dict:
     """Access major SpecPipe group statistics reports from SpecPipe report directory"""
     resulting_report: dict = {}
     data_paths = _get_file_path(specpipe_report_dir, ".__specpipe_result_summary_")
     for data_path in data_paths:
         data_name = str(os.path.basename(data_path)).replace(".__specpipe_result_summary_", "").replace(".dill", "")
-        with open(data_path, 'rb') as f:
+        with open(unc_path(data_path), 'rb') as f:
             resulting_report[data_name] = dill.load(f)
     return resulting_report
 
 
 # Reading core chain results
+@simple_type_validator
 def core_chain_report(specpipe_report_dir: str) -> list[dict]:
     """Access major SpecPipe core processing chain reports from SpecPipe report directory"""
     # Get chain report dir paths
@@ -79,7 +86,9 @@ def core_chain_report(specpipe_report_dir: str) -> list[dict]:
     # Filter chain dir paths
     chain_dir_paths = []
     for dir_path in data_dir_paths:
-        if 'test_run' not in dir_path and ".__specpipe_core_result_Chain_process_info.dill" in os.listdir(dir_path):
+        if ('test_run' not in dir_path) and (
+            ".__specpipe_core_result_Chain_process_info.dill" in os.listdir(unc_path(dir_path))
+        ):
             chain_dir_paths.append(dir_path)
 
     # Turn off plot display in loading
@@ -97,7 +106,7 @@ def core_chain_report(specpipe_report_dir: str) -> list[dict]:
 
         # Get chain info
         chain_info_path = dir_path + "/.__specpipe_core_result_Chain_process_info.dill"
-        with open(chain_info_path, 'rb') as f:
+        with open(unc_path(chain_info_path), 'rb') as f:
             chain_info = dill.load(f)
             model_name = chain_info.iloc[-1, 1]
         chain_report: dict = {}
@@ -109,7 +118,7 @@ def core_chain_report(specpipe_report_dir: str) -> list[dict]:
             # Remove model name
             data_name = data_name.replace("_" + model_name, "")
             if data_name != 'Chain_process_info':
-                with open(data_path, 'rb') as f:
+                with open(unc_path(data_path), 'rb') as f:
                     chain_report[data_name] = dill.load(f)
 
         resulting_report.append(chain_report)

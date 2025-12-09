@@ -24,7 +24,7 @@ from scipy.stats import mannwhitneyu
 
 # Local
 from .roistats import Stats2d
-from .specio import RealNumber, simple_type_validator
+from .specio import RealNumber, simple_type_validator, unc_path
 
 
 # %% Experiment group sample data statistics for a chain
@@ -49,7 +49,7 @@ def chain_sample_group_stats(  # noqa: C901
 
     # Validate input and output paths
     # Sample data path
-    if not os.path.exists(sample_data_path):
+    if not os.path.exists(unc_path(sample_data_path)):
         raise ValueError(f"Invalid path of 'sample_data_path': {sample_data_path}")
     sdata_path_name, sdata_path_ext = os.path.splitext(sample_data_path)
     if str(sdata_path_ext).lower() != ".csv":
@@ -61,17 +61,17 @@ def chain_sample_group_stats(  # noqa: C901
             \nExpected: {preprocessing_chain_index}, Got: {cind}"
         )
     # Sample target path
-    if not os.path.exists(sample_target_path):
+    if not os.path.exists(unc_path(sample_target_path)):
         raise ValueError(f"Invalid path of 'sample_target_path': {sample_target_path}")
     if str(os.path.splitext(sample_target_path)[1]).lower() != ".csv":
         raise ValueError("Sample data CSV file extension '.csv' is missing in the given 'sample_target_path'")
     # Output dir path
-    if not os.path.exists(output_directory):
+    if not os.path.exists(unc_path(output_directory)):
         raise ValueError(f"Invalid path of 'output_directory': {output_directory}")
     write_dir = output_directory
 
     # Read preprocessed data
-    df_preprocessed = pd.read_csv(sample_data_path, header=0).iloc[:, 1:]
+    df_preprocessed = pd.read_csv(unc_path(sample_data_path), header=0).iloc[:, 1:]
     # Validate columns
     if len(df_preprocessed.columns) > 3:
         if list(df_preprocessed.columns)[0:3] == ["Sample_ID", "X_shape", "y"]:
@@ -82,7 +82,7 @@ def chain_sample_group_stats(  # noqa: C901
         raise ValueError(f"Invalid sample data columns: {df_preprocessed.columns}")
 
     # Read sample groups
-    df_sample_targets = pd.read_csv(sample_target_path)
+    df_sample_targets = pd.read_csv(unc_path(sample_target_path))
     # Validate columns
     if list(df_sample_targets.columns) == ['Sample_ID', 'Label', 'Target_value', 'Group']:
         pass
@@ -171,19 +171,19 @@ def chain_sample_group_stats(  # noqa: C901
         # Save results
         # Save target stats
         df_ystats.to_csv(
-            write_dir + f"PreprocessingChainResult_chain_ind_{preprocessing_chain_index}_y_stats.csv",
+            unc_path(write_dir + f"PreprocessingChainResult_chain_ind_{preprocessing_chain_index}_y_stats.csv"),
             index=False,
         )
         # Dump y stats dill (specpipe private)
         dill_result_path = write_dir + ".__specpipe_dill_data/.__specpipe_result_summary_sample_targets_stats.dill"
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
-        dill.dump(df_ystats, open(dill_result_path, "wb"))
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
+        dill.dump(df_ystats, open(unc_path(dill_result_path), "wb"))
         # Save X stats
         for m in list(gstats.keys()):
             dfm = df_xstats_dict[m]
             dfm.to_csv(
-                write_dir + f"PreprocessingChainResult_chain_ind_{preprocessing_chain_index}_X_{m}.csv",
+                unc_path(write_dir + f"PreprocessingChainResult_chain_ind_{preprocessing_chain_index}_X_{m}.csv"),
                 index=False,
             )
 
@@ -232,19 +232,21 @@ def chain_sample_group_stats(  # noqa: C901
         # Save results
         # Save target stats
         df_ystats.to_csv(
-            write_dir + f"PreprocessingChainResult_chain_ind_{preprocessing_chain_index}_y_stats.csv", index=False
+            unc_path(write_dir + f"PreprocessingChainResult_chain_ind_{preprocessing_chain_index}_y_stats.csv"),
+            index=False,
         )
         # Dump y stats dill (specpipe private)
         dill_result_path = write_dir + ".__specpipe_dill_data/.__specpipe_result_summary_sample_targets_stats.dill"
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
-        dill.dump(df_ystats, open(dill_result_path, "wb"))
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
+        dill.dump(df_ystats, open(unc_path(dill_result_path), "wb"))
 
         # Save X stats
         for m in list(gstats_x.keys()):
             dfm = df_xstats_dict[m]
             dfm.to_csv(
-                write_dir + f"PreprocessingChainResult_chain_ind_{preprocessing_chain_index}_X_{m}.csv", index=False
+                unc_path(write_dir + f"PreprocessingChainResult_chain_ind_{preprocessing_chain_index}_X_{m}.csv"),
+                index=False,
             )
 
 
@@ -278,15 +280,17 @@ def sample_group_stats(  # noqa: C901
         output_directory = sample_data_dir
 
     # Validate report file and dir paths
-    if not os.path.exists(sample_data_dir):
+    if not os.path.exists(unc_path(sample_data_dir)):
         raise ValueError(f"Missing required file in given pipeline_config_dir: {sample_data_dir}")
-    if not os.path.exists(sample_target_path):
+    if not os.path.exists(unc_path(sample_target_path)):
         raise ValueError(f"Missing required file in given pipeline_config_dir: {sample_target_path}")
-    if not os.path.exists(output_directory):
+    if not os.path.exists(unc_path(output_directory)):
         raise ValueError(f"Missing required file in given pipeline_config_dir: {output_directory}")
 
     # Scan preprocessing result files
-    preprocessing_fns = [str(entry.name) for entry in os.scandir(sample_data_dir) if len(str(entry.name)) > 39]
+    preprocessing_fns = [
+        str(entry.name) for entry in os.scandir(unc_path(sample_data_dir)) if len(str(entry.name)) > 39
+    ]
     chain_result_fns = []
     for fn in preprocessing_fns:
         if (fn[-4:] == ".csv") and (fn[:35] == "PreprocessingChainResult_chain_ind_"):
@@ -315,24 +319,30 @@ def sample_group_stats(  # noqa: C901
 
     # Add y stats to modeling targets dir
     shutil.copyfile(
-        f"{output_directory}PreprocessingChainResult_chain_ind_0_y_stats.csv",
-        f"{sample_target_path[:-4] + '_stats' + sample_target_path[-4:]}",
+        unc_path(f"{output_directory}PreprocessingChainResult_chain_ind_0_y_stats.csv"),
+        unc_path(f"{sample_target_path[:-4] + '_stats' + sample_target_path[-4:]}"),
     )
 
 
 # %% Process ID label converters
 
 
-def process_id_to_label(process_id: str, pipeline_config_dir: str) -> str:
+def process_id_to_label(process_id: str, pipeline_config_dir: str, ignore: bool = False) -> str:
     """
-    Convert unique SpecPipe process ID to process label.
+    Convert unique SpecPipe process ID to process label. If ignore True, return input if input is not id.
     """
     config_dir = (pipeline_config_dir + "/").replace("//", "/")
-    df_proc = pd.read_csv(config_dir + "SpecPipe_added_process.csv")
+    df_proc = pd.read_csv(unc_path(config_dir + "SpecPipe_added_process.csv"))
     process_labels = list(df_proc["Method"][df_proc["ID"] == process_id])
-    if len(process_labels) < 1:
-        raise ValueError(f"No label found for given process ID: {process_id}")
-    return str(process_labels[0])
+    if not ignore:
+        if len(process_labels) < 1:
+            raise ValueError(f"No label found for given process ID: {process_id}")
+        return str(process_labels[0])
+    else:
+        if len(process_labels) < 1:
+            return process_id
+        else:
+            return str(process_labels[0])
 
 
 def process_label_to_id(process_label: str, pipeline_config_dir: str) -> str:
@@ -354,7 +364,7 @@ def process_label_to_id(process_label: str, pipeline_config_dir: str) -> str:
             pass
     # Convert label to ID
     config_dir = (pipeline_config_dir + "/").replace("//", "/")
-    df_proc = pd.read_csv(config_dir + "SpecPipe_added_process.csv")
+    df_proc = pd.read_csv(unc_path(config_dir + "SpecPipe_added_process.csv"))
     process_ids = list(df_proc["ID"][df_proc["Method"] == process_label])
     if len(process_ids) > 1:
         raise ValueError(
@@ -383,14 +393,14 @@ def performance_metrics_summary(  # noqa: C901
     chains_label_path = config_dir + "SpecPipe_exec_chains_in_label.csv"
 
     # Validate paths
-    if not os.path.exists(chains_id_path):
+    if not os.path.exists(unc_path(chains_id_path)):
         raise ValueError(f"Missing required file in given pipeline_config_dir: {chains_id_path}")
-    if not os.path.exists(chains_label_path):
+    if not os.path.exists(unc_path(chains_label_path)):
         raise ValueError(f"Missing required file in given pipeline_config_dir: {chains_label_path}")
 
     # Chains
-    df_cid = pd.read_csv(chains_id_path)
-    df_clab = pd.read_csv(chains_label_path)
+    df_cid = pd.read_csv(unc_path(chains_id_path))
+    df_clab = pd.read_csv(unc_path(chains_label_path))
 
     # Validate results
     # Configuration chains
@@ -405,14 +415,14 @@ def performance_metrics_summary(  # noqa: C901
     # Reconstruct chains
     dir_names = [
         entry.name
-        for entry in os.scandir(report_dir)
+        for entry in os.scandir(unc_path(report_dir))
         if entry.is_dir() and "Data_chain_Preprocessing_#" in entry.name and "_Model_" in entry.name
     ]
     if len(dir_names) < 1:
         raise ValueError(f"No model evaluation report found in the given report path: {report_dir}")
     chain_txt_names = [
         entry.name
-        for entry in os.scandir(report_dir)
+        for entry in os.scandir(unc_path(report_dir))
         if entry.is_file() and ".txt" in entry.name and "Preprocessing_#" in entry.name
     ]
     if len(chain_txt_names) < 1:
@@ -445,10 +455,10 @@ def performance_metrics_summary(  # noqa: C901
         else:
             raise ValueError(
                 f"None or multiple preprocessing chain file found for 'Preprocessing_#{chain_num}', \
-                             got: {chain_txt}"
+                    got: {chain_txt}"
             )
         # Get preprocessing chain
-        with open(report_dir + chain_txt, "r", encoding="utf-8") as f:
+        with open(unc_path(report_dir + chain_txt), "r", encoding="utf-8") as f:
             steps_list: list = [line.strip() for line in f.readlines()]
         steps: tuple = tuple(steps_list + [model_name])
         # Add to full chain
@@ -479,16 +489,16 @@ def performance_metrics_summary(  # noqa: C901
         df_cprocs = pd.DataFrame({"Chain_in_process_ID": cprocs_in_id, "Chain_in_process_label": cprocs_in_label})
         # Dump dill (specpipe private)
         dill_result_path = metrics_dir + ".__specpipe_dill_data/.__specpipe_core_result_Chain_process_info.dill"
-        if not os.path.exists(os.path.dirname(dill_result_path)):
-            os.makedirs(os.path.dirname(dill_result_path))
-        dill.dump(df_cprocs, open(dill_result_path, "wb"))
+        if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+            os.makedirs(unc_path(os.path.dirname(dill_result_path)))
+        dill.dump(df_cprocs, open(unc_path(dill_result_path), "wb"))
         # Read performance metrics
         metrics_filename = [
             entry.name
-            for entry in os.scandir(metrics_dir)
+            for entry in os.scandir(unc_path(metrics_dir))
             if f"_performance_{dir_name.split('_Model_')[-1]}.csv" in entry.name
         ][0]
-        df_metrics = pd.read_csv(f"{report_dir}{dir_name}/{metrics_filename}")
+        df_metrics = pd.read_csv(unc_path(f"{report_dir}{dir_name}/{metrics_filename}"))
         if "Classification_performance_" in metrics_filename:
             # micro metrics
             micro_metrics = (
@@ -561,13 +571,14 @@ def regression_performance_marginal_stats(
     metrics_dict: dict[str, Any],
     pipeline_config_dir: str,
     model_evaluation_report_dir: str,
+    validate_process: bool = True,
 ) -> dict[str, Any]:
     """
     Compute marginal performance statistics using the result dictionary from function 'performance_metrics_summary'.
     """
     # Validate model_evaluation_report_dir
     report_dir = (model_evaluation_report_dir.replace("\\", "/") + "/").replace("//", "/")
-    if not os.path.exists(report_dir):
+    if not os.path.exists(unc_path(report_dir)):
         raise ValueError(f"Invalid 'model_evaluation_report_dir': {report_dir}")
 
     # Get summarized metrics data and corresponding chains
@@ -599,7 +610,8 @@ def regression_performance_marginal_stats(
             "All",
         ] + step_process_ids
         step_gstats_r2.loc[0, :] = ["Process_label", "All"] + [
-            process_id_to_label(proc_id, config_dir) for proc_id in step_gstats_r2.columns[2:]
+            process_id_to_label(proc_id, config_dir, ignore=(not validate_process))
+            for proc_id in step_gstats_r2.columns[2:]
         ]
         # Aggregate group of all records
         r2_all = list(df_reg_metrics.loc[:, "R2"])
@@ -629,22 +641,23 @@ def regression_performance_marginal_stats(
         marginal_performance_stats[step] = {"r2": step_gstats_r2, "summary": df_reg_metrics}
         # Save step result
         if len(step_process_ids) > 1:
-            step_gstats_r2.to_csv(report_dir + f"Marginal_R2_stats_{str(step).lower()}.csv", index=False)
+            step_gstats_r2.to_csv(unc_path(report_dir + f"Marginal_R2_stats_{str(step).lower()}.csv"), index=False)
             # Dump dill (specpipe private)
             dill_result_path = (
                 report_dir
                 + f".__specpipe_dill_data/.__specpipe_result_summary_Marginal_R2_stats_{str(step).lower()}.dill"
             )
-            if not os.path.exists(os.path.dirname(dill_result_path)):
-                os.makedirs(os.path.dirname(dill_result_path))
-            dill.dump(step_gstats_r2, open(dill_result_path, "wb"))
+            if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+                os.makedirs(unc_path(os.path.dirname(dill_result_path)))
+            dill.dump(step_gstats_r2, open(unc_path(dill_result_path), "wb"))
 
-    df_reg_metrics.to_csv(report_dir + "Performance_summary.csv", index=False)
+    # Save summary results used
+    df_reg_metrics.to_csv(unc_path(report_dir + "Performance_summary.csv"), index=False)
     # Dump dill (specpipe private)
     dill_result_path = report_dir + ".__specpipe_dill_data/.__specpipe_result_summary_Performance_summary.dill"
-    if not os.path.exists(os.path.dirname(dill_result_path)):
-        os.makedirs(os.path.dirname(dill_result_path))
-    dill.dump(df_reg_metrics, open(dill_result_path, "wb"))
+    if not os.path.exists(unc_path(os.path.dirname(dill_result_path))):
+        os.makedirs(unc_path(os.path.dirname(dill_result_path)))
+    dill.dump(df_reg_metrics, open(unc_path(dill_result_path), "wb"))
 
     return marginal_performance_stats
 
@@ -654,13 +667,14 @@ def classification_performance_marginal_stats(  # noqa: C901
     metrics_dict: dict[str, Any],
     pipeline_config_dir: str,
     model_evaluation_report_dir: str,
+    validate_process: bool = True,
 ) -> dict[str, Any]:
     """
     Compute marginal performance statistics using the result dictionary from function 'performance_metrics_summary'.
     """
     # Validate model_evaluation_report_dir
     report_dir = (model_evaluation_report_dir.replace("\\", "/") + "/").replace("//", "/")
-    if not os.path.exists(report_dir):
+    if not os.path.exists(unc_path(report_dir)):
         raise ValueError(f"Invalid 'model_evaluation_report_dir': {report_dir}")
 
     # Get summarized metrics data and corresponding chains
@@ -694,7 +708,8 @@ def classification_performance_marginal_stats(  # noqa: C901
             "All",
         ] + step_process_ids
         step_gstats_macauc.loc[0, :] = ["Process_label", "All"] + [
-            process_id_to_label(proc_id, config_dir) for proc_id in step_gstats_macauc.columns[2:]
+            process_id_to_label(proc_id, config_dir, ignore=(not validate_process))
+            for proc_id in step_gstats_macauc.columns[2:]
         ]
         step_gstats_micauc = step_gstats_macauc.copy(deep=True)
         step_gstats_micauc.loc[2:5, "Process_ID"] = [
@@ -746,9 +761,11 @@ def classification_performance_marginal_stats(  # noqa: C901
         # Save step result
         if len(step_process_ids) > 1:
             # Save macro-avg AUC
-            step_gstats_macauc.to_csv(report_dir + f"Marginal_macro_avg_AUC_stats_{str(step).lower()}.csv", index=False)
+            step_gstats_macauc.to_csv(
+                unc_path(report_dir + f"Marginal_macro_avg_AUC_stats_{str(step).lower()}.csv"), index=False
+            )
             # Dump dill (specpipe private)
-            dill_result_path = (
+            dill_result_path = unc_path(
                 report_dir
                 + ".__specpipe_dill_data/"
                 + f".__specpipe_result_summary_Marginal_macro_avg_AUC_stats_{str(step).lower()}.dill"
@@ -757,9 +774,11 @@ def classification_performance_marginal_stats(  # noqa: C901
                 os.makedirs(os.path.dirname(dill_result_path))
             dill.dump(step_gstats_macauc, open(dill_result_path, "wb"))
             # Save micro-avg AUC
-            step_gstats_micauc.to_csv(report_dir + f"Marginal_micro_avg_AUC_stats_{str(step).lower()}.csv", index=False)
+            step_gstats_micauc.to_csv(
+                unc_path(report_dir + f"Marginal_micro_avg_AUC_stats_{str(step).lower()}.csv"), index=False
+            )
             # Dump dill (specpipe private)
-            dill_result_path = (
+            dill_result_path = unc_path(
                 report_dir
                 + ".__specpipe_dill_data/"
                 + f".__specpipe_result_summary_Marginal_micro_avg_AUC_stats_{str(step).lower()}.dill"
@@ -773,18 +792,18 @@ def classification_performance_marginal_stats(  # noqa: C901
     marginal_performance_stats["micro_summary"] = df_micro_metrics
     # Save performance summary
     # Save macro-avg performance
-    df_macro_metrics.to_csv(report_dir + "Macro_avg_performance_summary.csv", index=False)
+    df_macro_metrics.to_csv(unc_path(report_dir + "Macro_avg_performance_summary.csv"), index=False)
     # Dump dill (specpipe private)
-    dill_result_path = (
+    dill_result_path = unc_path(
         report_dir + ".__specpipe_dill_data/.__specpipe_result_summary_Macro_avg_performance_summary.dill"
     )
     if not os.path.exists(os.path.dirname(dill_result_path)):
         os.makedirs(os.path.dirname(dill_result_path))
     dill.dump(df_macro_metrics, open(dill_result_path, "wb"))
     # Save micro-avg performance
-    df_micro_metrics.to_csv(report_dir + "Micro_avg_performance_summary.csv", index=False)
+    df_micro_metrics.to_csv(unc_path(report_dir + "Micro_avg_performance_summary.csv"), index=False)
     # Dump dill (specpipe private)
-    dill_result_path = (
+    dill_result_path = unc_path(
         report_dir + ".__specpipe_dill_data/.__specpipe_result_summary_Micro_avg_performance_summary.dill"
     )
     if not os.path.exists(os.path.dirname(dill_result_path)):

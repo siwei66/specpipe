@@ -32,6 +32,7 @@ from .specio import (
     search_file,
     shp_roi_coords,
     simple_type_validator,
+    unc_path,
 )
 from .specexp_vis import raster_rgb_preview
 
@@ -203,7 +204,7 @@ class SpecExp:
 
         # Report directory
         report_directory = (report_directory.replace("\\", "/") + "/").replace("//", "/")
-        report_directory_path = Path(report_directory)
+        report_directory_path = Path(unc_path(report_directory))
         if report_directory_path.is_dir() is False:
             raise ValueError(f"\nInvalid report_directory path: \n'{report_directory}'")
         self._report_directory: str = report_directory
@@ -263,7 +264,7 @@ class SpecExp:
     @report_directory.setter
     def report_directory(self, value: str) -> None:
         value = (value.replace("\\", "/") + "/").replace("//", "/")
-        value_path = Path(value)
+        value_path = Path(unc_path(value))
         if value_path.is_dir() is False:
             raise ValueError(f"\nreport_directory is invalid: \n'{value}'")
         self._report_directory = value
@@ -702,11 +703,11 @@ class SpecExp:
         # Report directory
         if self.log_loading:
             report_dir = self.report_directory + "SpecExp_configuration/Loading_history/"
-            if not os.path.isdir(report_dir):
-                os.makedirs(report_dir)
+            if not os.path.isdir(unc_path(report_dir)):
+                os.makedirs(unc_path(report_dir))
             # Save updating reports
-            df_all.to_csv(report_dir + "All_loaded_images_" + cts + ".csv", index=False)
-            df_load_report.to_csv(report_dir + "Loaded_images_" + cts + ".csv", index=False)
+            df_all.to_csv(unc_path(report_dir + "All_loaded_images_" + cts + ".csv"), index=False)
+            df_load_report.to_csv(unc_path(report_dir + "Loaded_images_" + cts + ".csv"), index=False)
 
     # Add raster image paths to an experiment group
     # Format of associated attribute:
@@ -778,7 +779,7 @@ class SpecExp:
 
             # Validate path
             for pathi in image_path_list:
-                if not os.path.exists(pathi):
+                if not os.path.exists(unc_path(pathi)):
                     raise ValueError(f"Given path does not exist: {pathi}")
 
             self._add_image_paths(group_name, mask_of, image_path_list)
@@ -822,7 +823,7 @@ class SpecExp:
 
             # Validate path
             for pathi in img_path_total:
-                if not os.path.exists(pathi):
+                if not os.path.exists(unc_path(pathi)):
                     raise ValueError(f"Given path does not exist: {pathi}")
 
             # Update images
@@ -1417,8 +1418,8 @@ class SpecExp:
 
         # Report dir
         report_dir = self.report_directory + "SpecExp_configuration/Loading_history/"
-        if not os.path.isdir(report_dir):
-            os.makedirs(report_dir)
+        if not os.path.isdir(unc_path(report_dir)):
+            os.makedirs(unc_path(report_dir))
 
         # Current time for saving reports
         cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -1455,8 +1456,8 @@ class SpecExp:
             # Report directory
             if self.log_loading:
                 # Save updating reports
-                df_all.to_csv(report_dir + "All_loaded_ROIs_" + cts + ".csv", index=False)
-                df_load_report.to_csv(report_dir + "Loaded_ROIs_" + cts + ".csv", index=False)
+                df_all.to_csv(unc_path(report_dir + "All_loaded_ROIs_" + cts + ".csv"), index=False)
+                df_load_report.to_csv(unc_path(report_dir + "Loaded_ROIs_" + cts + ".csv"), index=False)
                 # Print saved path
                 print("\nROI updating reports saved in: \n", report_dir)
 
@@ -1466,7 +1467,7 @@ class SpecExp:
         # Save err report
         if len(fail_err_list) > 0:
             df_err = pd.DataFrame(fail_err_list, columns=["Item", "Path", "Error_line", "Error_message"])
-            df_err.to_csv(report_dir + "_failed_ROI_loading_" + cts + ".csv", index=False)
+            df_err.to_csv(unc_path(report_dir + "_failed_ROI_loading_" + cts + ".csv"), index=False)
             # Print err
             print("\nLoading from following ROI files failed:\n", fail_list)
 
@@ -1735,7 +1736,7 @@ class SpecExp:
         existing_paths = []
         non_existing_paths = []
         for roi_path in roi_pathsi:
-            if os.path.exists(roi_path):
+            if os.path.exists(unc_path(roi_path)):
                 existing_paths.append(roi_path)
             else:
                 non_existing_paths.append(roi_path)
@@ -3111,8 +3112,8 @@ class SpecExp:
     def _update_sspecs_file(self, silent_run: bool = False, save_backup: bool = True) -> None:
         # Validate output directory
         wpath = self._report_directory + "Standalone_spectral_data/"
-        if not os.path.exists(wpath):
-            os.makedirs(wpath)
+        if not os.path.exists(unc_path(wpath)):
+            os.makedirs(unc_path(wpath))
 
         # Result to dataframes
         df_sspecs = pd.DataFrame(
@@ -3126,13 +3127,15 @@ class SpecExp:
 
         # Write to csv
         # Write current
-        df_sspecs_out.to_csv(wpath + f"Standalone_spectra_{self._create_time}.csv", index=False)
+        df_sspecs_out.to_csv(unc_path(wpath + f"Standalone_spectra_{self._create_time}.csv"), index=False)
 
         # Write backup
         # Current time for saving backups
         cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         if save_backup:
-            df_sspecs_out.to_csv(wpath + f"Standalone_spectra_{self._create_time}_backup_{cts}.csv", index=False)
+            df_sspecs_out.to_csv(
+                unc_path(wpath + f"Standalone_spectra_{self._create_time}_backup_{cts}.csv"), index=False
+            )
 
         # Print update reports
         if not silent_run:
@@ -3169,12 +3172,12 @@ class SpecExp:
         if ext.lower() != "csv":
             raise ValueError(f"\nThe file path must contain .csv extension: \n{dpath}")
         # Validate file existence
-        if not os.path.exists(dpath):
+        if not os.path.exists(unc_path(dpath)):
             raise ValueError(f"\nInvalid file path: \n{dpath}")
 
         # Validate structure
         try:
-            df_sspecs = pd.read_csv(dpath)
+            df_sspecs = pd.read_csv(unc_path(dpath))
         except Exception as e:
             raise ValueError("\nUnable to read the provided file: \ndpath\n\n", e) from e
         coln_d = [("Band_" + str(i + 1)) for i in range(len(df_sspecs.columns) - 4)]
@@ -3540,7 +3543,7 @@ class SpecExp:
 
         # Validate output dir path
         dir_path = os.path.dirname(save_path)
-        if not (os.path.exists(dir_path) and os.path.isdir(dir_path)):
+        if not (os.path.exists(unc_path(dir_path)) and os.path.isdir(unc_path(dir_path))):
             raise ValueError(f"Output directory is invalid: {dir_path}")
 
         # Labels as df
@@ -3548,7 +3551,7 @@ class SpecExp:
         df_lb = df_lb.astype("object")
 
         # Save to file
-        df_lb.to_csv(save_path, index=False)
+        df_lb.to_csv(unc_path(save_path), index=False)
 
     # Alias
     labels_to_csv = sample_labels_to_csv
@@ -3638,7 +3641,7 @@ class SpecExp:
             read_path = label_csv_path
 
         # Validate path existence
-        if os.path.exists(read_path) is False:
+        if os.path.exists(unc_path(read_path)) is False:
             raise ValueError(f"The provided path is invalid: {read_path}")
 
         # Validate path extension
@@ -3646,7 +3649,7 @@ class SpecExp:
             raise ValueError(f"File format is not '.csv': {read_path}")
 
         # Load dataframe - table format validated in self.sample_labels_from_df
-        df_label = pd.read_csv(read_path)
+        df_label = pd.read_csv(unc_path(read_path))
         df_label = df_label.astype("object")
 
         # Update labels - formatting with property formatting function
@@ -3688,9 +3691,9 @@ class SpecExp:
 
         # Write to csv
         if include_header:
-            dft.to_csv(path, index=False)
+            dft.to_csv(unc_path(path), index=False)
         else:
-            dft.to_csv(path, index=False, header=False)
+            dft.to_csv(unc_path(path), index=False, header=False)
 
     # Alias
     targets_to_csv = sample_targets_to_csv
@@ -3792,9 +3795,9 @@ class SpecExp:
 
         # Read df
         if include_header:
-            dft = pd.read_csv(path, dtype=dtp)
+            dft = pd.read_csv(unc_path(path), dtype=dtp)
         else:
-            dft = pd.read_csv(path, dtype=dtp, header=None)
+            dft = pd.read_csv(unc_path(path), dtype=dtp, header=None)
         dft.fillna("-", inplace=True)
         str_cols = list(dft.columns[:2]) + list(dft.columns[3:])
         dft[str_cols] = dft[str_cols].astype("object")
@@ -3863,12 +3866,12 @@ class SpecExp:
 
         # Dump directory
         dump_dir = self.report_directory + "SpecExp_configuration/"
-        if not os.path.exists(dump_dir):
-            os.mkdir(dump_dir)
+        if not os.path.exists(unc_path(dump_dir)):
+            os.mkdir(unc_path(dump_dir))
 
         # Dump data
         dump_path0 = dump_dir + f"SpecExp_data_configuration_{self.create_time}.dill"
-        with open(dump_path0, 'wb') as f:
+        with open(unc_path(dump_path0), 'wb') as f:
             dill.dump(self, f)
 
         # Dump copy
@@ -3877,7 +3880,7 @@ class SpecExp:
             dump_path1 = dump_dir + f"SpecExp_data_configuration_{self.create_time}_copy_at_{cts}.dill"
             dump_path1_sp = os.path.splitext(dump_path1)
             ci = 0
-            while os.path.exists(dump_path1):
+            while os.path.exists(unc_path(dump_path1)):
                 ci = ci + 1
                 cs = "_" + str(ci)
                 dump_path1 = dump_path1_sp[0] + cs + dump_path1_sp[1]
@@ -3887,7 +3890,7 @@ class SpecExp:
                             copy file creation rate limited to 100 per second."
                     )
             # Dump
-            with open(dump_path1, 'wb') as f:
+            with open(unc_path(dump_path1), 'wb') as f:
                 dill.dump(self, f)
 
             # Print output path
@@ -3920,7 +3923,7 @@ class SpecExp:
             dump_path0 = config_file_path
 
         # Load to instance
-        with open(dump_path0, 'rb') as f:
+        with open(unc_path(dump_path0), 'rb') as f:
             loaded_instance = dill.load(f)
         self.__dict__.update(loaded_instance.__dict__)
 
