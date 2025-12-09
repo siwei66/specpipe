@@ -3667,7 +3667,7 @@ class TestUncPathStatic(unittest.TestCase):
     @staticmethod
     def test_windows_short_paths() -> None:
         """Test short paths on Windows (<= 255 chars)"""
-        with patch('sys.platform', 'win32'):
+        if sys.platform == 'win32':
             test_cases = [
                 ("C:\\test", "C:\\test"),
                 ("C:\\test\\", "C:\\test\\"),
@@ -3684,7 +3684,7 @@ class TestUncPathStatic(unittest.TestCase):
     @staticmethod
     def test_windows_long_paths_with_support() -> None:
         """Test long paths on Windows with long path support enabled"""
-        with patch('sys.platform', 'win32'):
+        if sys.platform == 'win32':
             # Mock long path support
             with patch('specpipe.specio._is_long_path_supported', return_value=True):
                 # Test local long path
@@ -3707,7 +3707,7 @@ class TestUncPathStatic(unittest.TestCase):
     @staticmethod
     def test_windows_long_paths_without_support() -> None:
         """Test that long paths raise ValueError without long path support"""
-        with patch('sys.platform', 'win32'):
+        if sys.platform == 'win32':
             # Mock NO long path support
             with patch('specpipe.specio._is_long_path_supported', return_value=False):
                 long_path = TestUncPathStatic.create_long_path(r"C:\test")
@@ -3717,7 +3717,7 @@ class TestUncPathStatic(unittest.TestCase):
     @staticmethod
     def test_existing_unc_paths() -> None:
         """Test that already UNC-formatted paths are preserved"""
-        with patch('sys.platform', 'win32'):
+        if sys.platform == 'win32':
             with patch('specpipe.specio._is_long_path_supported', return_value=True):
                 # Test existing UNC local path
                 existing_unc_local = r"\\?\C:\Users\test"
@@ -3736,13 +3736,12 @@ class TestUncPathStatic(unittest.TestCase):
     @staticmethod
     def test_path_normalization() -> None:
         """Test that path normalization is always applied"""
-        with patch('sys.platform', 'win32'):
+        if sys.platform == 'win32':
             test_cases = [
                 (r"C:/Users/../Users/test", r"C:\Users\test"),
                 (r"C:\Users\.\test\..\file", r"C:\Users\file"),
                 (r"\\server/share\path/..", r"\\server\share"),
             ]
-
             for input_path, expected in test_cases:
                 result = unc_path(input_path)
                 assert result == expected, f"Failed for: {input_path}"
@@ -3750,7 +3749,7 @@ class TestUncPathStatic(unittest.TestCase):
     @staticmethod
     def test_edge_cases() -> None:
         """Test various edge cases"""
-        with patch('sys.platform', 'win32'):
+        if sys.platform == 'win32':
             with patch('specpipe.specio._is_long_path_supported', return_value=True):
                 # Test empty string
                 result = unc_path("")
@@ -3772,7 +3771,7 @@ class TestUncPathStatic(unittest.TestCase):
     @staticmethod
     def test_relative_paths() -> None:
         """Test that relative paths are converted to absolute for UNC"""
-        with patch('sys.platform', 'win32'):
+        if sys.platform == 'win32':
             with patch('specpipe.specio._is_long_path_supported', return_value=True):
                 test_cases = [
                     (r"relative\path", os.path.normpath(r"relative\path")),
@@ -3781,7 +3780,7 @@ class TestUncPathStatic(unittest.TestCase):
                 ]
                 for input_path, expected in test_cases:
                     result = unc_path(input_path)
-                    assert os.path.normpath(result.replace('\\\\?\\', '')) == expected
+                    assert os.path.normpath(result.replace('\\\\?\\', '')) == expected, f"Failed for: {input_path}"
 
 
 # %% Test - unc_path
