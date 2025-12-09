@@ -195,7 +195,7 @@ pipe.rm_process(method='replace_nan')
 # Fittable feature engineering models
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import SelectKBest, f_classif
-from specpipe.modelconnector import IdentityTransformer
+from specpipe.modelconnector import IdentityTransformer  # Passthrough transformer for comparison
 
 # Test feature selection
 selector1 = SelectKBest(f_classif, k=5)  # Select 5 features
