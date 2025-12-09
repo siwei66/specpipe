@@ -1,3 +1,7 @@
+<div align="left">
+  <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/assets/docs/SpecPipeLogo.png" alt="SpecPipeLogo" width="150" height="150">
+</div>
+
 # SpecPipe
 
 ## A high-performance, file-based pipeline for batch processing and modeling of hyperspectral images.
@@ -447,11 +451,9 @@ Processes can be removed by various criteria, the example removes the function '
     ```python
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.svm import SVC
 
     rf_classifier = RandomForestRegressor(n_estimators=10)
     knn_classifier = KNeighborsRegressor(n_neighbors=3)
-    svc = SVC()
     ```
 
 - Add models to the pipeline:
@@ -657,7 +659,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ```
     Output:
     <div align="center">
-    <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/demo/demo_results_classification/Modeling/Model_evaluation_reports/Data_chain_Preprocessing_%230_Model_KNeighborsClassifier/ROC_curve_KNeighborsClassifier.png"
+    <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/demo/demo_results_classification/Modeling/Model_evaluation_reports/Data_chain_Preprocessing_%230_Model_StandardScaler_feat_all_KNeighborsClassifier/ROC_curve_StandardScaler_feat_all_KNeighborsClassifier.png"
          alt="Demo receiver operating characteristic curve"
          width="400"
          style="max-width: 100%;">
@@ -840,11 +842,55 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ```
     Output:
     <div align="center">
-    <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/demo/demo_results_regression/Modeling/Model_evaluation_reports/Data_chain_Preprocessing_%230_Model_KNeighborsRegressor/Scatter_plot_KNeighborsRegressor.png"
+    <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/demo/demo_results_regression/Modeling/Model_evaluation_reports/Data_chain_Preprocessing_%230_Model_StandardScaler_feat_all_KNeighborsRegressor/Scatter_plot_StandardScaler_feat_all_KNeighborsRegressor.png"
          alt="Demo receiver operating characteristic curve"
          width="400"
          style="max-width: 100%;">
     </div>
+
+
+### 7 Test feature engineering fittables
+
+Feature engineering fittables (data transformers) are fitted during the model validation process and function as integrated parts of the model. To incorporate these transformers, use the model connector functions 'combine_transformer_classifier' or 'combine_transformer_regressor' (similar to sklearn.pipeline).
+
+The SpecPipe module also includes a composer that generates batchwise combined models using a full factorial design. Each component within these combined models automatically supports all marginal statistics and testing features available in the module.
+
+- For example:
+    ```python
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.feature_selection import SelectKBest, f_classif
+    from specpipe.modelconnector import IdentityTransformer  # Passthrough transformer for comparison
+
+    selector1 = SelectKBest(f_classif, k=5)  # Select 5 features
+    selector2 = IdentityTransformer()  # For passthrough (no selection)
+
+    from specpipe import factorial_transformer_chains
+
+    models = factorial_transformer_chains(
+        [StandardScaler(), IdentityTransformer()],  # Model step 1: test data scalers
+        {'Feat5': selector1, 'FeatAll': selector2},  # Model step 2: test feature selection fittables
+        # ...
+        estimators={'KNN': knn_classifier, 'RF': rf_classifier},  # Estimators (specify custom labels using dictionary input)
+        is_regression=False
+    )
+    print(models)
+    ```
+    Output:
+    ```text
+    [TransClassifier_StandardScaler_Feat5_KNN,
+     TransClassifier_StandardScaler_Feat5_RF,
+     TransClassifier_StandardScaler_FeatAll_KNN,
+     TransClassifier_StandardScaler_FeatAll_RF,
+     TransClassifier_IdentityTransformer_Feat5_KNN,
+     TransClassifier_IdentityTransformer_Feat5_RF,
+     TransClassifier_IdentityTransformer_FeatAll_KNN,
+     TransClassifier_IdentityTransformer_FeatAll_RF]
+    ```
+- Finally, add the generated models to your pipeline:
+    ```python
+    for model in models:
+        pipe.add_model(model, validation_method="2-fold")
+    ```
 
 
 ## Contributing <a name="contributing"></a>
