@@ -1584,6 +1584,7 @@ def _is_long_path_supported() -> bool:
         return True
     try:
         import winreg
+
         key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\FileSystem")
         value, _ = winreg.QueryValueEx(key, "LongPathsEnabled")
         winreg.CloseKey(key)
