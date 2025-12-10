@@ -19,17 +19,18 @@ def minmax_hyper(data: Annotated[Any, arraylike_validator(ndim=3)]) -> torch.Ten
     """
     MinMax (MinMax Normalization) function for image pixel spectrum correction in SpecPipe pipelines.
     This function is for optimized GPU-accelerated application.
+
     Process input data level: 4 - 'pixel_hyperspecs_tensor'
     Process output data level: 4 - 'pixel_hyperspecs_tensor'
 
     Parameters
     ----------
-    data : Annotated[Any, arraylike_validator(ndim, optional
+    data : torch.Tensor-like, optional
         2D arraylike spectral data to process.
 
     Returns
     -------
-    np.ndarray
+    torch.Tensor
         SNV transformed spectral data.
     """
     import numpy as np  # noqa: W291

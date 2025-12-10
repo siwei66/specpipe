@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests for SpecPipe SNV (Standard Normal Variate) functions
+Tests for SpecPipe AUC (Area Under Curve) normalization functions
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
@@ -35,8 +35,8 @@ from specpipe.example_data import create_test_raster  # noqa: E402
 
 # Function to test
 from specpipe.rasterop import pixel_apply  # noqa: E402
-from specpipe.functions.snv import snv  # noqa: E402
-from specpipe.functions.snv_hyper import snv_hyper  # noqa: E402
+from specpipe.functions.aucnorm import aucnorm  # noqa: E402
+from specpipe.functions.aucnorm_hyper import aucnorm_hyper  # noqa: E402
 
 # Check if cuda is available
 try:
@@ -48,8 +48,8 @@ except ImportError:
 # %% Test
 
 
-class TestSNV(unittest.TestCase):
-    """Test snv and snv_hyper functionalities."""
+class TestAUCNorm(unittest.TestCase):
+    """Test aucnorm and aucnorm_hyper functionalities."""
 
     test_dir: str = ""
     img_path: str = ""
@@ -71,36 +71,36 @@ class TestSNV(unittest.TestCase):
         shutil.rmtree(cls.test_dir)
 
     @staticmethod
-    def test_snv() -> None:
-        """Test snv basic functionality."""
+    def test_aucnorm() -> None:
+        """Test aucnorm basic functionality."""
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
             pixel_apply(
-                image_path=TestSNV.img_path,
-                output_path=TestSNV.dst_path,
-                spectral_function=snv,
+                image_path=TestAUCNorm.img_path,
+                output_path=TestAUCNorm.dst_path,
+                spectral_function=aucnorm,
                 tile_size=1,
                 progress=False,
                 function_type='array',
             )
-            assert os.path.exists(TestSNV.dst_path)
+            assert os.path.exists(TestAUCNorm.dst_path)
 
     @staticmethod
-    def test_snv_hyper() -> None:
-        """Test snv_hyper basic functionality."""
+    def test_aucnorm_hyper() -> None:
+        """Test aucnorm_hyper basic functionality."""
         if HAS_CUDA:
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
                 pixel_apply(
-                    image_path=TestSNV.img_path,
-                    output_path=TestSNV.dst_path_hyper,
-                    spectral_function=snv_hyper,
+                    image_path=TestAUCNorm.img_path,
+                    output_path=TestAUCNorm.dst_path_hyper,
+                    spectral_function=aucnorm_hyper,
                     tile_size=1,
                     progress=False,
                     function_type='tensor_hyper',
                 )
-                assert os.path.exists(TestSNV.dst_path)
-                with rasterio.open(TestSNV.dst_path) as src1, rasterio.open(TestSNV.dst_path_hyper) as src2:
+                assert os.path.exists(TestAUCNorm.dst_path)
+                with rasterio.open(TestAUCNorm.dst_path) as src1, rasterio.open(TestAUCNorm.dst_path_hyper) as src2:
                     data1 = src1.read()
                     data2 = src2.read()
                     np.testing.assert_allclose(

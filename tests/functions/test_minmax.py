@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests for SpecPipe MinMax (MinMax Normalization) functions for hyperspectral image pixel application
+Tests for SpecPipe MinMax (MinMax Normalization) functions
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """

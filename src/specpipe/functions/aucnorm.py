@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-SpecPipe - process functions - MinMax (MinMax Normalization)
+SpecPipe - process functions - AUC (Area Under Curve) normalization
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
@@ -11,13 +11,13 @@ from typing import Annotated, Any
 from ..specio import arraylike_validator, simple_type_validator
 
 
-# %% MinMax
+# %% AUC normalization
 
 
 @simple_type_validator
-def minmax(data: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+def aucnorm(data: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
     """
-    MinMax (MinMax Normalization) function.
+    AUC (Area Under Curve) normalization function.
 
     For image pixel spectrum correction in SpecPipe pipelines:
         Set process input data level: 2 / 'pixel_specs_array'
@@ -37,13 +37,11 @@ def minmax(data: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
     Returns
     -------
     np.ndarray
-        SNV transformed spectral data.
+        AUC normalization transformed spectral data.
     """
     import numpy as np  # noqa: W291
 
-    data = np.array(data)
-    vmin = np.nanmin(data, axis=1, keepdims=True)
-    vmax = np.nanmax(data, axis=1, keepdims=True)
-    minmax_values = (data - vmin) / (vmax - vmin + 1e-15)
+    areas = np.sum(np.abs(data), axis=1, keepdims=True)
+    auc_normalized = data / (areas + 1e-15)
 
-    return np.array(minmax_values)
+    return np.array(auc_normalized)
