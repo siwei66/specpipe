@@ -490,7 +490,7 @@ def pixel_spec_apply(  # noqa: C901
                         for n in range(tile_width):
                             # Apply function
                             processed_spec = spectral_function(tile_data[:, m, n])
-                            processed_tile[:, m, n] = np.array(processed_spec)
+                            processed_tile[:, m, n] = np.asarray(processed_spec)
                     # Write array to output
                     dst.write(processed_tile, window=win)
 
@@ -540,7 +540,7 @@ def pixel_array_apply(  # noqa: C901
         # Reshape test data
         test_data_input = test_data.reshape(src.count, -1).T
         test_result = spectral_function(test_data_input)
-        num_bands_out = np.array(test_result).shape[1]
+        num_bands_out = np.asarray(test_result).shape[1]
 
         # Get metadata from the source image
         meta = src.meta.copy()
@@ -575,7 +575,7 @@ def pixel_array_apply(  # noqa: C901
                     original_shape = tile_data.shape
                     # Reshape src tile data
                     spectra_2d = tile_data.reshape(src.count, -1).T
-                    spectra_2d = np.array(spectra_2d)
+                    spectra_2d = np.asarray(spectra_2d)
                     # Apply vectorized function
                     processed_spectra = spectral_function(spectra_2d)
                     # Reshape back

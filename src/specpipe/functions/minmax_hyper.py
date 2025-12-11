@@ -40,7 +40,7 @@ def minmax_hyper(data: Annotated[Any, arraylike_validator(ndim=3)]) -> torch.Ten
         tensor_data = data
     else:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        tensor_data = torch.tensor(np.array(data), device=device)
+        tensor_data = torch.from_numpy(np.asarray(data)).to(device)
 
     vmin = torch.min(tensor_data, dim=1, keepdim=True).values
     vmax = torch.max(tensor_data, dim=1, keepdim=True).values

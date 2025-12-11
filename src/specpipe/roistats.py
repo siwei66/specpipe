@@ -226,7 +226,7 @@ def minbbox(
     Get minimum bounding box of a ROI that has at least some number of valid pixels with band value within a threshold.
     """
     # Get ROI bounding box
-    carr = np.array(roi_coordinates[0])
+    carr = np.asarray(roi_coordinates[0])
     xmin, xmax = min(carr[:, 0]), max(carr[:, 0])
     ymin, ymax = min(carr[:, 1]), max(carr[:, 1])
     cdbounds = [[(xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax), (xmin, ymin)]]
@@ -364,9 +364,9 @@ def axisconv(
     """
     arr: np.ndarray
     if axis == 0:
-        arr = np.array(arr2d).astype(astype)
+        arr = np.asarray(arr2d).astype(astype)
     elif axis == 1:
-        arr = np.array(arr2d).astype(astype).T
+        arr = np.asarray(arr2d).astype(astype).T
     else:
         raise ValueError(f"Axis must be 0 or 1, got: {axis}")
     return arr
@@ -429,7 +429,7 @@ def moment2d(  # noqa: C901
         if reference is None:
             ref = np.nanmean(arr, axis=0, keepdims=True)
         elif len(reference) == nvar:
-            ref = np.array(reference).reshape(1, -1)
+            ref = np.asarray(reference).reshape(1, -1)
         else:
             raise ValueError(
                 f"Reference and data_array_2d must have same number of variables, \
@@ -572,7 +572,7 @@ def smopt(measure: str) -> Callable:  # noqa: C901
             raise ValueError("Undefined measure name, please provide the measure function instead")
 
     def msfunc(arr: Annotated[Any, arraylike_validator(ndim=2, as_type=float)]) -> np.ndarray:
-        result: np.ndarray = np.array(mfunc(arr, axis=0))
+        result: np.ndarray = np.asarray(mfunc(arr, axis=0))
         return result
 
     return msfunc
@@ -585,14 +585,14 @@ def cmval(arr: Annotated[Any, arraylike_validator(ndim=2)], cfunc: Callable) -> 
     Custom measure function validator
     """
     cfunc_name = cfunc.__name__
-    test_arr = np.array(arr).astype(float)[0:5, :]
+    test_arr = np.asarray(arr).astype(float)[0:5, :]
     try:
         testv = cfunc(test_arr)
     except Exception as e:
         raise ValueError(
             f"Error in the testing given custom measure \n'{cfunc_name}' on the provided data: \n{e}"
         ) from e
-    testv = np.array(testv)
+    testv = np.asarray(testv)
     if np.issubdtype(testv.dtype, np.number):
         if testv.ndim > 1:
             raise ValueError(
@@ -669,7 +669,7 @@ class Stats2d:
         """
         Mean values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        result: np.ndarray = np.array(np.nanmean(data_array_2d, axis=axis))
+        result: np.ndarray = np.asarray(np.nanmean(data_array_2d, axis=axis))
         return result
 
     @staticmethod
@@ -678,7 +678,7 @@ class Stats2d:
         """
         Standard deviation values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        result: np.ndarray = np.array(np.nanstd(data_array_2d, axis=axis))
+        result: np.ndarray = np.asarray(np.nanstd(data_array_2d, axis=axis))
         return result
 
     @staticmethod
@@ -687,7 +687,7 @@ class Stats2d:
         """
         Variance values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        result: np.ndarray = np.array(np.nanvar(data_array_2d, axis=axis))
+        result: np.ndarray = np.asarray(np.nanvar(data_array_2d, axis=axis))
         return result
 
     @staticmethod
@@ -696,7 +696,7 @@ class Stats2d:
         """
         Skewness values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        result: np.ndarray = np.array(moment2d(data_array_2d, 3, standardized=True, axis=axis))
+        result: np.ndarray = np.asarray(moment2d(data_array_2d, 3, standardized=True, axis=axis))
         return result
 
     @staticmethod
@@ -705,7 +705,7 @@ class Stats2d:
         """
         Kurtosis values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        result: np.ndarray = np.array(moment2d(data_array_2d, 4, standardized=True, axis=axis))
+        result: np.ndarray = np.asarray(moment2d(data_array_2d, 4, standardized=True, axis=axis))
         return result
 
     @staticmethod
@@ -714,7 +714,7 @@ class Stats2d:
         """
         Minimum values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        result: np.ndarray = np.array(np.nanmin(data_array_2d, axis=axis))
+        result: np.ndarray = np.asarray(np.nanmin(data_array_2d, axis=axis))
         return result
 
     @staticmethod
@@ -723,7 +723,7 @@ class Stats2d:
         """
         Median values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        result: np.ndarray = np.array(np.nanmedian(data_array_2d, axis=axis))
+        result: np.ndarray = np.asarray(np.nanmedian(data_array_2d, axis=axis))
         return result
 
     @staticmethod
@@ -732,7 +732,7 @@ class Stats2d:
         """
         Maximum values of a 2D data array with each row or column as a sample. See stats2d.
         """
-        result: np.ndarray = np.array(np.nanmax(data_array_2d, axis=axis))
+        result: np.ndarray = np.asarray(np.nanmax(data_array_2d, axis=axis))
         return result
 
     # Return stats values only, single measure only
@@ -744,10 +744,10 @@ class Stats2d:
         """
         measure = self.measure
         if type(measure) is str:
-            result: np.ndarray = np.array(Stats2d(measure).stats2d(data_array_2d)[measure])
+            result: np.ndarray = np.asarray(Stats2d(measure).stats2d(data_array_2d)[measure])
             return result
         elif callable(measure):
-            result = np.array(Stats2d(measure).stats2d(data_array_2d)[measure.__name__])
+            result = np.asarray(Stats2d(measure).stats2d(data_array_2d)[measure.__name__])
             return result
         elif measure is None:
             raise ValueError("'measure' must be specified for 'Stats2d' when calling this method, got None.")
@@ -758,7 +758,7 @@ class Stats2d:
     @property
     def values(self) -> Callable:
         def wrapper(*args, **kwargs) -> np.ndarray:  # type: ignore[no-untyped-def]
-            result: np.ndarray = np.array(self._values(*args, **kwargs))
+            result: np.ndarray = np.asarray(self._values(*args, **kwargs))
             return result
 
         # Set dynamic name
@@ -847,7 +847,7 @@ def roi_mean(image_path: str, roi_coordinates: list[list[tuple[Union[int, float]
     roi_coordinates : list[list[tuple[Union[int, float],Union[int, float]]]]
         Lists of vertex coordinate pairs of the polygons of a region of interest (ROI).
     """
-    result: np.ndarray = np.array(Stats2d().mean(ROISpec("float64").roispec(image_path, roi_coordinates)))
+    result: np.ndarray = np.asarray(Stats2d().mean(ROISpec("float64").roispec(image_path, roi_coordinates)))
     return result
 
 
@@ -863,7 +863,7 @@ def roi_std(image_path: str, roi_coordinates: list[list[tuple[Union[int, float],
     roi_coordinates : list[list[tuple[Union[int, float],Union[int, float]]]]
         Lists of vertex coordinate pairs of the polygons of a region of interest (ROI).
     """
-    result: np.ndarray = np.array(Stats2d().std(ROISpec("float64").roispec(image_path, roi_coordinates)))
+    result: np.ndarray = np.asarray(Stats2d().std(ROISpec("float64").roispec(image_path, roi_coordinates)))
     return result
 
 
@@ -879,7 +879,7 @@ def roi_median(image_path: str, roi_coordinates: list[list[tuple[Union[int, floa
     roi_coordinates : list[list[tuple[Union[int, float],Union[int, float]]]]
         Lists of vertex coordinate pairs of the polygons of a region of interest (ROI).
     """
-    result: np.ndarray = np.array(Stats2d().median(ROISpec("float64").roispec(image_path, roi_coordinates)))
+    result: np.ndarray = np.asarray(Stats2d().median(ROISpec("float64").roispec(image_path, roi_coordinates)))
     return result
 
 
@@ -916,8 +916,8 @@ def spectral_angle(
         If all values of a spectral vector equals zero.
     """
     # Convert lists to numpy arrays
-    spec_1 = np.array(spec_1)
-    spec_2 = np.array(spec_2)
+    spec_1 = np.asarray(spec_1)
+    spec_2 = np.asarray(spec_2)
 
     spec_angle: float
 
@@ -988,7 +988,7 @@ def arr_spectral_angles(
         If input spectra_array does not match with reference_spectrum.
     """
     # Data validation
-    spectra_array = np.array(spectra_array)
+    spectra_array = np.asarray(spectra_array)
     if spectra_array.ndim != 2:
         raise ValueError("input spectra_array should be 2d array like.")
     if np.isnan(spectra_array).any():
@@ -999,7 +999,7 @@ def arr_spectral_angles(
         spectra_array = spectra_array.T
     else:
         raise ValueError("axis can only be 0 or 1.")
-    reference_spectrum = np.array(reference_spectrum)
+    reference_spectrum = np.asarray(reference_spectrum)
     if len(reference_spectrum) != spectra_array.shape[1]:
         raise ValueError("input spectra_array does not match with reference_spectrum.")
 
@@ -1052,7 +1052,7 @@ def np_sig_digit(arr_like: Annotated[Any, arraylike_validator()], sig_digit: int
         rdfunc = np.floor  # type: ignore[assignment]
     else:
         raise ValueError(f"mode must one of 'round', 'ceil' and 'floor', but got: '{mode}'")
-    result: np.ndarray = np.array(rdfunc(arr_like * factor) / factor)
+    result: np.ndarray = np.asarray(rdfunc(arr_like * factor) / factor)
     return result
 
 
@@ -1112,7 +1112,7 @@ def round_digit(
         Rounded value or array of values.
     """
     if isinstance(value, (list, tuple, np.ndarray, pd.Series, pd.DataFrame, torch.Tensor)):
-        value1 = np.array(value)
+        value1 = np.asarray(value)
         result = np_sig_digit(value1, sig_digit, mode)
         if isinstance(value, (np.ndarray, pd.Series, pd.DataFrame)):
             value[:] = result[:]

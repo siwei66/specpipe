@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Usage demo for SpecPipe
+SpecPipe - Demonstration for parallel processing in windows
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """

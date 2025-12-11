@@ -9,6 +9,7 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 
 # OS
 import os
+import sys
 import shutil
 import tempfile
 
@@ -93,6 +94,8 @@ def create_test_directory_structure(base_dir: str) -> tuple[str, str]:
 
 
 # %% test functions : SpecExp
+
+
 class TestSpecExp(unittest.TestCase):
     """Test class for SpecExp functionality"""
 
@@ -102,25 +105,23 @@ class TestSpecExp(unittest.TestCase):
     rois_dir: str
     spec_exp: SpecExp
 
-    @classmethod
-    def setUpClass(cls) -> None:
+    def setUp(self) -> None:
         """Setup method that runs before each test"""
         # Create a temporary directory for testing
-        cls.test_dir = (str(tempfile.mkdtemp()).replace("\\", "/") + "/").replace("//", "/")
-        cls.report_dir = (str(os.path.join(cls.test_dir, "reports")).replace("\\", "/") + "/").replace("//", "/")
-        os.makedirs(cls.report_dir, exist_ok=True)
+        self.test_dir = (str(tempfile.mkdtemp()).replace("\\", "/") + "/").replace("//", "/")
+        self.report_dir = (str(os.path.join(self.test_dir, "reports")).replace("\\", "/") + "/").replace("//", "/")
+        os.makedirs(self.report_dir, exist_ok=True)
 
         # Create test data directories
-        cls.images_dir, cls.rois_dir = create_test_directory_structure(cls.test_dir)
+        self.images_dir, self.rois_dir = create_test_directory_structure(self.test_dir)
 
         # Initialize SpecExp instance
-        cls.spec_exp = SpecExp(report_directory=cls.report_dir, log_loading=False)
+        self.spec_exp = SpecExp(report_directory=self.report_dir, log_loading=False)
 
-    @classmethod
-    def tearDownClass(cls) -> None:
+    def tearDown(self) -> None:
         """Cleanup after each test method"""
-        if hasattr(cls, "test_dir") and os.path.exists(cls.test_dir):
-            shutil.rmtree(cls.test_dir)
+        if hasattr(self, "test_dir") and os.path.exists(self.test_dir):
+            shutil.rmtree(self.test_dir)
 
     def spec_exp_init(self) -> None:
         """Initialize SpecExp"""
@@ -129,7 +130,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_initialization(self) -> None:
         """Test SpecExp initialization"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         assert self.spec_exp.report_directory == self.report_dir
@@ -139,14 +139,15 @@ class TestSpecExp(unittest.TestCase):
         assert len(self.spec_exp.rois) == 0
 
         # Test invalid report directory
-        dir_path = "/invalid/path/that/does/not/exist"
-        with pytest.raises(ValueError, match=dir_path):
+        dir_path = self.test_dir + "invalid_path_that_does_not_exist/"
+        if os.path.exists(dir_path):
+            shutil.rmtree(dir_path)
+        with pytest.warns(UserWarning, match=dir_path):
             SpecExp(report_directory=dir_path)
 
     @silent
     def test_add_groups(self) -> None:
         """Test adding groups"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         # Add single group
@@ -162,13 +163,9 @@ class TestSpecExp(unittest.TestCase):
         self.spec_exp.add_groups(["group1"])
         assert self.spec_exp.groups.count("group1") == 1  # Should not duplicate
 
-        # Initialize SpecExp after testing
-        self.spec_exp_init()
-
     @silent
     def test_rm_group(self) -> None:
         """Test removing groups"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         # Setup: add groups and some data
@@ -180,13 +177,9 @@ class TestSpecExp(unittest.TestCase):
         assert "group1" not in self.spec_exp.groups
         assert len(self.spec_exp.images) == 0  # Should remove associated images
 
-        # Initialize SpecExp after testing
-        self.spec_exp_init()
-
     @silent
     def test_add_images(self) -> None:
         """Test adding images"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         self.spec_exp.add_groups(["test_group"])
@@ -207,14 +200,13 @@ class TestSpecExp(unittest.TestCase):
         assert len(masks) == 1
 
         # Test adding images with invalid full path
-        img_path = "/invalid/path/that/does/not/exist/image1.tif"
+        img_path = self.test_dir + "invalid_path_that_does_not_exist/image1.tif"
         with pytest.raises(ValueError, match=img_path):
             self.spec_exp.add_images_by_path(group="test_group", path=[img_path])
 
     @silent
     def test_ls_images(self) -> None:
         """Test listing images"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         self.spec_exp.add_groups(["test_group"])
@@ -232,7 +224,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_rm_images(self) -> None:
         """Test removing images"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         self.spec_exp.add_groups(["test_group"])
@@ -246,7 +237,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_add_rois_by_suffix(self) -> None:
         """Test adding ROIs by suffix"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         self.spec_exp.add_groups(["test_group"])
@@ -308,7 +298,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_add_rois_by_file(self) -> None:
         """Test adding ROIs by file path"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         self.spec_exp.add_groups(["test_group"])
@@ -358,7 +347,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_add_roi_by_coords(self) -> None:
         """Test adding ROIs by coordinates"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         self.spec_exp.add_groups(["test_group"])
@@ -379,7 +367,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_ls_rois(self) -> None:
         """Test listing ROIs"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         self.spec_exp.add_groups(["test_group"])
@@ -404,7 +391,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_rm_rois(self) -> None:
         """Test removing ROIs"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         self.spec_exp.add_groups(["test_group"])
@@ -426,7 +412,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_add_standalone_specs(self) -> None:
         """Test adding standalone spectra"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         self.spec_exp.add_groups(["test_group"])
@@ -446,7 +431,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_ls_standalone_specs(self) -> None:
         """Test listing standalone spectra"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         self.spec_exp.add_groups(["test_group"])
@@ -470,7 +454,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_rm_standalone_specs(self) -> None:
         """Test removing standalone spectra"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         self.spec_exp.add_groups(["test_group"])
@@ -491,7 +474,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_sample_labels_management(self) -> None:
         """Test sample labels management"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         # First add some samples (ROIs or standalone spectra)
@@ -530,7 +512,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_sample_targets_management(self) -> None:
         """Test sample targets management"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         # First add some samples
@@ -579,7 +560,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_save_and_load_config(self) -> None:
         """Test saving and loading configuration"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         # Setup some data
@@ -609,7 +589,6 @@ class TestSpecExp(unittest.TestCase):
     @silent
     def test_property_access(self) -> None:
         """Test property accessors"""
-        # Initialize SpecExp
         self.spec_exp_init()
 
         # Test read-only properties
@@ -629,24 +608,23 @@ class TestSpecExp(unittest.TestCase):
 
     def test_method_alias(self) -> None:
         """Test method alias"""
-        # Initialize SpecExp
         self.spec_exp_init()
-        spec1 = self.spec_exp
+        spec_exp = self.spec_exp
 
         # Validate consistency of identical method
-        assert spec1.add_specs == spec1.add_standalone_specs
-        assert spec1.load_specs == spec1.load_standalone_specs
-        assert spec1.ls_specs == spec1.ls_standalone_specs
-        assert spec1.labels_to_csv == spec1.sample_labels_to_csv
-        assert spec1.ls_labels == spec1.ls_sample_labels
-        assert spec1.labels_from_df == spec1.sample_labels_from_df
-        assert spec1.labels_from_csv == spec1.sample_labels_from_csv
-        assert spec1.targets_from_csv == spec1.sample_targets_from_csv
-        assert spec1.targets_to_csv == spec1.sample_targets_to_csv
-        assert spec1.ls_targets == spec1.ls_sample_targets
-        assert spec1.targets_from_df == spec1.sample_targets_from_df
-        assert spec1.save_config == spec1.save_data_config
-        assert spec1.load_config == spec1.load_data_config
+        assert spec_exp.add_specs == spec_exp.add_standalone_specs
+        assert spec_exp.load_specs == spec_exp.load_standalone_specs
+        assert spec_exp.ls_specs == spec_exp.ls_standalone_specs
+        assert spec_exp.labels_to_csv == spec_exp.sample_labels_to_csv
+        assert spec_exp.ls_labels == spec_exp.ls_sample_labels
+        assert spec_exp.labels_from_df == spec_exp.sample_labels_from_df
+        assert spec_exp.labels_from_csv == spec_exp.sample_labels_from_csv
+        assert spec_exp.targets_from_csv == spec_exp.sample_targets_from_csv
+        assert spec_exp.targets_to_csv == spec_exp.sample_targets_to_csv
+        assert spec_exp.ls_targets == spec_exp.ls_sample_targets
+        assert spec_exp.targets_from_df == spec_exp.sample_targets_from_df
+        assert spec_exp.save_config == spec_exp.save_data_config
+        assert spec_exp.load_config == spec_exp.load_data_config
 
 
 # %% Test - SpecExp
@@ -689,4 +667,4 @@ class TestSpecExp(unittest.TestCase):
 # %% Test main
 
 if __name__ == "__main__":
-    unittest.main()
+    sys.exit(pytest.main([__file__]))

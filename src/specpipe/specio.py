@@ -241,7 +241,7 @@ def arraylike_validator(  # noqa: C901
             raise TypeError("Callable cannot be converted to numpy.ndarray.")
         else:
             try:
-                arr = np.array(v)
+                arr = np.asarray(v)
             except Exception as e:
                 raise ValueError(
                     f"Given data \n{v}\n with data type \n'{type(v)}'\n cannot be converted to numpy.ndarray."

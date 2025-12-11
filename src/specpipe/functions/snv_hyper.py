@@ -40,7 +40,7 @@ def snv_hyper(data: Annotated[Any, arraylike_validator(ndim=3)]) -> torch.Tensor
         tensor_data = data
     else:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        tensor_data = torch.tensor(np.array(data), device=device)
+        tensor_data = torch.from_numpy(np.asarray(data)).to(device)
 
     vmean = torch.mean(tensor_data, dim=1, keepdim=True)
     vstd = torch.std(tensor_data, dim=1, keepdim=True, unbiased=False)

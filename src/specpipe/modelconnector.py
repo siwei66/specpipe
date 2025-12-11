@@ -402,7 +402,7 @@ class TransClassifier(BaseEstimator, ClassifierMixin):
             The fitted combined model.
         """
         # Validate inputs
-        X = np.array(X)
+        X = np.asarray(X)
         X, y = check_X_y(X, y)
         # Fit transformers and transform X_train
         for transformer in self.data_transformers:
@@ -445,12 +445,12 @@ class TransClassifier(BaseEstimator, ClassifierMixin):
             Transformed X.
         """
         check_is_fitted(self, 'is_fitted_')
-        X = np.array(X)
+        X = np.asarray(X)
         X = check_array(X)
         for transformer in self.data_transformers:
             assert hasattr(transformer, 'transform')
             X = transformer.transform(X)
-        return np.array(X)
+        return np.asarray(X)
 
     @simple_type_validator
     def predict(self, X: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:  # noqa: N803
@@ -468,7 +468,7 @@ class TransClassifier(BaseEstimator, ClassifierMixin):
             Predicted target values of X.
         """
         check_is_fitted(self, 'is_fitted_')
-        X = np.array(X)
+        X = np.asarray(X)
         X = check_array(X)
         # Transform X_pred
         for transformer in self.data_transformers:
@@ -477,7 +477,7 @@ class TransClassifier(BaseEstimator, ClassifierMixin):
         # Predict using classifier
         assert hasattr(self.classifier, 'predict')
         y_pred = self.classifier.predict(X)
-        y_pred = np.array(y_pred)
+        y_pred = np.asarray(y_pred)
         return y_pred
 
     @simple_type_validator
@@ -496,14 +496,14 @@ class TransClassifier(BaseEstimator, ClassifierMixin):
             Predicted target values of X.
         """  # noqa: E501
         check_is_fitted(self, 'is_fitted_')
-        X = np.array(X)
+        X = np.asarray(X)
         X = check_array(X)
         for transformer in self.data_transformers:
             assert hasattr(transformer, 'transform')
             X = transformer.transform(X)
         assert hasattr(self.classifier, 'predict_proba')
         y_pred_proba = self.classifier.predict_proba(X)
-        y_pred_proba = np.array(y_pred_proba)
+        y_pred_proba = np.asarray(y_pred_proba)
         return y_pred_proba
 
     @simple_type_validator
@@ -528,7 +528,7 @@ class TransClassifier(BaseEstimator, ClassifierMixin):
             The fitted combined model.
         """
         check_is_fitted(self, 'is_fitted_')
-        X = np.array(X)
+        X = np.asarray(X)
         for transformer in self.data_transformers:
             assert hasattr(transformer, 'transform')
             X = transformer.transform(X)
@@ -608,7 +608,7 @@ class TransRegressor(BaseEstimator, RegressorMixin):
             The fitted combined model.
         """
         # Validate inputs
-        X = np.array(X)
+        X = np.asarray(X)
         X, y = check_X_y(X, y)
         # Fit transformer and transform X_train
         for transformer in self.data_transformers:
@@ -644,12 +644,12 @@ class TransRegressor(BaseEstimator, RegressorMixin):
             Transformed X.
         """
         check_is_fitted(self, 'is_fitted_')
-        X = np.array(X)
+        X = np.asarray(X)
         X = check_array(X)
         for transformer in self.data_transformers:
             assert hasattr(transformer, 'transform')
             X = transformer.transform(X)
-        return np.array(X)
+        return np.asarray(X)
 
     @simple_type_validator
     def predict(self, X: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:  # noqa: N803
@@ -667,7 +667,7 @@ class TransRegressor(BaseEstimator, RegressorMixin):
             Predicted target values of X.
         """
         check_is_fitted(self, 'is_fitted_')
-        X = np.array(X)
+        X = np.asarray(X)
         X = check_array(X)
         # Transform X_pred
         for transformer in self.data_transformers:
@@ -676,7 +676,7 @@ class TransRegressor(BaseEstimator, RegressorMixin):
         # Predict using regressor
         assert hasattr(self.regressor, 'predict')
         y_pred = self.regressor.predict(X)
-        y_pred = np.array(y_pred)
+        y_pred = np.asarray(y_pred)
         return y_pred
 
     @simple_type_validator
@@ -701,7 +701,7 @@ class TransRegressor(BaseEstimator, RegressorMixin):
             The fitted combined model.
         """
         check_is_fitted(self, 'is_fitted_')
-        X = np.array(X)
+        X = np.asarray(X)
         for transformer in self.data_transformers:
             assert hasattr(transformer, 'transform')
             X = transformer.transform(X)
@@ -732,7 +732,7 @@ class IdentityTransformer(BaseEstimator, TransformerMixin):
 
     @simple_type_validator
     def transform(self, X: Annotated[Any, arraylike_validator()]) -> np.ndarray:  # noqa: N803
-        return np.array(X)
+        return np.asarray(X)
 
     @simple_type_validator
     def fit_transform(
@@ -740,7 +740,7 @@ class IdentityTransformer(BaseEstimator, TransformerMixin):
         X: Annotated[Any, arraylike_validator()],  # noqa: N803
         y: Optional[Annotated[Any, arraylike_validator()]] = None,
     ) -> np.ndarray:  # noqa: N803
-        return np.array(X)
+        return np.asarray(X)
 
 
 # %% Combined model statistics
@@ -777,7 +777,7 @@ def _convert_metrics_combined_model(metrics_dict: dict, modeleva_report_dir: str
         chain_model_components.append((list(chain_process_info['Chain_in_process_ID']), model_component_list))
 
     # Match components of combined model with the chain in metrics_dict
-    chain_arr = np.array(metrics_dict['chains_in_ID'])
+    chain_arr = np.asarray(metrics_dict['chains_in_ID'])
     chain_modelcomp_list = []
     for row_chain in chain_arr:
         for chain_model_component in chain_model_components:

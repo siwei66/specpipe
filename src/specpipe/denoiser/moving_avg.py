@@ -11,13 +11,8 @@ import numpy as np
 from typing import Union, Annotated, Any, Optional
 
 from ..specio import simple_type_validator, arraylike_validator
-from .utils import RollWindow
+from .utils import RollWindow, _to_2d_arr, _back_1d_arr
 from .outlier import ArrayOutlier
-
-# # For local test
-# from specpipe.specio import simple_type_validator, arraylike_validator
-# from specpipe.denoiser.utils import RollWindow
-# from specpipe.denoiser.outlier import ArrayOutlier
 
 
 # %% Common denoising techniques - kernel smoothing methods - moving average smoothing
@@ -173,7 +168,10 @@ class MovingAvg(RollWindow):
         return window_array
 
     @simple_type_validator
-    def simple_moving_average(self, data_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def simple_moving_average(
+        self,
+        data_array: Union[Annotated[Any, arraylike_validator(ndim=2)], Annotated[Any, arraylike_validator(ndim=1)]],
+    ) -> np.ndarray:
         """
         Implemente simple moving average of input 2d data array.
 
@@ -187,14 +185,14 @@ class MovingAvg(RollWindow):
         np.ndarray
             Smoothing result.
         """
-        data_array = np.array(data_array).astype(self.numtype)
+        data_array = _to_2d_arr(data_array).astype(self.numtype)
         if self.outlier_replacer is None:
             result = super().apply(data_array, self.sma_kernel)
         else:
             result = super().chain_apply(
                 data_array=data_array, function_list=[self.outlier_replacer.replace, self.sma_kernel]
             )
-        return np.array(result)
+        return _back_1d_arr(result)
 
     @simple_type_validator
     def median_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
@@ -225,7 +223,10 @@ class MovingAvg(RollWindow):
         return window_array
 
     @simple_type_validator
-    def moving_median(self, data_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def moving_median(
+        self,
+        data_array: Union[Annotated[Any, arraylike_validator(ndim=2)], Annotated[Any, arraylike_validator(ndim=1)]],
+    ) -> np.ndarray:
         """
         Implemente moving median of input 2d data array.
 
@@ -239,14 +240,14 @@ class MovingAvg(RollWindow):
         np.ndarray
             Smoothing result.
         """
-        data_array = np.array(data_array).astype(self.numtype)
+        data_array = _to_2d_arr(data_array).astype(self.numtype)
         if self.outlier_replacer is None:
             result = super().apply(data_array, self.median_kernel)
         else:
             result = super().chain_apply(
                 data_array=data_array, function_list=[self.outlier_replacer.replace, self.median_kernel]
             )
-        return np.array(result)
+        return _back_1d_arr(result)
 
     @simple_type_validator
     def wma_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
@@ -346,21 +347,24 @@ class MovingAvg(RollWindow):
         return wavg
 
     @simple_type_validator
-    def weighted_moving_average(self, data_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def weighted_moving_average(
+        self,
+        data_array: Union[Annotated[Any, arraylike_validator(ndim=2)], Annotated[Any, arraylike_validator(ndim=1)]],
+    ) -> np.ndarray:
         """
         Implemente weighted moving average of input 2d data array.
 
         Parameters
         ----------
-        data_array : np.ndarray.
-            Input data series in 2d data array.
+        data_array : 1D or 2D arraylike
+            1D data array or 2D data array of 1D series data.
 
         Returns
         -------
         np.ndarray
             Smoothing result.
         """
-        data_array = np.array(data_array).astype(self.numtype)
+        data_array = _to_2d_arr(data_array).astype(self.numtype)
         if self.outlier_replacer is None:
             result = super().apply(data_array, self.wma_kernel)
         else:
@@ -368,28 +372,31 @@ class MovingAvg(RollWindow):
                 data_array=data_array, function_list=[self.outlier_replacer.replace, self.wma_kernel]
             )
 
-        return np.array(result)
+        return _back_1d_arr(result)
 
     @simple_type_validator
-    def gaussian_filter(self, data_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def gaussian_filter(
+        self,
+        data_array: Union[Annotated[Any, arraylike_validator(ndim=2)], Annotated[Any, arraylike_validator(ndim=1)]],
+    ) -> np.ndarray:
         """
         Implemente Gaussian smoothing of input 2d data array.
 
         Parameters
         ----------
-        data_array : np.ndarray.
-            Input data series in 2d data array.
+        data_array : 1D or 2D arraylike
+            1D data array or 2D data array of 1D series data.
 
         Returns
         -------
         np.ndarray
             Smoothing result.
         """
-        data_array = np.array(data_array).astype(self.numtype)
+        data_array = _to_2d_arr(data_array).astype(self.numtype)
         if self.outlier_replacer is None:
             result = super().apply(data_array, self.gaussian_kernel)
         else:
             result = super().chain_apply(
                 data_array=data_array, function_list=[self.outlier_replacer.replace, self.gaussian_kernel]
             )
-        return np.array(result)
+        return _back_1d_arr(result)

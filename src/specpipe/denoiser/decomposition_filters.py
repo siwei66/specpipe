@@ -9,21 +9,20 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 
 import numpy as np
 import pywt
-from typing import Annotated, Any
+from typing import Annotated, Any, Union
 
 from ..specio import simple_type_validator, arraylike_validator
-
-# # For local test
-# from specpipe.specio import simple_type_validator, arraylike_validator
 
 
 # %% Decomposition-based smoothing - Fourier Filter
 
 
 class FourierFilter:
+
+    @simple_type_validator
     def __init__(
         self,
-        sampling_rate: float = -1.0,
+        sampling_rate: Union[int, float] = -1.0,
         cutoff: float = 0.5,
         axis: int = 0,
     ) -> None:
@@ -58,14 +57,17 @@ class FourierFilter:
         self.axis = axis
 
     @simple_type_validator
-    def apply(self, data_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def apply(
+        self,
+        data_array: Union[Annotated[Any, arraylike_validator(ndim=2)], Annotated[Any, arraylike_validator(ndim=1)]],
+    ) -> np.ndarray:
         """
         Apply Fourier filter to 2D arraylike of 1D series data.
 
         Parameters
         ----------
-        data_array : 2D arraylike
-            2D arraylike of 1D series data.
+        data_array : 1D or 2D arraylike
+            1D data array or 2D data array of 1D series data.
 
         Returns
         -------
@@ -76,9 +78,13 @@ class FourierFilter:
         sampling_rate = self.sampling_rate
         perc_cutoff = self.cutoff
 
-        data_array = np.array(data_array)
-        if axis == 1:
+        _is_1d: bool = False
+        data_array = np.asarray(data_array)
+        if axis == 1 and data_array.ndim == 2:
             data_array = data_array.T
+        elif axis == 1 and data_array.ndim == 1:
+            data_array = data_array.reshape(1, -1)
+            _is_1d = True
 
         # Calculate the Nyquist frequency
         nyquist_freq = 0.5 * sampling_rate
@@ -109,6 +115,10 @@ class FourierFilter:
         if axis == 1:
             out = out.T
 
+        if _is_1d:
+            out = np.asarray(out).reshape(-1)
+
+        assert isinstance(out, np.ndarray)
         return out
 
 
@@ -116,6 +126,8 @@ class FourierFilter:
 
 
 class WaveletFilter:
+
+    @simple_type_validator
     def __init__(
         self,
         wavelet: str = 'haar',
@@ -214,14 +226,17 @@ class WaveletFilter:
             )
 
     @simple_type_validator
-    def apply(self, data_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def apply(
+        self,
+        data_array: Union[Annotated[Any, arraylike_validator(ndim=2)], Annotated[Any, arraylike_validator(ndim=1)]],
+    ) -> np.ndarray:
         """
         Apply Fourier filter to 2D arraylike of 1D series data.
 
         Parameters
         ----------
-        data_array : 2D arraylike
-            2D arraylike of 1D series data.
+        data_array : 1D or 2D arraylike
+            1D data array or 2D data array of 1D series data.
 
         Returns
         -------
@@ -232,9 +247,13 @@ class WaveletFilter:
         cutoff = self.cutoff
         axis = self.axis
 
-        data_array = np.array(data_array, dtype=float)
-        if axis == 1:
+        _is_1d: bool = False
+        data_array = np.asarray(data_array)
+        if axis == 1 and data_array.ndim == 2:
             data_array = data_array.T
+        elif axis == 1 and data_array.ndim == 1:
+            data_array = data_array.reshape(1, -1)
+            _is_1d = True
 
         # Initialize output
         out = np.zeros_like(data_array)
@@ -270,6 +289,9 @@ class WaveletFilter:
 
         if axis == 1:
             out = out.T
+
+        if _is_1d:
+            out = np.asarray(out).reshape(-1)
 
         assert isinstance(out, np.ndarray)
         return out

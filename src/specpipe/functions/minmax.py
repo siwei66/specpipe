@@ -41,9 +41,9 @@ def minmax(data: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
     """
     import numpy as np  # noqa: W291
 
-    data = np.array(data)
+    data = np.asarray(data)
     vmin = np.nanmin(data, axis=1, keepdims=True)
     vmax = np.nanmax(data, axis=1, keepdims=True)
     minmax_values = (data - vmin) / (vmax - vmin + 1e-15)
 
-    return np.array(minmax_values)
+    return np.asarray(minmax_values)

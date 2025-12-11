@@ -19,6 +19,34 @@ from ..specio import simple_type_validator, arraylike_validator
 # from specpipe.specio import simple_type_validator, arraylike_validator
 
 
+# %% Helper: data standardizers - 1D data to 2D and 2D back to 1D
+
+
+def _to_2d_arr(
+    data_array: Union[Annotated[Any, arraylike_validator(ndim=2)], Annotated[Any, arraylike_validator(ndim=1)]],
+) -> np.ndarray:
+    """Standardize 1D and 2D arraylike to 2D array data"""
+    data_array = np.asarray(data_array)
+    if data_array.ndim == 1:
+        return np.asarray(data_array.reshape(1, -1))
+    elif data_array.ndim == 2:
+        return np.asarray(data_array)
+    else:
+        raise ValueError(f"Expected 1D or 2D array, but got shape: {data_array.shape}")
+
+
+def _back_1d_arr(data_array: Union[Annotated[Any, arraylike_validator(ndim=2)]]) -> np.ndarray:
+    """Standardize 1D and 2D arraylike to 2D array data"""
+    data_array = np.asarray(data_array)
+    if data_array.ndim == 2:
+        if data_array.shape[0] == 1 or data_array.shape[1] == 1:
+            return np.asarray(data_array.reshape(-1))
+        else:
+            return np.asarray(data_array)
+    else:
+        raise ValueError(f"Expected 2D array, but got shape: {data_array.shape}")
+
+
 # %% Common denoising techniques - kernel smoothing methods - helper: rolling window application of functions
 
 

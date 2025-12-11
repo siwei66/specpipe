@@ -206,7 +206,12 @@ class SpecExp:
         report_directory = (report_directory.replace("\\", "/") + "/").replace("//", "/")
         report_directory_path = Path(unc_path(report_directory))
         if report_directory_path.is_dir() is False:
-            raise ValueError(f"\nInvalid report_directory path: \n'{report_directory}'")
+            report_directory_path.mkdir(parents=True, exist_ok=True)
+            warnings.warn(
+                f"\nThe specified report directory does not exist and is created: \n'{report_directory}'",
+                UserWarning,
+                stacklevel=2,
+            )
         self._report_directory: str = report_directory
 
         # Experiment group management

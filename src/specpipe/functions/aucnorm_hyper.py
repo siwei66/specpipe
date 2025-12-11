@@ -40,7 +40,7 @@ def aucnorm_hyper(data: Annotated[Any, arraylike_validator(ndim=3)]) -> torch.Te
         tensor_data = data
     else:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        tensor_data = torch.tensor(np.array(data), device=device)
+        tensor_data = torch.from_numpy(np.asarray(data)).to(device)
 
     areas = torch.sum(torch.abs(tensor_data), dim=1, keepdim=True)
     auc_normalized = tensor_data / (areas + 1e-15)

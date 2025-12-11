@@ -14,12 +14,7 @@ from sklearn.preprocessing import PolynomialFeatures
 
 from ..specio import simple_type_validator, arraylike_validator
 from .outlier import ArrayOutlier
-from .utils import RollWindow
-
-# # Local test
-# from specpipe.specio import simple_type_validator, arraylike_validator
-# from specpipe.denoiser.outlier import ArrayOutlier
-# from specpipe.denoiser.rolling_window import RollWindow
+from .utils import RollWindow, _to_2d_arr, _back_1d_arr
 
 
 # %% Common denoising techniques - kernel smoothing methods
@@ -203,21 +198,24 @@ class LocalPolynomial(RollWindow):
 
     # Perform SG filter on 2-d array of 1-d series data
     @simple_type_validator
-    def savitzky_golay_filter(self, data_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def savitzky_golay_filter(
+        self,
+        data_array: Union[Annotated[Any, arraylike_validator(ndim=2)], Annotated[Any, arraylike_validator(ndim=1)]],
+    ) -> np.ndarray:
         """
         Implemente Savitzky-Golay smoothing of input 2D data array.
 
         Parameters
         ----------
-        data_array : 2D arraylike
-            2D data array of 1D series data.
+        data_array : 1D or 2D arraylike
+            1D data array or 2D data array of 1D series data.
 
         Returns
         -------
         np.ndarray
             Resulting smoothed data array.
         """
-        data_array = np.array(data_array).astype(self.numtype)
+        data_array = _to_2d_arr(data_array).astype(self.numtype)
 
         # Validate rolling mode and padding approach
         if self.roll_mode == 'knn':
@@ -235,7 +233,7 @@ class LocalPolynomial(RollWindow):
                 data_array=data_array, function_list=[self.outlier_replacer.replace, self.savitzky_golay_kernel]
             )
 
-        return np.array(result)
+        return _back_1d_arr(result)
 
     # Polynomial regression on 1-d series data, return estimation of focal point
     @simple_type_validator
@@ -318,21 +316,24 @@ class LocalPolynomial(RollWindow):
 
     # Perform simple polynomial filter on 2-d array of 1-d series data
     @simple_type_validator
-    def simple_polynomial_filter(self, data_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def simple_polynomial_filter(
+        self,
+        data_array: Union[Annotated[Any, arraylike_validator(ndim=2)], Annotated[Any, arraylike_validator(ndim=1)]],
+    ) -> np.ndarray:
         """
         Implemente simple polynomial smoothing of input 2D data array.
 
         Parameters
         ----------
-        data_array : 2D arraylike
-            2D data array of 1D series data.
+        data_array : 1D or 2D arraylike
+            1D data array or 2D data array of 1D series data.
 
         Returns
         -------
         np.ndarray
             Resulting smoothed data array.
         """
-        data_array = np.array(data_array).astype(self.numtype)
+        data_array = _to_2d_arr(data_array).astype(self.numtype)
 
         # Apply kernel
         if self.outlier_replacer is None:
@@ -342,8 +343,7 @@ class LocalPolynomial(RollWindow):
                 data_array=data_array, function_list=[self.outlier_replacer.replace, self.simple_polynomial_kernel]
             )
 
-        result = np.array(result)
-        return result
+        return _back_1d_arr(result)
 
     # weight function for lowess
     @staticmethod
@@ -589,21 +589,24 @@ class LocalPolynomial(RollWindow):
 
     # Perform lowess filter on 2-d array of 1-d series data
     @simple_type_validator
-    def lowess_filter(self, data_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def lowess_filter(
+        self,
+        data_array: Union[Annotated[Any, arraylike_validator(ndim=2)], Annotated[Any, arraylike_validator(ndim=1)]],
+    ) -> np.ndarray:
         """
         Implemente LOWESS smoothing of input 2D data array.
 
         Parameters
         ----------
-        data_array : 2D arraylike
-            2D data array of 1D series data.
+        data_array : 1D or 2D arraylike
+            1D data array or 2D data array of 1D series data.
 
         Returns
         -------
         np.ndarray
             Resulting smoothed data array.
         """
-        data_array = np.array(data_array).astype(self.numtype)
+        data_array = _to_2d_arr(data_array).astype(self.numtype)
 
         # Apply kernel
         if self.outlier_replacer is None:
@@ -613,4 +616,4 @@ class LocalPolynomial(RollWindow):
                 data_array=data_array, function_list=[self.outlier_replacer.replace, self.lowess_kernel]
             )
 
-        return np.array(result)
+        return _back_1d_arr(result)

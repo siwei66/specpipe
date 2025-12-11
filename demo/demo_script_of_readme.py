@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Usage demo for SpecPipe
+SpecPipe - Basic usage demonstration from README.md
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
