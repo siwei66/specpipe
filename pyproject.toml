@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "specpipe"
 version = "0.3.1"
-description = "A file-based pipeline for efficient batch processing and modeling of hyperspectral images."
+description = "A Python framework for automated batch implementation and method testing of universal hyperspectral modeling pipelines."
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [

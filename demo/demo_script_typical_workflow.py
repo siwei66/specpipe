@@ -70,3 +70,7 @@ for model in models: pipe.add_model(model, validation_method="2-fold")  # noqa
 # Review the processing chains and run pipeline
 pipe.ls_chains()
 pipe.run()
+
+# Retrieve results to console
+pipe.report_summary()  # Summaries
+pipe.report_chains()  # Reports of each processing chain

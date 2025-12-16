@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-SpecPipe - A file-based pipeline for efficient batch processing and modeling of hyperspectral images
-"""
+SpecPipe
+A Python framework for automated batch implementation and method testing of universal hyperspectral modeling pipelines
+"""  # noqa: E501
 
 # Package meta
 __version__ = "0.3.1"
