@@ -4,6 +4,10 @@
 
 # SpecPipe
 
+[![Tests](https://github.com/siwei66/specpipe/actions/workflows/tests.yml/badge.svg)](https://github.com/siwei66/specpipe/actions/workflows/tests.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/siwei66/specpipe/blob/master/LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/specpipe.svg)](https://pypi.org/project/specpipe/)
+
 ## A Python framework for automated batch implementation and method testing of universal hyperspectral modeling pipelines.
 
 SpecPipe streamlines the batch testing and optimization of hyperspectral analysis workflows. It provides a structured and extensible framework to apply and assess various image processing techniques (calibration, baseline correction, denoising, feature engineering, etc.) in combination with various machine learning models. The pipeline employs a comprehensive full-factorial design to evaluate all method combinations and generates standard reports on performance metrics, comparative statistical tests, residual analysis, influence anlaysis and visualizations.
