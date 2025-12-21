@@ -54,9 +54,12 @@ def factorial_transformer_chains(  # noqa: C901
     Parameters
     ----------
     step_transformers : tuple[Union[list[object], dict[str, object], None], ...]
-        A list of data transformers at each step.
+        Data transformers of each step.
+        Customize transformer name using dictionary input as {custom_name : transformer_model}.
+
     estimators : Union[list[object], dict[str, object]]
         Estimators for final step.
+
     is_regression : bool
         Set True if all estimators are regressors, set False if all estimators are classifiers.
         Estimators cannot be a mix of regressors and classifiers.
@@ -65,6 +68,31 @@ def factorial_transformer_chains(  # noqa: C901
     -------
     list[object]
         List of combined models.
+
+    Examples
+    --------
+    >>> from sklearn.feature_selection import SelectKBest, f_classif
+    >>> from sklearn.ensemble import RandomForestClassifier
+    >>> from sklearn.neighbors import KNeighborsClassifier
+    >>> selector5 = SelectKBest(f_classif, k=5)
+    >>> selector10 = SelectKBest(f_classif, k=10)
+    >>> rf = RandomForestClassifier(n_estimators=10)
+    >>> knn = KNeighborsClassifier(n_neighbors=3)
+
+    Without specify labels for component models:
+    >>> models = factorial_transformer_chains(
+        [selector5, selector10],
+        estimators=[knn, rf],
+        is_regression=False
+    )
+
+    Specify labels for component models:
+    >>> models = factorial_transformer_chains(
+        {'feat5': selector5, 'feat10': selector10},
+        estimators={'KNN': knn, 'RF': rf},
+        is_regression=False
+    )
+
     """
     # Validate given step_transformers
     if step_transformers is None:
@@ -174,7 +202,7 @@ def factorial_transformer_chains(  # noqa: C901
 def combine_transformer_classifier(  # noqa: C901
     data_transformer: Union[object, list[object]],
     classifier: object,
-    data_transformer_label: Optional[list[str]] = None,
+    data_transformer_label: Union[str, list[str], None] = None,
     classifier_label: Optional[str] = None,
 ) -> object:
     """
@@ -183,15 +211,44 @@ def combine_transformer_classifier(  # noqa: C901
 
     Parameters:
     -----------
-    data_transformer
+    data_transformer : Union[object, list[object]]
         Data transformation model, any data transformation or feature selection model.
-    classifier
+
+    classifier : object
         Classification model.
+
+    data_transformer_label : Union[str, list[str], None], optional
+        label(s) for the transformer(s). Defaults to model class names if not specified.
+
+    classifier_label: Optional[str]
+        label for the classifier. Defaults to model class name if not specified.
 
     Returns:
     --------
     model
         Combined classification model.
+
+    Examples
+    --------
+    >>> from sklearn.feature_selection import SelectKBest, f_classif
+    >>> from from sklearn.preprocessing import StandardScaler
+    >>> from sklearn.neighbors import KNeighborsClassifier
+
+    >>> selector = SelectKBest(f_classif, k=5)
+    >>> scaler = StandardScaler()
+    >>> knn = KNeighborsClassifier(n_neighbors=3)
+
+    Without specifying model labels:
+    >>> combined_model = combine_transformer_classifier([scaler, selector], knn)
+
+    Specify model labels:
+    >>> combined_model = combine_transformer_classifier(
+        [scaler, selector],
+        knn,
+        data_transformer_label=['scaler', 'selector'],
+        classifier_label='knn'
+    )
+
     """  # noqa: E501
     # Validate input models
     if isinstance(data_transformer, list):
@@ -215,6 +272,9 @@ def combine_transformer_classifier(  # noqa: C901
             transformer_name = transformer_name + f"{data_transformer.__class__.__name__}_"
             transformer_name_list.append(data_transformer.__class__.__name__)
     else:
+        if isinstance(data_transformer_label, str):
+            data_transformer_label = [data_transformer_label]
+        assert isinstance(data_transformer_label, list)
         if len(data_transformers) != len(data_transformer_label):
             raise ValueError(
                 f"Got {len(data_transformers)} data transformers, but got {len(data_transformer_label)} label:\
@@ -266,6 +326,7 @@ def combine_transformer_regressor(  # noqa: C901
     -----------
     data_transformer
         Data transformation model, any data transformation or feature selection model.
+
     regressor
         Regression model.
 
@@ -273,6 +334,28 @@ def combine_transformer_regressor(  # noqa: C901
     --------
     model
         Combined regression model.
+
+    Examples
+    --------
+    >>> from sklearn.feature_selection import SelectKBest, f_regression
+    >>> from from sklearn.preprocessing import StandardScaler
+    >>> from sklearn.neighbors import KNeighborsRegressor
+
+    >>> selector = SelectKBest(f_regression, k=5)
+    >>> scaler = StandardScaler()
+    >>> knn = KNeighborsRegressor(n_neighbors=3)
+
+    Without specifying model labels:
+    >>> combined_model = combine_transformer_regressor([scaler, selector], knn)
+
+    Specify model labels:
+    >>> combined_model = combine_transformer_regressor(
+        [scaler, selector],
+        knn,
+        data_transformer_label=['scaler', 'selector'],
+        classifier_label='knn'
+    )
+
     """  # noqa: E501
     # Validate input models
     if isinstance(data_transformer, list):

@@ -36,6 +36,7 @@ from .specio import (
 )
 from .specexp_vis import raster_rgb_preview
 
+
 # %% Spectral Experiment Class - SpecExp
 
 
@@ -50,150 +51,169 @@ class SpecExp:
     Attributes:
     -----------
     ** Report and log configurations **
-        - report_directory : str
-            The root directory for reports.
+    report_directory : str
+        The root directory for reports.
 
-        - log_loading : bool
-            Whether configuration of , the default is True.
+    log_loading : bool
+        Whether configuration of , the default is True.
 
     ** Group configuration **
-        - groups : list[str], [Group name]
-            Experiment groups.
+    groups : list[str]
+        Experiment groups.
+        Data structure: [Group name]
 
     ** Image data **
-        - images : list[tuple[str, str, str, str, str]], [(0 index, 1 group_name, 2 image_name, 3 mask_of, 4 image_path)]
-            Raster image loading data.
+    images : list[tuple[str, str, str, str, str]]
+        Raster image loading data.
+        Data structure: [(0 index, 1 group_name, 2 image_name, 3 mask_of, 4 image_path)]
 
-        - images_data
-            Raster image for sample spectral data.
-            Type and data structure same as 'images'.
+    images_data : list[tuple[str, str, str, str, str]]
+        Raster image for sample spectral data.
+        Data structure same as 'images'.
 
-        - images_mask
-            Raster image serving as masks.
-            Type and data structure same as 'images'.
+    images_mask : list[tuple[str, str, str, str, str]]
+        Raster image serving as masks.
+        Data structure same as 'images'.
 
     ** ROI data **
-        - rois_from_file : list[tuple[str,str,str,str,str,list[list[tuple[float,float]]],str,str]]
-            Regions of Interet (ROIs) loaded from ROI files.
-            Data structure: [(0 index, 1 group_name, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path)].
+    rois_from_file : list[tuple[str, str, str, str, str, list[list[tuple[float, float]]], str, str]]
+        Regions of Interet (ROIs) loaded from ROI files.
+        Data structure: [(0 index, 1 group_name, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs, 6 ROI file name, 7 ROI file path)].
 
-        - rois_from_coords : list[tuple[str,str,str,str,str,list[list[tuple[float,float]]]]]
-            Regions of Interet (ROIs) added from coordinate lists.
-            Data structure: [(0 index, 1 group_name, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs)]
+    rois_from_coords : list[tuple[str, str, str, str, str, list[list[tuple[float, float]]]]]
+        Regions of Interet (ROIs) added from coordinate lists.
+        Data structure: [(0 index, 1 group_name, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs)]
 
     ** All ROIs, sample ROIs and mask ROIs **
-        - rois : list[tuple[str,str,str,str,str,list[list[tuple[float,float]]]]]
-            All regions of interest (ROIs).
-            Data structure: [(0 index, 1 group_name, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs)].
+    rois : list[tuple[str,str,str,str,str,list[list[tuple[float,float]]]]]
+        All regions of interest (ROIs).
+        Data structure: [(0 index, 1 group_name, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs)].
 
-        - rois_sample
-            ROIs of sample.
-            Type and data structure same as 'rois'.
+    rois_sample : list[tuple[str,str,str,str,str,list[list[tuple[float,float]]]]]
+        ROIs of sample.
+        Data structure same as 'rois'.
 
-        - rois_mask
-            ROIs serving as masks.
-            Type and data structure same as 'rois'.
+    rois_mask : list[tuple[str,str,str,str,str,list[list[tuple[float,float]]]]]
+        ROIs serving as masks.
+        Data structure same as 'rois'.
 
     ** Standalone spectra **
-        - standalone_specs : list[tuple[str,str,str,str,list[Union[float,int]]]]
-            Standalone spectral data, e.g. extracted 1D spectra or 1D spectra data from spectrameter.
-            Data structure: [(0 id, 1 group, 2 use_type, 3 sample_name, 4 spectral_data_list)].
+    standalone_specs : list[tuple[str,str,str,str,list[Union[float,int]]]]
+        Standalone spectral data, e.g. extracted 1D spectra or 1D spectra data from spectrameter.
+        Data structure: [(0 id, 1 group, 2 use_type, 3 sample_name, 4 spectral_data_list)].
 
-        - standalone_specs_sample
-            Standalone spectral data serving as training samples.
+    standalone_specs_sample : list[tuple[str,str,str,str,list[Union[float,int]]]]
+        Standalone spectral data serving as training samples.
+        Data structure same as 'standalone_specs'.
 
     ** Sample labels **
-        - sample_labels : list[tuple[str,str,str]], [(0 fixed sample index, 1 custom labels, 2 groups)]
-            Custom sample labels.
+    sample_labels : list[tuple[str,str,str]]
+        Custom sample labels.
+        Data structure: [(0 fixed sample index, 1 custom labels, 2 groups)]
 
     ** Sample target values **
-        - sample_targets : list[tuple[str,str,Union[str,bool,int,float],str]], [(0 fixed sample id, 1 custom labels, 2 target values, 3 groups)]
-            Target values of samples for modeling.
+    sample_targets : list[tuple[str,str,Union[str,bool,int,float],str]]
+        Target values of samples for modeling.
+        Data structure: [(0 fixed sample id, 1 custom labels, 2 target values, 3 groups)]
 
 
     Methods:
     --------
     ** Group management **
-        - add_groups(group_list:list[str])
-            Add experiment groups by list of group names.
+    add_groups
+        Add experiment groups by list of group names.
 
-        - rm_group(group_name:str)
-            Remove a group from experiment by name, simultaneously removing associated image paths, ROI files, and added ROIs.
+    rm_group
+        Remove a group from experiment by name, simultaneously removing associated image paths, ROI files, and added ROIs.
 
     ** Image management **
-        - add_images_by_name(image_name, image_directory, group, mask_of)
-            Add paths of raster images to an experiment group, either by searching name pattern in a directory or by image paths.
+    add_images_by_name
+        Add paths of raster images to an experiment group by searching name pattern(s) in the specified directory.
 
-        - add_images_by_path(path, group, mask_of)
-            Add paths of raster images to an experiment group, either by searching name pattern in a directory or by image paths.
+    add_images_by_path
+        Add paths of raster images to an experiment group by image path(s).
 
-        - ls_images(image_name, group, mask_of)
-            List added image items based on image name and belonging group.
+    ls_images
+        List added image items based on image name and belonging group.
 
-        - rm_images(image_name, group, globbing)
-            Remove raster images from a belonging group by image names, simultaneously removing associated ROIs.
+    rm_images
+        Remove raster images from a belonging group by image names, simultaneously removing associated ROIs.
 
     ** ROI management **
-        - add_rois_by_suffix(roi_filename_suffix, search_directory, group, as_mask, include_roiname, exclude_roiname)
-            Load ROIs from ROI files by searching their name suffix pattern to the names of the added associated images.
+    add_rois_by_suffix
+        Load ROIs from ROI files by searching their name suffix pattern to the names of the added associated images.
 
-        - add_rois_by_file(path_list, image_name, group, as_mask, include_roiname, exclude_roiname)
-            Load ROIs from the ROI files in the path list to an associated image.
+    add_rois_by_file
+        Load ROIs from the ROI files in the path list to an associated image.
 
-        - add_roi_by_coords(roi_name, coord_lists, image_name, group, as_mask)
-            Add a (multi-)polygon ROI defined by vertex coordinate pairs in console to an image.
+    add_roi_by_coords
+        Add a (multi-)polygon ROI defined by vertex coordinate pairs in console to an image.
 
-        - ls_rois(roi_name_list, roi_file_name_list, source_type, image_name, group)
-            List added ROI items based on roi_name, belonging group_name, associated image name and source ROI file name if loaded.
+    ls_rois
+        List added ROI items based on roi_name, belonging group_name, associated image name and source ROI file name if loaded.
 
-        - rm_rois(ROI_name, ROI_type, roi_source_file_name, roi_source_file_path, image_name, group)
-            Remove loaded ROIs based on the value or value pattern of provided parameters.
+    rm_rois
+        Remove loaded ROIs based on the value or value pattern of provided parameters.
 
     ** Standalone spectra management **
-        - add_standalone_specs(spec_data, group, use_type, sample_name_list, silent_run, save_backup, return_updates)
-            Add 1D standalone spectra to a group.
+    add_standalone_specs
+        Add 1D standalone spectra to a group.
+        Alias: add_specs
 
-        - load_standalone_specs(csv_file_path)
-            Load or reload standalone spectra from CSV file.
+    load_standalone_specs
+        Load or reload standalone spectra from CSV file.
+        Alias: load_specs
 
-        - ls_standalone_specs(sample_name, group, use_type)
-            List added standalone spectra filtered by group_name, use_type and sample_name.
+    ls_standalone_specs
+        List added standalone spectra filtered by group_name, use_type and sample_name.
+        Alias: ls_specs
 
-        - rm_standalone_specs(sample_name, group, use_type)
-            Remove added standalone spectra by group_name, use_type and sample_name.
+    rm_standalone_specs
+        Remove added standalone spectra by group_name, use_type and sample_name.
+        Alias: rm_specs
 
     ** Sample label management **
-        - ls_sample_labels(return_dataframe)
-            Retrieve custom sample as sample label dataframe.
+    ls_sample_labels
+        Retrieve custom sample as sample label dataframe.
+        Alias: ls_labels
 
-        - sample_labels_from_df(labels_dataframe)
-            Load custom sample labels from sample label dataframe.
+    sample_labels_from_df
+        Load custom sample labels from sample label dataframe.
+        Alias: labels_from_df
 
-        - sample_labels_to_csv(path)
-            Save custom sample labels to csv file.
+    sample_labels_to_csv
+        Save custom sample labels to csv file.
+        Alias: labels_to_csv
 
-        - sample_labels_from_csv(label_csv_path)
-            Load custom sample labels from saved csv file. Custom labels can be edited in a CSV file and reloaded by calling this method.
+    sample_labels_from_csv
+        Load custom sample labels from saved csv file. Custom labels can be edited in a CSV file and reloaded by calling this method.
+        Alias: labels_from_csv
 
     ** Sample target value management **
-        - ls_sample_targets(return_dataframe)
-            Retrieve sample target values as sample target value dataframe.
+    ls_sample_targets
+        Retrieve sample target values as sample target value dataframe.
+        Alias: ls_targets
 
-        - sample_targets_from_df(target_value_dataframe)
-            Load sample target values from a sample target value dataframe.
+    sample_targets_from_df
+        Load sample target values from a sample target value dataframe.
+        Alias: targets_from_df
 
-        - sample_targets_to_csv(path)
-            Save the sample target values to a CSV file. If target values are not specified, create a standard CSV file of sample targets.
+    sample_targets_to_csv
+        Save the sample target values to a CSV file. If target values are not specified, create a standard CSV file of sample targets.
+        Alias: targets_to_csv
 
-        - sample_target_from_csv(label_csv_path)
-            Load sample target values from CSV file. To add target values in table, use this method to reload the modified standard CSV file of sample targets.
+    sample_target_from_csv
+        Load sample target values from CSV file. To add target values in table, use this method to reload the modified standard CSV file of sample targets.
+        Alias: targets_from_csv
 
     ** Save and reload the entire data configurations **
-        - save_data_config(copy)
-            Save current configurations.
+    save_data_config
+        Save current configurations.
+        Alias: save_config
 
-        - load_data_config(config_file_path)
-            Reload configurations from saved 'SpecExp_data_configuration_{create_time}.dill' file.
+    load_data_config
+        Reload configurations from saved 'SpecExp_data_configuration_{create_time}.dill' file.
+        Alias: load_config
 
     """  # noqa: E501
 
@@ -204,7 +224,8 @@ class SpecExp:
 
         # Report directory
         report_directory = (report_directory.replace("\\", "/") + "/").replace("//", "/")
-        report_directory_path = Path(unc_path(report_directory))
+        report_directory_path = Path(unc_path(report_directory)).absolute()
+        report_directory = (str(report_directory_path).replace("\\", "/") + "/").replace("//", "/")
         if report_directory_path.is_dir() is False:
             report_directory_path.mkdir(parents=True, exist_ok=True)
             warnings.warn(
@@ -269,7 +290,8 @@ class SpecExp:
     @report_directory.setter
     def report_directory(self, value: str) -> None:
         value = (value.replace("\\", "/") + "/").replace("//", "/")
-        value_path = Path(unc_path(value))
+        value_path = Path(unc_path(value)).absolute()
+        value = (str(value_path).replace("\\", "/") + "/").replace("//", "/")
         if value_path.is_dir() is False:
             raise ValueError(f"\nreport_directory is invalid: \n'{value}'")
         self._report_directory = value
@@ -539,16 +561,37 @@ class SpecExp:
         Parameters
         ----------
         group_list : list[str]
-            list of group names to add. Groups can be experiment groups or groups of certain features to test.
+            List of group names to add. Groups can be experiment groups or groups of certain features to test.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups(['group1', 'group2'])
         """
         for group_name in group_name_list:
             if group_name not in self._groups:
                 self._groups.append(group_name)
             else:
-                print(f"Group name '{group_name}' already exists and not added")
+                print(f"Group name '{group_name}' already exists")
 
     def ls_groups(self) -> list:
-        """List added groups."""
+        """
+        List added groups.
+
+        Returns
+        -------
+        list[str]
+            List of group names。
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups(['group1', 'group2'])
+        >>> exp.ls_groups()
+
+        The result is the same as:
+        >>> exp.groups
+        """
         return self.groups
 
     # Remove group and its associated configuration data
@@ -565,7 +608,14 @@ class SpecExp:
         Parameters
         ----------
         group_name : str
-            group to remove.
+            Group to remove.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups(['group1', 'group2'])
+
+        >>> exp.rm_group('group2')
         """  # noqa: E501
         # Validate groups
         if len(self._groups) == 0:
@@ -734,29 +784,23 @@ class SpecExp:
         group_name : str
             group of the added raster images.
 
-        image_name : str, optional
+        image_name : Union[str, list[str], None], optional
             Image name(s) or pattern(s) of image names in the given directory. For multiple patterns or names, please provide them in a list.
             Unix-like filename pattern is supported for image names.
             Image names must be unique within each group for the same type, or the existed duplicated record will be overwritten.
             The default is ''.
 
         image_directory : str, optional
-            directory path of the images to add. The default is ''.
+            directory path of the images to add. The default is ''. The default uses current working directory.
 
         image_full_path : Union[str, list[str], None], optional
             absolute path or list of absolute paths of the image files. The default is [].
             The implemention of image_full_path is preferred if image_name and image_directory are simultaneously provided.
 
-        mask_of : bool
+        mask_of : str
             If the given image is a binary raster mask of a spectral image, specify the name of the target image it corresponds to.
             If not, this is default to ''.
 
-        Raises
-        ------
-        ValueError
-            If neither image name_pattern nor image_full_path is provided.
-        ValueError
-            If given path does not exist.
         """  # noqa: E501
         # Validate group name
         group_name = str(group_name)
@@ -849,18 +893,19 @@ class SpecExp:
         mask_of: str = "",
     ) -> None:
         """
-        Add paths of raster images to an experiment group, either by searching name pattern in a directory or by image paths.
+        Add paths of raster images to an experiment group by searching name pattern(s) in the specified directory.
 
         Parameters
         ----------
-        image_name : str, optional
+        image_name : Union[str, list[str], None], optional
             Image name(s) or pattern(s) of image names in the given directory. For multiple patterns or names, please provide them in a list.
             Unix-like filename pattern is supported for image names.
             Image names must be unique within each group for the same type, or the existed duplicated record will be overwritten.
             The default is ''.
 
         image_directory : str, optional
-            directory path of the images to add. The default is ''.
+            directory path of the images to add.
+            If empty string '', the current working directory is used. The default is ''.
 
         group : str
             group of the added raster images.
@@ -868,6 +913,27 @@ class SpecExp:
         mask_of : bool
             If the given image is a binary raster mask of a spectral image, specify the name of the target image it corresponds to.
             If not, this is default to ''.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+
+        Add single image:
+        >>> exp.add_images_by_name("image.tif", "/rasters", "group1")
+
+        Add single image using default current working directory:
+        >>> exp.add_images_by_name("image.tif", group="group1")
+
+        Add multiple images:
+        >>> exp.add_images_by_name(["image1.tif", "image2.tif"], "/rasters", "group1")
+
+        Add by pattern:
+        >>> exp.add_images_by_name("*.tif", "/rasters", "group1")
+        >>> exp.add_images_by_name(["*.tif", "*.tiff"], "/rasters", "group1")
+
+        Add raster mask:
+        >>> exp.add_images_by_name("image_mask.tif", "/rasters", "group1", mask_of="image1")
         """  # noqa: E501
         self._add_images(
             image_name=image_name,
@@ -884,7 +950,7 @@ class SpecExp:
         mask_of: str = "",
     ) -> None:
         """
-        Add paths of raster images to an experiment group, either by searching name pattern in a directory or by image paths.
+        Add paths of raster images to an experiment group by image path(s).
 
         Parameters
         ----------
@@ -898,6 +964,18 @@ class SpecExp:
         mask_of : bool
             If the given image is a binary raster mask of a spectral image, specify the name of the target image it corresponds to.
             If not, this is default to ''.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+
+        Add single image:
+        >>> exp.add_images_by_path("/image.tif", "group1")
+
+        Add multiple images:
+        >>> exp.add_images_by_path(["/image1.tif", "/image2.tif"], "group1")
+
         """  # noqa: E501
         self._add_images(
             image_full_path=path,
@@ -1015,7 +1093,7 @@ class SpecExp:
         group : str, optional
             Group of the images. The default is '' (Not applied).
 
-        mask_of : Union[str, list[str], None]
+        mask_of : Union[str, list[str]]
             The name(s) of the target image if raster masks is to list.
             - For sample images, specify the empty string ''.
             - For mask(s) of a single image, provide the target image name.
@@ -1024,8 +1102,25 @@ class SpecExp:
 
         Returns
         -------
-        Optional[Annotated[pd.DataFrame, {'ID':str, 'Group':str, 'Image':str, 'Type':str, 'Path':str}]]
+        Union[pd.DataFrame, None]
             Dataframe of matched image items.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image.tif", "group1")
+
+        List all added images:
+        >>> exp.ls_images()
+
+        List images by name:
+        >>> exp.ls_images("image.tif")
+        >>> exp.ls_images(group="group1")
+
+        Retrieve image item dataframe:
+        >>> exp.ls_images(return_dataframe=True)
+
         """
         group_name: str = group
 
@@ -1072,28 +1167,52 @@ class SpecExp:
         ----------
         image_name : str
             Image name.
+
         group : str
             Image group.
+
         rgb_band_index : tuple[int, int, int]
             RGB band index.
+
         display_size : tuple[Union[int, float], Union[int, float]]
             Preview plot size.
+
         roi_name : Optional[str], optional
             ROI name, if None, all associated ROIs will be displayed. The default is None.
+
         roi_color : Union[str, tuple[float, float, float]], optional
             Color of ROI frame in name or RGB values in tuple. The default is "red".
+
         roi_linewidth : Union[int, float], optional
             Linewidth of ROI frame. The default is 3.
+
         display_roi : bool, optional
             Whether ROI is displayed. The default is True.
+
         normalize : bool, optional
             Whether image value is normalized for RGB display. The default is True.
+
         output_path : Optional[str], optional
             Output RGB image to the path, if None, no file output. The default is None.
+
         dpi : int, optional
             Output RGB image DPI. The default is 150.
+
         show_image : bool, optional
             Whether show image in console. The default is True.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image.tif", "group1")
+
+        Basic usage:
+        >>> exp.show_image("image.tif", "group_1", rgb_band_index=(192, 124, 64))
+
+        Output to png image file:
+        >>> exp.show_image("image.tif", "group_1", rgb_band_index=(192, 124, 64), output_path="/image_rgb.png")
+
         """
         # Get image
         if roi_name is None:
@@ -1161,10 +1280,27 @@ class SpecExp:
             Whether globbing is enabled. The default is True.
             If set False, the usage of Unix-like filename patterns will be disabled.
 
-        Raises
-        ------
-        ValueError
-            If group_name is not found.
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name(["image1.tif", "image2.tif"], "group1")
+
+        Remove all images:
+        >>> exp.rm_images()
+
+        Remove image by name:
+        >>> exp.rm_images("image1.tif")
+
+        Remove multiple images by names:
+        >>> exp.rm_images(["image1.tif", "image2.tif"])
+
+        Remove image by group:
+        >>> exp.rm_images(group="group2")
+
+        Remove image by name pattern:
+        >>> exp.rm_images("image*")
+
         """
         group_name: str = group
 
@@ -1243,14 +1379,14 @@ class SpecExp:
             print("\nFollowing associated ROI file items are removed:\n")
             self._rois_from_file_to_df(removed_total["roif"])
         else:
-            print("\nNo ROI item found, no ROI is removed")
+            print("\nNo file-added ROI item found, no file-added ROI is removed")
 
         # self._rois_from_coords update report
         if len(removed_total["roic"]) > 0:
             print("\nFollowing associated console-added ROI items are removed:\n")
             self._df_roic(removed_total["roic"])
         else:
-            print("\nNo console-added ROI item found, no ROI is removed")
+            print("\nNo console-added ROI item found, no console-added ROI is removed")
 
         # Update image mask and image sample
         self._update_image_rev()
@@ -1478,6 +1614,7 @@ class SpecExp:
 
     # TODO : Auto-ROI - Not implemented in current version
     # Function : Each image as a sample, generate multipolygon ROIs of all valid regions of the image using a mask value
+    # Here for API, function in new file
     # Or each untouched independent valid area in a raster image as a sample, set by 'segment' parameter.
     # self._rois_from_coords: [0 id, 1 group, 2 image_name, 3 ROI_name, 4 ROI_type, 5 list of lists of coordinate pairs]
     # @simple_type_validator
@@ -1506,8 +1643,8 @@ class SpecExp:
         group: str = "",
         as_mask: bool = False,
         *,
-        include_roiname: Optional[list[str]] = None,
-        exclude_roiname: Optional[list[str]] = None,
+        include_roiname: Union[str, list[str], None] = None,
+        exclude_roiname: Union[str, list[str], None] = None,
     ) -> None:
         """
         Load ROIs from ROI files by searching their name suffix pattern to the names of the added associated images.
@@ -1524,12 +1661,12 @@ class SpecExp:
         search_directory : str, optional
             Directory path to search the ROI files. The default is current working directory.
 
-        include_roiname : list[str]
-            Inclusion filter for ROI names, ROIs with a name containing any string in the list are included.
+        include_roiname : Union[str, list[str], None]
+            Inclusion filter for ROI name(s), ROIs with a name containing any string in the list are included.
             The default is None (all ROIs are included).
 
-        exclude_roiname : list[str]
-            Exclusion filter for ROI names, ROIs with a name containing any string in the list are excluded.
+        exclude_roiname : Union[str, list[str], None]
+            Exclusion filter for ROI name(s), ROIs with a name containing any string in the list are excluded.
             The default is None (no ROI is excluded).
 
         group : str
@@ -1539,12 +1676,30 @@ class SpecExp:
             Whether the ROIs are added as masks.
             If True, the added ROIs are labeled as masks, if False, the added ROIs are labeled as samples.
 
-        Raises
-        ------
-        ValueError
-            If group_name is not found.
-        ValueError
-            No image added.
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image1.tif", "group1")
+
+        For ROI files like "image1_roi.xml":
+        >>> exp.add_rois_by_suffix("_roi.xml", group="group1")
+
+        Add by pattern:
+        >>> exp.add_rois_by_suffix("*.xml", group="group1")
+
+        Exclude ROI name:
+        >>> exp.add_rois_by_suffix("*.xml", group="group1", exclude_roiname='name_to_exclude')
+
+        Exclude multiple ROI names:
+        >>> exp.add_rois_by_suffix("*.xml", group="group1", exclude_roiname=['name_to_exclude1', 'name_to_exclude2'])
+
+        Add ROI with specified ROI name:
+        >>> exp.add_rois_by_suffix("*.xml", group="group1", include_roiname='_sample')
+
+        Add ROI as mask of the corresponding image:
+        >>> exp.add_rois_by_suffix("_mask.xml", group="group1", as_mask=True)
+
         """
         group_name: str = group
 
@@ -1556,11 +1711,17 @@ class SpecExp:
         # Initialize 'include' and 'exclude'
         if include_roiname is None:
             include = []
+        elif isinstance(include_roiname, str):
+            include = [include_roiname]
         else:
+            assert isinstance(include_roiname, list)
             include = include_roiname
         if exclude_roiname is None:
             exclude = []
+        elif isinstance(exclude_roiname, str):
+            exclude = [exclude_roiname]
         else:
+            assert isinstance(exclude_roiname, list)
             exclude = exclude_roiname
 
         # Validate groups
@@ -1607,33 +1768,33 @@ class SpecExp:
             # Combine updated results
             new_rois = new_rois + pars_result[0]
 
-            # Filter parsed new ROI names
-            # Includes
-            if len(include) > 0:
-                new_rois_filtered = []
-                for roi_item in new_rois:
-                    whether_filtered = True
-                    for pat in include:
-                        if pat in roi_item[3]:
-                            whether_filtered = False
-                    if not whether_filtered:
-                        new_rois_filtered.append(roi_item)
-                new_rois = new_rois_filtered
-            # Excludes
-            if len(exclude) > 0:
-                new_rois_filtered = []
-                for roi_item in new_rois:
-                    whether_filtered = False
-                    for pat in exclude:
-                        if pat in roi_item[3]:
-                            whether_filtered = True
-                    if not whether_filtered:
-                        new_rois_filtered.append(roi_item)
-                new_rois = new_rois_filtered
-
             # Combine failed results
             fail_list = fail_list + pars_result[1]
             fail_err_list = fail_err_list + pars_result[2]
+
+        # Filter parsed new ROI names
+        # Includes
+        if len(include) > 0:
+            new_rois_filtered = []
+            for roi_item in new_rois:
+                whether_filtered = True
+                for pat in include:
+                    if pat in roi_item[3]:
+                        whether_filtered = False
+                if not whether_filtered:
+                    new_rois_filtered.append(roi_item)
+            new_rois = new_rois_filtered
+        # Excludes
+        if len(exclude) > 0:
+            new_rois_filtered = []
+            for roi_item in new_rois:
+                whether_filtered = False
+                for pat in exclude:
+                    if pat in roi_item[3]:
+                        whether_filtered = True
+                if not whether_filtered:
+                    new_rois_filtered.append(roi_item)
+            new_rois = new_rois_filtered
 
         # Update self._rois_from_file and output reports
         self._roi_receiver(new_rois, fail_list, fail_err_list)
@@ -1652,28 +1813,27 @@ class SpecExp:
     @simple_type_validator
     def add_rois_by_file(  # noqa: C901
         self,
-        path_list: list[str],
+        path: Union[str, list[str]],
         image_name: str = "",
         group: str = "",
         as_mask: bool = False,
         *,
-        include_roiname: Optional[list[str]] = None,
-        exclude_roiname: Optional[list[str]] = None,
+        include_roiname: Union[str, list[str], None] = None,
+        exclude_roiname: Union[str, list[str], None] = None,
     ) -> None:
         """
         Load ROIs by ENVI '.xml' ROI files or shape files like '.shp' files from QGIS/ArcGIS.
-        The path list should contains the full paths of the ROI files.
 
         Parameters
         ----------
-        path_list : list[str], optional
+        path : Union[str, list[str]], optional
             list of ROI file paths. The default is [].
 
-        include_roiname : list[str]
+        include_roiname : Union[str, list[str], None]
             Inclusion filter for ROI names, ROIs with a name containing any string in the list are included.
             The default is [] (all ROIs are included).
 
-        exclude_roiname : list[str]
+        exclude_roiname : Union[str, list[str], None]
             Exclusion filter for ROI names, ROIs with a name containing any string in the list are excluded.
             The default is [] (no ROI is excluded).
 
@@ -1687,15 +1847,28 @@ class SpecExp:
             Whether the ROIs are added as masks.
             If True, the added ROIs are labeled as masks, if False, the added ROIs are labeled as samples.
 
-        Raises
-        ------
-        ValueError
-            If group_name is not found.
-        ValueError
-            If image_name is not found.
-        ValueError
-            If ROI file extension is not supported.
-        """
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image1.tif", "group1")
+
+        For ROI files like "image1_roi.xml":
+        >>> exp.add_rois_by_file("/image1_roi.xml", group="group1")
+
+        Exclude multiple ROI name:
+        >>> exp.add_rois_by_file("/image1_roi.xml", group="group1", exclude_roiname='name_to_exclude')
+
+        Exclude multiple ROI names:
+        >>> exp.add_rois_by_file("/image1_roi.xml", group="group1", exclude_roiname=['name_to_exclude1', 'name_to_exclude2'])
+
+        Add ROI with specified ROI names:
+        >>> exp.add_rois_by_file("/image1_roi.xml", group="group1", include_roiname='_sample')
+
+        Add ROI as mask of the corresponding image:
+        >>> exp.add_rois_by_file("/image1_roi_mask.xml", group="group1", as_mask=True)
+
+        """  # noqa: E501
         group_name: str = group
 
         # Validate group name
@@ -1718,18 +1891,28 @@ class SpecExp:
         else:
             roi_type = "sample"
 
-        # Default 'include' and 'exclude'
+        # Initialize 'include' and 'exclude'
         if include_roiname is None:
             include = []
+        elif isinstance(include_roiname, str):
+            include = [include_roiname]
         else:
+            assert isinstance(include_roiname, list)
             include = include_roiname
         if exclude_roiname is None:
             exclude = []
+        elif isinstance(exclude_roiname, str):
+            exclude = [exclude_roiname]
         else:
+            assert isinstance(exclude_roiname, list)
             exclude = exclude_roiname
 
         # Add roi path list to image
-        roi_pathsi = [fpath.replace("\\", "/") for fpath in path_list]
+        if isinstance(path, str):
+            path_list = [path]
+        else:
+            path_list = path
+        roi_pathsi = [os.path.abspath(os.path.normpath(fpath)).replace("\\", "/") for fpath in path_list]
 
         # Validate file structure of paths
         for fpath in roi_pathsi:
@@ -1815,14 +1998,14 @@ class SpecExp:
         Add a (multi-)polygon ROI defined by vertex coordinate pairs in console to an image.
         The vertex coordinates should be defined in the following structure:
             [ Polygons [ Coordinate pairs (Coordinate X, Coordinate Y) ] ]
-            with type: list[list[tuple[Union[int,float],Union[int,float]]]]
+            with type: list[list[tuple[Union[int, float], Union[int, float]]]]
 
         Parameters
         ----------
         roi_name : str, optional
             Name of the added ROI. The default is ''.
 
-        coord_lists : dict[str, list[list[tuple[Union[int,float],Union[int,float]]]], optional
+        coord_lists : dict[str, list[list[tuple[Union[int, float],Union[int, float]]]], optional
             List of lists of coordinate pairs of the polygon vertices. The default is {}.
 
         image_name : str, optional
@@ -1835,13 +2018,16 @@ class SpecExp:
             Whether the ROIs are added as masks.
             If True, the added ROIs are labeled as masks, if False, the added ROIs are labeled as samples.
 
-        Raises
-        ------
-        ValueError
-            If raster image name is not found.
-        ValueError
-            If number of coordinate pairs less than 4.
-        """
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image1.tif", "group1")
+
+        >>> coordinates = [[(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]]
+        >>> spec_exp.add_roi_by_coords(roi_name="test_roi", group="test_group", image_name="image1.tif", coord_lists=coordinates)
+
+        """  # noqa: E501
         group_name: str = group
 
         # Validate groups
@@ -2187,9 +2373,29 @@ class SpecExp:
 
         Returns
         -------
-        Optional[Union[Annotated[pd.DataFrame, {'ID':str, 'Group':str, 'Image':str, 'ROI_name':str, 'ROI_type':str, 'Coordinates':list[list[tuple[float,float]]]}],
-                       Annotated[pd.DataFrame, {'ID':str, 'Group':str, 'Image':str, 'ROI_name':str, 'ROI_type':str, 'Coordinates':list[list[tuple[float,float]]], 'ROI_source_file':str, 'ROI_file_path':str}]]]
+        Union[pd.DataFrame, None]
             Dataframe of matched ROIs.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image1.tif", "group1")
+        >>> exp.add_rois_by_suffix("_roi.xml", group="group1")
+
+        List all ROIs:
+        >>> exp.ls_rois()
+
+        List ROIs with condition:
+        >>> exp.ls_rois(roi_type="sample")
+        >>> exp.ls_rois(roi_name_list=["ROI1", "ROI2"])
+        >>> exp.ls_rois(source_type="coords")
+        >>> exp.ls_rois(group="group1")
+        >>> exp.ls_rois(group="group1", roi_type="sample")
+
+        Return result in dataframe:
+        >>> exp.ls_rois(return_dataframe=True)
+
         """  # noqa: E501
         group_name: str = group
 
@@ -2322,7 +2528,11 @@ class SpecExp:
         ]
     ]:
         """
-        List file-added Regions of Interest. See method 'ls_rois' for details.
+        List file-added Regions of Interest. For detailed use, see 'ls_rois'.
+
+        See Also
+        --------
+        ls_rois
         """
 
         if return_dataframe:
@@ -2417,7 +2627,11 @@ class SpecExp:
         ]
     ]:
         """
-        List console-added Regions of Interest. See method 'ls_rois' for details.
+        List console-added Regions of Interest. For detailed use, see 'ls_rois'.
+
+        See Also
+        --------
+        ls_rois
         """
         if return_dataframe:
             return self.ls_rois(
@@ -2548,7 +2762,11 @@ class SpecExp:
         ]
     ]:
         """
-        List console-added Regions of Interest. See method 'ls_rois' for details.
+        List console-added Regions of Interest. For detailed use, see 'ls_rois'.
+
+        See Also
+        --------
+        ls_rois
         """
         if return_dataframe:
             return self.ls_rois(
@@ -2678,7 +2896,11 @@ class SpecExp:
         ]
     ]:
         """
-        List console-added Regions of Interest. See method 'ls_rois' for details.
+        List console-added Regions of Interest. For detailed use, see 'ls_rois'.
+
+        See Also
+        --------
+        ls_rois
         """
         if return_dataframe:
             return self.ls_rois(
@@ -2762,12 +2984,12 @@ class SpecExp:
             print(f"\nNo ROIs_from_{rm_target} added.")
             return
 
-        # Validate pattern
-        val_value = 0
-        for item_pat in item_pattern.values():
-            val_value = val_value + len(item_pat)
-        if val_value == 0:
-            raise ValueError("\nNo criterion is provided for removal")
+        # Validate pattern (raise error if no criterion is given)
+        # val_value = 0
+        # for item_pat in item_pattern.values():
+        #     val_value = val_value + len(item_pat)
+        # if val_value == 0:
+        #     raise ValueError("\nNo criterion is provided for removal")
 
         removed_rois = item_list_original
         remained_rois = []
@@ -2841,7 +3063,7 @@ class SpecExp:
             The name or name pattern of the ROI(s) to remove. If not provided, this criterion is ignored.
 
         roi_type : str, optional
-            The name or name pattern of the type of the ROI(s) to remove. If not provided, this criterion is ignored.
+            Type of ROI, choose between "sample" and "mask". If not provided, this criterion is ignored.
 
         roi_source_file_name: str
             Name or name pattern of source ROI files.
@@ -2855,15 +3077,22 @@ class SpecExp:
         group : str, optional
             The name or name pattern of belonging group of the ROI(s) to remove. If not provided, this criterion is ignored.
 
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image1.tif", "group1")
+        >>> exp.add_rois_by_suffix("_roi.xml", group="group1")
 
-        Raises
-        ------
-        ValueError
-            roi_type must be 'sample' or 'mask' if provided.
-        ValueError
-            If no criterion is provided for the removal.
-        ValueError
-            If provided criteria will remove all ROIs.
+        Remove all ROIs:
+        >>> exp.rm_rois()
+
+        Remove ROIs by condition(s):
+        >>> exp.rm_rois(roi_type="mask")
+        >>> exp.rm_rois(group="group1")
+        >>> exp.rm_rois(image_name="image1.tif")
+        >>> exp.rm_rois(roi_source_file_name="image1_roi.xml")
+
         """  # noqa: E501
         group_name: str = group
 
@@ -2933,7 +3162,7 @@ class SpecExp:
             list[list[Union[int, float]]],
             Annotated[Any, arraylike_validator(ndim=2, as_type="float")],
         ],
-        group: str = "",
+        group: str,
         use_type: str = "sample",
         sample_name_list: Optional[list[str]] = None,
         *,
@@ -2967,8 +3196,16 @@ class SpecExp:
             Whether to save backup files, if set False, the data is saved without creating a backup file.
 
         return_updates : bool, optional
-            Whether to return updates. If True, the report will be returned.
-        """
+            Whether to return updates. If True, the data update report will be returned.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+
+        >>> exp.add_standalone_specs([[1, 2, 3, 4], [1, 3, 3, 3]], group='group1', sample_name_list=['sample1', 'sample2'])
+
+        """  # noqa: E501
         group_name: str = group
 
         # Initialize sample_names
@@ -3155,22 +3392,27 @@ class SpecExp:
     # Format of associated attribute:
     # [0 id, 1 group, 2 use_type, 3 sample_name, 4 spectral_data_list]
     @simple_type_validator
-    def load_standalone_specs(self, csv_file_path: Optional[str] = None) -> None:  # noqa: C901
+    def load_standalone_specs(self, csv_file_path: str) -> None:  # noqa: C901
         """
         Load or reload standalone spectra from CSV file.
-        Expected columns: ['ID', 'Group', 'Use_type', 'Sample_name', 'Band_1', 'Band_2',...]
-        The ID and Sample_name values must be unique.
 
         Parameters
         ----------
-        csv_file_path : str, optional
-            CSV file path. If not given, the default path will be 'Standalone_spectral_data/Standalone_spectra_(create_time).csv' in the SpecExp.report_directory.
-        """  # noqa: E501
-        # Default path
-        if csv_file_path is None:
-            dpath = self._report_directory + "Standalone_spectral_data/" + f"Standalone_spectra_{self._create_time}.csv"
-        else:
-            dpath = csv_file_path
+        csv_file_path : str
+            CSV file path.
+            Expected table column names: ['ID', 'Group', 'Use_type', 'Sample_name', 'Band_1', 'Band_2',...]
+            The 'ID' and 'Sample_name' values must be unique.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+
+        >>> exp.load_standalone_specs("/specs.csv")
+
+        """
+        # Validate path
+        dpath = os.path.abspath(os.path.normpath(csv_file_path)).replace("\\", "/")
 
         # Validate extension
         ext = dpath.split(".")[-1]
@@ -3342,7 +3584,7 @@ class SpecExp:
         group: str = "",
         use_type: str = "",
         *,
-        sample_name_exact_match: bool = True,
+        exact_match: bool = True,
         print_result: bool = True,
         return_dataframe: bool = False,
     ) -> Optional[pd.DataFrame]:
@@ -3361,8 +3603,8 @@ class SpecExp:
         use_type : str, optional
             Type label.
 
-        sample_name_exact_match : bool, optional
-            If sample_name_exact_match is set to False, all items with sample_names containing the given name value will be returned.
+        exact_match : bool, optional
+            If exact_match is set to False, all items with sample_names containing the given name value will be returned.
 
         print_result : bool, optional
             Whether results are prited in console. If set True, a simplied dataframe will be printed. The default is True.
@@ -3374,8 +3616,28 @@ class SpecExp:
         -------
         df_sspec : Optional[pd.DataFrame]
             If return_dataframe is set to True. A result dataframe will be returned.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_standalone_specs([[1, 2, 3, 4], [1, 3, 3, 3]], group='group1', sample_name_list=['sample1', 'sample2'])
+
+        List all standalone spectra:
+        >>> exp.ls_standalone_specs()
+
+        List by condition:
+        >>> exp.ls_standalone_specs(group='group1')
+
+        List by name partial match:
+        >>> exp.ls_standalone_specs(sample_name='1', exact_match=False)
+
+        Return results in dataframe:
+        >>> exp.ls_standalone_specs(return_dataframe=True)
+
         """  # noqa: E501
         group_name: str = group
+        sample_name_exact_match: bool = exact_match
 
         # Get result
         result = self._get_sspecs(
@@ -3437,6 +3699,19 @@ class SpecExp:
 
         silent_run : bool, optional
             If silent_run is set True, the removal report will not be printed.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_standalone_specs([[1, 2, 3, 4], [1, 3, 3, 3]], group='group1', sample_name_list=['sample1', 'sample2'])
+
+        Remove all standalone spectra:
+        >>> exp.rm_standalone_specs()
+
+        Remove by condition:
+        >>> exp.rm_standalone_specs(group='group1')
+
         """  # noqa: E501
         group_name: str = group
 
@@ -3483,10 +3758,11 @@ class SpecExp:
         # Updated saved file
         self._update_sspecs_file(silent_run=True)
 
+    # Alias
     rm_specs = rm_standalone_specs
 
     ## Sample label management ====================
-    # TODO: Helper: Sample label - group identifier
+    # Helper: Sample label - group identifier
     @simple_type_validator
     def _sample_id_to_group(self, sample_ids: list[str]) -> list[str]:
         """
@@ -3533,10 +3809,19 @@ class SpecExp:
             Output csv file path.
             If not given, the labels is saved as 'Sample_labels.csv' in the report directory.
 
-        Raises
-        ------
-        ValueError
-            If directory of the provided csv path is invalid.
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image1.tif", "group1")
+        >>> exp.add_rois_by_suffix("_roi.xml", group="group1")
+
+        Output to default path:
+        >>> exp.sample_labels_to_csv()
+
+        Output to custom path:
+        >>> exp.sample_labels_to_csv('/labels.csv')
+
         """
         # Default save path
         if path == "":
@@ -3583,6 +3868,16 @@ class SpecExp:
         ----------
         return_dataframe : bool
             Whether dataframe is returned. The default is True.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image1.tif", "group1")
+        >>> exp.add_rois_by_suffix("_roi.xml", group="group1")
+
+        >>> exp.ls_sample_labels()
+
         """
         df_lb = pd.DataFrame(self._sample_labels, columns=["Sample_ID", "Label", "Group"])
         df_lb = df_lb.astype("object")
@@ -3609,6 +3904,17 @@ class SpecExp:
         labels_dataframe : pd.DataFrame
             Dataframe of sample labels. Expected columns: ["Sample_ID", "Label", "Group"]. The labels must be unique.
             The initial/current label dataframe can be retrieved using SpecExp.ls_sample_labels().
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image1.tif", "group1")
+        >>> exp.add_rois_by_suffix("_roi.xml", group="group1")
+
+        >>> df = exp.ls_sample_labels()
+        >>> exp.sample_labels_from_df(df)
+
         """
         # Update labels - formatting with property formatting function
         self.sample_labels = labels_dataframe
@@ -3630,12 +3936,21 @@ class SpecExp:
             Path of modified label CSV file. Expected columns: ["Sample_ID", "Label", "Group"].
             If not given, the labels is saved as 'Sample_labels.csv' in the report directory.
 
-        Raises
-        ------
-        ValueError
-            If the provided path is invalid.
-        ValueError
-            If the provided file is not 'csv'.
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image1.tif", "group1")
+        >>> exp.add_rois_by_suffix("_roi.xml", group="group1")
+
+        Use default path:
+        >>> exp.sample_labels_to_csv()
+        >>> exp.sample_labels_from_csv()
+
+        Use custom path:
+        >>> exp.sample_labels_to_csv('/labels.csv')
+        >>> exp.sample_labels_from_csv('/labels.csv')
+
         """
         # Default save path
         if label_csv_path == "":
@@ -3673,9 +3988,24 @@ class SpecExp:
         Parameters
         ----------
         path : str
-            CSV file path. The default is '{report_directory}/sample_target_values.csv'.
+            CSV file path. The default is '{report_directory}/Sample_target_values.csv'.
+
         include_header : bool, optional
             If True, the headers are included as the first row. The default is True.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image1.tif", "group1")
+        >>> exp.add_rois_by_suffix("_roi.xml", group="group1")
+
+        Output to default path:
+        >>> exp.sample_targets_to_csv()
+
+        Output to custom path:
+        >>> exp.sample_targets_to_csv("/target.csv")
+
         """  # noqa: E501
         # Validate labels
         if len(self.sample_labels) == 0:
@@ -3683,7 +4013,7 @@ class SpecExp:
 
         # Default path
         if len(path) == 0:
-            path = self.report_directory + "sample_target_values.csv"
+            path = self.report_directory + "Sample_target_values.csv"
 
         # Convert sample_targets to dataframe
         if len(self.sample_targets) > 0:
@@ -3717,12 +4047,23 @@ class SpecExp:
     def ls_sample_targets(self, return_dataframe: bool = True) -> Optional[pd.DataFrame]:
         """
         Retrieve sample target values as dataframe.
+        If no sample targets have been specified, returns a blank template dataframe that can be filled and assigned back to the SpecExp instance.
 
         Parameters
         ----------
         return_dataframe : bool
             If true, the dataframe is returned, or the dataframe is printed. The default is True.
-        """
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image1.tif", "group1")
+        >>> exp.add_rois_by_suffix("_roi.xml", group="group1")
+
+        >>> exp.ls_sample_targets()
+
+        """  # noqa: E501
         if len(self.sample_targets) > 0:
             dft = pd.DataFrame(self.sample_targets, columns=["Sample_ID", "Label", "Target_value", "Group"])
         else:
@@ -3754,6 +4095,17 @@ class SpecExp:
         target_value_dataframe : pd.DataFrame
             Dataframe of sample target values. Expected columns: ["Sample_ID", "Label", "Target_value", "Group"].
             The current target value dataframe can be retrieved using SpecExp.ls_sample_targets().
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image1.tif", "group1")
+        >>> exp.add_rois_by_suffix("_roi.xml", group="group1")
+
+        >>> df = exp.ls_sample_targets()
+        >>> exp.sample_targets_from_df(df)
+
         """  # noqa: E501
         # Update targets - formatting with property formatting function
         self.sample_targets = target_value_dataframe
@@ -3778,7 +4130,7 @@ class SpecExp:
         ----------
         path : str
             CSV file path. Expected columns: ["Sample_ID", "Label", "Target_value", "Group"].
-            The default is '<SpecExp.report_directory>/sample_target_values.csv'.
+            The default is '<SpecExp.report_directory>/Sample_target_values.csv'.
 
         target_dtype : Union[type,str,None], optional
             Data type of target values.
@@ -3786,10 +4138,26 @@ class SpecExp:
 
         include_header : bool, optional
             If True, the first row of the CSV file is treated as headers. The default is True.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+        >>> exp.add_groups("group1")
+        >>> exp.add_images_by_name("image1.tif", "group1")
+        >>> exp.add_rois_by_suffix("_roi.xml", group="group1")
+
+        Use default path:
+        >>> exp.sample_targets_to_csv()
+        >>> exp.sample_targets_from_csv()
+
+        Use custom path:
+        >>> exp.sample_targets_to_csv("/target.csv")
+        >>> exp.sample_targets_from_csv("/target.csv")
+
         """  # noqa: E501
         # Default path
         if len(path) == 0:
-            path = self.report_directory + "sample_target_values.csv"
+            path = self.report_directory + "Sample_target_values.csv"
 
         # Default dtype
         if target_dtype is None:
@@ -3813,7 +4181,7 @@ class SpecExp:
     # Alias
     targets_from_csv = sample_targets_from_csv
 
-    # TODO: update_sample_labels_targets
+    # Update_sample_labels_targets
     # self._sample_labels: [0 fixed sample id, 1 user assinged labels, 2 sample belonging group]
     # self._sample_targets: [0 fixed sample id, 1 user assinged labels, 2 target values, 3 sample belonging group]
     def _update_sample_labels_targets(self) -> None:
@@ -3865,6 +4233,16 @@ class SpecExp:
         ----------
         copy : bool, optional
             If set True, a copy will be created simultaneously. The default is True.
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+
+        >>> exp.save_data_config()
+
+        Disable copy:
+        >>> exp.save_data_config(copy=False)
+
         """
         # Current time for saving
         cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -3916,6 +4294,18 @@ class SpecExp:
             Configuration file path of 'SpecExp_data_configuration_(creating-time).dill'.
             The path can be absolute path of the dill file or its relative path to report directory.
             If not given, the path will be '(SpecExp.report_directory)/SpecExp_configuration/SpecExp_data_configuration_(SpecExp.create_time).dill'
+
+        Examples
+        --------
+        >>> exp = SpecExp("/experiment")
+
+        Use default path:
+        >>> exp.save_data_config()
+        >>> exp.load_data_config()
+
+        Use custom configuration file path:
+        >>> exp.load_data_config("/spec_exp_config.dill")
+
         """  # noqa: E501
         # Load path
         if config_file_path == "":

@@ -47,8 +47,8 @@ def create_test_spec_pipe(dir_path: str, sample_n: int = 10, n_bands: int = 8, i
     # Step 0
     pipe.add_process(5, 6, 0, roispec)
     # Step 1
-    pipe.add_process(6, 7, 0, Stats2d.mean)
-    pipe.add_process(6, 7, 0, Stats2d.median)
+    pipe.add_process(6, 7, 0, Stats2d().mean)
+    pipe.add_process(6, 7, 0, Stats2d().median)
     # Step 2 - modeling
     if is_regression:
         pipe.add_process(7, 8, 0, RandomForestRegressor(n_estimators=6))

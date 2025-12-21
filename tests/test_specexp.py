@@ -13,9 +13,6 @@ import sys
 import shutil
 import tempfile
 
-# Typing
-from typing import Union
-
 # Test
 import pytest
 import unittest
@@ -97,446 +94,637 @@ def create_test_directory_structure(base_dir: str) -> tuple[str, str]:
 
 
 class TestSpecExp(unittest.TestCase):
-    """Test class for SpecExp functionality"""
+    """Test class for SpecExp functionality (static methods + class setup)"""
 
     test_dir: str
     report_dir: str
     images_dir: str
     rois_dir: str
-    spec_exp: SpecExp
 
-    def setUp(self) -> None:
-        """Setup method that runs before each test"""
-        # Create a temporary directory for testing
-        self.test_dir = (str(tempfile.mkdtemp()).replace("\\", "/") + "/").replace("//", "/")
-        self.report_dir = (str(os.path.join(self.test_dir, "reports")).replace("\\", "/") + "/").replace("//", "/")
-        os.makedirs(self.report_dir, exist_ok=True)
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.test_dir = (str(tempfile.mkdtemp()).replace("\\", "/") + "/").replace("//", "/")
+        cls.report_dir = (str(os.path.join(cls.test_dir, "reports")).replace("\\", "/") + "/").replace("//", "/")
+        os.makedirs(cls.report_dir, exist_ok=True)
 
-        # Create test data directories
-        self.images_dir, self.rois_dir = create_test_directory_structure(self.test_dir)
+        cls.images_dir, cls.rois_dir = create_test_directory_structure(cls.test_dir)
 
-        # Initialize SpecExp instance
-        self.spec_exp = SpecExp(report_directory=self.report_dir, log_loading=False)
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if hasattr(cls, "test_dir") and os.path.exists(cls.test_dir):
+            shutil.rmtree(cls.test_dir)
 
-    def tearDown(self) -> None:
-        """Cleanup after each test method"""
-        if hasattr(self, "test_dir") and os.path.exists(self.test_dir):
-            shutil.rmtree(self.test_dir)
+    @staticmethod
+    def spec_exp_init() -> "SpecExp":
+        """Create a fresh SpecExp instance for each test"""
+        return SpecExp(
+            report_directory=TestSpecExp.report_dir,
+            log_loading=False,
+        )
 
-    def spec_exp_init(self) -> None:
-        """Initialize SpecExp"""
-        self.spec_exp = SpecExp(report_directory=self.report_dir, log_loading=False)
-
+    @staticmethod
     @silent
-    def test_initialization(self) -> None:
-        """Test SpecExp initialization"""
-        self.spec_exp_init()
+    def test_initialization() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        assert self.spec_exp.report_directory == self.report_dir
-        assert self.spec_exp.log_loading is False
-        assert len(self.spec_exp.groups) == 0
-        assert len(self.spec_exp.images) == 0
-        assert len(self.spec_exp.rois) == 0
+        assert spec_exp.report_directory == TestSpecExp.report_dir
+        assert spec_exp.log_loading is False
+        assert len(spec_exp.groups) == 0
+        assert len(spec_exp.images) == 0
+        assert len(spec_exp.rois) == 0
 
-        # Test invalid report directory
-        dir_path = self.test_dir + "invalid_path_that_does_not_exist/"
+        dir_path = TestSpecExp.test_dir + "invalid_path_that_does_not_exist/"
         if os.path.exists(dir_path):
             shutil.rmtree(dir_path)
+
         with pytest.warns(UserWarning, match=dir_path):
             SpecExp(report_directory=dir_path)
 
+    @staticmethod
     @silent
-    def test_add_groups(self) -> None:
-        """Test adding groups"""
-        self.spec_exp_init()
+    def test_add_groups() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        # Add single group
-        self.spec_exp.add_groups(["group1"])
-        assert "group1" in self.spec_exp.groups
+        spec_exp.add_groups(["group1"])
+        assert "group1" in spec_exp.groups
 
-        # Add multiple groups
-        self.spec_exp.add_groups(["group2", "group3"])
-        assert "group2" in self.spec_exp.groups
-        assert "group3" in self.spec_exp.groups
+        spec_exp.add_groups(["group2", "group3"])
+        assert "group2" in spec_exp.groups
+        assert "group3" in spec_exp.groups
 
-        # Try to add duplicate group
-        self.spec_exp.add_groups(["group1"])
-        assert self.spec_exp.groups.count("group1") == 1  # Should not duplicate
+        spec_exp.add_groups(["group1"])
+        assert spec_exp.groups.count("group1") == 1
 
+    @staticmethod
     @silent
-    def test_rm_group(self) -> None:
-        """Test removing groups"""
-        self.spec_exp_init()
+    def test_rm_group() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        # Setup: add groups and some data
-        self.spec_exp.add_groups(["group1", "group2"])
-        self.spec_exp.add_images_by_name(group="group1", image_name="image1.tif", image_directory=self.images_dir)
+        spec_exp.add_groups(["group1", "group2"])
+        spec_exp.add_images_by_name(
+            group="group1",
+            image_name="image1.tif",
+            image_directory=TestSpecExp.images_dir,
+        )
 
-        # Remove group
-        self.spec_exp.rm_group("group1")
-        assert "group1" not in self.spec_exp.groups
-        assert len(self.spec_exp.images) == 0  # Should remove associated images
+        spec_exp.rm_group("group1")
+        assert "group1" not in spec_exp.groups
+        assert len(spec_exp.images) == 0
 
+    @staticmethod
     @silent
-    def test_add_images(self) -> None:
-        """Test adding images"""
-        self.spec_exp_init()
+    def test_add_images() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        self.spec_exp.add_groups(["test_group"])
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image*.tif",
+            image_directory=TestSpecExp.images_dir,
+        )
 
-        # Add images by name pattern
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image*.tif", image_directory=self.images_dir)
+        images = spec_exp.ls_images(return_dataframe=True)
+        assert len(images) == 3
 
-        # Check if images were added
-        images = self.spec_exp.ls_images(return_dataframe=True)
-        assert len(images) == 3  # image1.tif, image2.tif, image3.tif
+        image_path = os.path.join(TestSpecExp.images_dir, "mask1.tif")
+        spec_exp.add_images_by_path(
+            group="test_group",
+            path=image_path,
+            mask_of="image1.tif",
+        )
 
-        # Add images by full path
-        image_path = os.path.join(self.images_dir, "mask1.tif")
-        self.spec_exp.add_images_by_path(group="test_group", path=image_path, mask_of="image1.tif")
-
-        # Check if mask was added
-        masks = self.spec_exp.ls_images(mask_of="image1.tif", return_dataframe=True)
+        masks = spec_exp.ls_images(
+            mask_of="image1.tif",
+            return_dataframe=True,
+        )
         assert len(masks) == 1
 
-        # Test adding images with invalid full path
-        img_path = self.test_dir + "invalid_path_that_does_not_exist/image1.tif"
+        img_path = TestSpecExp.test_dir + "invalid_path_that_does_not_exist/image1.tif"
         with pytest.raises(ValueError, match=img_path):
-            self.spec_exp.add_images_by_path(group="test_group", path=[img_path])
+            spec_exp.add_images_by_path(
+                group="test_group",
+                path=[img_path],
+            )
 
+    @staticmethod
     @silent
-    def test_ls_images(self) -> None:
-        """Test listing images"""
-        self.spec_exp_init()
+    def test_ls_images() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        self.spec_exp.add_groups(["test_group"])
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image*.tif", image_directory=self.images_dir)
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image*.tif",
+            image_directory=TestSpecExp.images_dir,
+        )
 
-        # List all images
-        all_images = self.spec_exp.ls_images(return_dataframe=True, print_result=False)
-
+        all_images = spec_exp.ls_images(
+            return_dataframe=True,
+            print_result=False,
+        )
         assert len(all_images) == 3
 
-        # List specific image
-        specific_image = self.spec_exp.ls_images(image_name="image1.tif", return_dataframe=True, print_result=False)
+        specific_image = spec_exp.ls_images(
+            image_name="image1.tif",
+            return_dataframe=True,
+            print_result=False,
+        )
         assert len(specific_image) == 1
 
+    @staticmethod
     @silent
-    def test_rm_images(self) -> None:
-        """Test removing images"""
-        self.spec_exp_init()
+    def test_rm_images() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        self.spec_exp.add_groups(["test_group"])
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image*.tif", image_directory=self.images_dir)
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image*.tif",
+            image_directory=TestSpecExp.images_dir,
+        )
 
-        # Remove specific image
-        self.spec_exp.rm_images(image_name="image1.tif")
-        remaining_images = self.spec_exp.ls_images(return_dataframe=True, print_result=False, mask_of="")
+        spec_exp.rm_images(image_name="image1.tif")
+
+        remaining_images = spec_exp.ls_images(
+            return_dataframe=True,
+            print_result=False,
+            mask_of="",
+        )
         assert len(remaining_images) == 2
 
+    @staticmethod
     @silent
-    def test_add_rois_by_suffix(self) -> None:
-        """Test adding ROIs by suffix"""
-        self.spec_exp_init()
+    def test_add_rois_by_suffix_basic() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        self.spec_exp.add_groups(["test_group"])
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image*.tif", image_directory=self.images_dir)
-
-        # Add ROIs by suffix
-        self.spec_exp.add_rois_by_suffix(
-            group="test_group", roi_filename_suffix="_rois.xml", search_directory=self.rois_dir
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image*.tif",
+            image_directory=TestSpecExp.images_dir,
         )
 
-        # Check if ROIs were added
-        rois = self.spec_exp.ls_rois_sample(return_dataframe=True, print_result=False)
+        # Test basic
+        spec_exp.add_rois_by_suffix(
+            group="test_group",
+            roi_filename_suffix="_rois.xml",
+            search_directory=TestSpecExp.rois_dir,
+        )
+
+        rois = spec_exp.ls_rois_sample(
+            return_dataframe=True,
+            print_result=False,
+        )
         assert len(rois) == 4
 
-        # Test adding rois with invalid group
+    @staticmethod
+    @silent
+    def test_add_rois_by_suffix_exclude_roiname() -> None:
+        # Test exclude using str
+        spec_exp = TestSpecExp.spec_exp_init()
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image*.tif",
+            image_directory=TestSpecExp.images_dir,
+        )
+        spec_exp.add_rois_by_suffix(
+            group="test_group",
+            roi_filename_suffix="_rois.xml",
+            exclude_roiname='ROI1',
+            search_directory=TestSpecExp.rois_dir,
+        )
+        rois = spec_exp.ls_rois_sample(
+            return_dataframe=True,
+            print_result=False,
+        )
+        assert list(rois['ROI_name']) == ['TestROI2', 'TestROI2']
+        # Test exclude using list
+        spec_exp = TestSpecExp.spec_exp_init()
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image*.tif",
+            image_directory=TestSpecExp.images_dir,
+        )
+        spec_exp.add_rois_by_suffix(
+            group="test_group",
+            roi_filename_suffix="_rois.xml",
+            exclude_roiname=['ROI1'],
+            search_directory=TestSpecExp.rois_dir,
+        )
+        rois = spec_exp.ls_rois_sample(
+            return_dataframe=True,
+            print_result=False,
+        )
+        assert list(rois['ROI_name']) == ['TestROI2', 'TestROI2']
+
+    @staticmethod
+    @silent
+    def test_add_rois_by_suffix_include_roiname() -> None:
+        # Test include using str
+        spec_exp = TestSpecExp.spec_exp_init()
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image*.tif",
+            image_directory=TestSpecExp.images_dir,
+        )
+        spec_exp.add_rois_by_suffix(
+            group="test_group",
+            roi_filename_suffix="_rois.xml",
+            include_roiname='ROI2',
+            search_directory=TestSpecExp.rois_dir,
+        )
+        rois = spec_exp.ls_rois_sample(
+            return_dataframe=True,
+            print_result=False,
+        )
+        assert list(rois['ROI_name']) == ['TestROI2', 'TestROI2']
+        # Test include using list of str
+        spec_exp = TestSpecExp.spec_exp_init()
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image*.tif",
+            image_directory=TestSpecExp.images_dir,
+        )
+        spec_exp.add_rois_by_suffix(
+            group="test_group",
+            roi_filename_suffix="_rois.xml",
+            include_roiname=['ROI2'],
+            search_directory=TestSpecExp.rois_dir,
+        )
+        rois = spec_exp.ls_rois_sample(
+            return_dataframe=True,
+            print_result=False,
+        )
+        assert list(rois['ROI_name']) == ['TestROI2', 'TestROI2']
+
+    @staticmethod
+    @silent
+    def test_add_rois_by_suffix_edge_cases() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
+
         group = "group_that_doex_not_exist"
         with pytest.raises(ValueError, match=group):
-            self.spec_exp.add_rois_by_suffix(
-                group=group, roi_filename_suffix="_rois.xml", search_directory=self.rois_dir
+            spec_exp.add_rois_by_suffix(
+                group=group,
+                roi_filename_suffix="_rois.xml",
+                search_directory=TestSpecExp.rois_dir,
             )
 
-        # Test adding rois with invalid image pattern
-        self.spec_exp_init()
-        self.spec_exp.add_groups(["test_group"])
+        spec_exp = TestSpecExp.spec_exp_init()
+        spec_exp.add_groups(["test_group"])
         with pytest.raises(ValueError, match="No image added"):
-            self.spec_exp.add_rois_by_suffix(
-                group="test_group", roi_filename_suffix="_rois.xml", search_directory=self.rois_dir
+            spec_exp.add_rois_by_suffix(
+                group="test_group",
+                roi_filename_suffix="_rois.xml",
+                search_directory=TestSpecExp.rois_dir,
             )
 
-        # Test adding rois with filter
-        # Init
-        self.spec_exp_init()
-        self.spec_exp.add_groups(["test_group"])
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image1.tif", image_directory=self.images_dir)
-        # Include adding
-        self.spec_exp.add_rois_by_suffix(
-            group="test_group",
-            roi_filename_suffix="_rois.xml",
-            search_directory=self.rois_dir,
-            include_roiname=["1"],
-        )
-        rois = self.spec_exp.ls_rois_sample(return_dataframe=True, print_result=False)
-        assert len(rois) == 1
-
-        # Init
-        self.spec_exp_init()
-        self.spec_exp.add_groups(["test_group"])
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image1.tif", image_directory=self.images_dir)
-        # Exclude adding
-        self.spec_exp.add_rois_by_suffix(
-            group="test_group",
-            roi_filename_suffix="_rois.xml",
-            search_directory=self.rois_dir,
-            exclude_roiname=["1"],
-        )
-        rois = self.spec_exp.ls_rois_sample(return_dataframe=True, print_result=False)
-        assert len(rois) == 1
-
+    @staticmethod
     @silent
-    def test_add_rois_by_file(self) -> None:
-        """Test adding ROIs by file path"""
-        self.spec_exp_init()
+    def test_add_rois_by_file_basic() -> None:
 
-        self.spec_exp.add_groups(["test_group"])
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image1.tif", image_directory=self.images_dir)
+        # Test list of file path
+        spec_exp = TestSpecExp.spec_exp_init()
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image1.tif",
+            image_directory=TestSpecExp.images_dir,
+        )
 
-        # Add ROIs by file path
-        roi_file = os.path.join(self.rois_dir, "image1_rois.xml")
-        self.spec_exp.add_rois_by_file(group="test_group", path_list=[roi_file], image_name="image1.tif")
+        roi_file = os.path.join(TestSpecExp.rois_dir, "image1_rois.xml")
+        spec_exp.add_rois_by_file(
+            group="test_group",
+            path=[roi_file],
+            image_name="image1.tif",
+        )
 
-        # Check if ROIs were added
-        rois = self.spec_exp.ls_rois_from_file(return_dataframe=True, print_result=False)
+        rois = spec_exp.ls_rois_from_file(
+            return_dataframe=True,
+            print_result=False,
+        )
         assert len(rois) == 2
 
-        # Test adding rois with invalid group
+        # Test using file path in string
+        spec_exp = TestSpecExp.spec_exp_init()
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image1.tif",
+            image_directory=TestSpecExp.images_dir,
+        )
+
+        roi_file = os.path.join(TestSpecExp.rois_dir, "image1_rois.xml")
+        spec_exp.add_rois_by_file(
+            group="test_group",
+            path=roi_file,
+            image_name="image1.tif",
+        )
+
+        rois = spec_exp.ls_rois_from_file(
+            return_dataframe=True,
+            print_result=False,
+        )
+        assert len(rois) == 2
+
+    @staticmethod
+    @silent
+    def test_add_rois_by_file_edge_cases() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
+        roi_file = os.path.join(TestSpecExp.rois_dir, "image1_rois.xml")
+        spec_exp.add_groups(["test_group"])
+
         group = "group_that_doex_not_exist"
         with pytest.raises(ValueError, match=group):
-            self.spec_exp.add_rois_by_file(group=group, path_list=[roi_file], image_name="image1.tif")
+            spec_exp.add_rois_by_file(
+                group=group,
+                path=[roi_file],
+                image_name="image1.tif",
+            )
 
-        # Test adding rois with invalid image pattern
         img_name = "image_name_that_doex_not_exist"
         with pytest.raises(ValueError, match=img_name):
-            self.spec_exp.add_rois_by_file(group="test_group", path_list=[roi_file], image_name=img_name)
+            spec_exp.add_rois_by_file(
+                group="test_group",
+                path=[roi_file],
+                image_name=img_name,
+            )
 
-        # Test adding rois with filter
-        # Init
-        self.spec_exp_init()
-        self.spec_exp.add_groups(["test_group"])
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image1.tif", image_directory=self.images_dir)
-        # Include adding
-        self.spec_exp.add_rois_by_file(
-            group="test_group", path_list=[roi_file], image_name="image1.tif", include_roiname=["1"]
-        )
-        rois = self.spec_exp.ls_rois_sample(return_dataframe=True, print_result=False)
-        assert len(rois) == 1
-
-        # Init
-        self.spec_exp_init()
-        self.spec_exp.add_groups(["test_group"])
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image1.tif", image_directory=self.images_dir)
-        # Exclude adding
-        self.spec_exp.add_rois_by_file(
-            group="test_group", path_list=[roi_file], image_name="image1.tif", exclude_roiname=["1"]
-        )
-        rois = self.spec_exp.ls_rois_sample(return_dataframe=True, print_result=False)
-        assert len(rois) == 1
-
+    @staticmethod
     @silent
-    def test_add_roi_by_coords(self) -> None:
-        """Test adding ROIs by coordinates"""
-        self.spec_exp_init()
+    def test_add_rois_by_file_include_roiname() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
+        roi_file = os.path.join(TestSpecExp.rois_dir, "image1_rois.xml")
 
-        self.spec_exp.add_groups(["test_group"])
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image1.tif", image_directory=self.images_dir)
-
-        # Add ROI by coordinates
-        coordinates: list[list[tuple[Union[int, float], Union[int, float]]]] = [
-            [(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]
-        ]
-        self.spec_exp.add_roi_by_coords(
-            roi_name="test_roi", group="test_group", image_name="image1.tif", coord_lists=coordinates
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image1.tif",
+            image_directory=TestSpecExp.images_dir,
         )
 
-        # Check if ROI was added
-        rois = self.spec_exp.ls_rois_from_coords(return_dataframe=True, print_result=False)
+        spec_exp.add_rois_by_file(
+            group="test_group",
+            path=[roi_file],
+            image_name="image1.tif",
+            include_roiname=["1"],
+        )
+
+        rois = spec_exp.ls_rois_sample(return_dataframe=True, print_result=False)
         assert len(rois) == 1
 
+    @staticmethod
     @silent
-    def test_ls_rois(self) -> None:
-        """Test listing ROIs"""
-        self.spec_exp_init()
+    def test_add_rois_by_file_exclude_roiname() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
+        roi_file = os.path.join(TestSpecExp.rois_dir, "image1_rois.xml")
 
-        self.spec_exp.add_groups(["test_group"])
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image1.tif", image_directory=self.images_dir)
-
-        # Add ROI by coordinates
-        coordinates: list[list[tuple[Union[int, float], Union[int, float]]]] = [
-            [(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]
-        ]
-        self.spec_exp.add_roi_by_coords(
-            roi_name="test_roi", group="test_group", image_name="image1.tif", coord_lists=coordinates
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image1.tif",
+            image_directory=TestSpecExp.images_dir,
         )
 
-        # List all ROIs
-        all_rois = self.spec_exp.ls_rois(return_dataframe=True)
+        spec_exp.add_rois_by_file(
+            group="test_group",
+            path=[roi_file],
+            image_name="image1.tif",
+            exclude_roiname=["1"],
+        )
+
+        rois = spec_exp.ls_rois_sample(return_dataframe=True, print_result=False)
+        assert len(rois) == 1
+
+    @staticmethod
+    @silent
+    def test_add_roi_by_coords() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
+
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image1.tif",
+            image_directory=TestSpecExp.images_dir,
+        )
+
+        coordinates = [[(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]]
+
+        spec_exp.add_roi_by_coords(
+            roi_name="test_roi",
+            group="test_group",
+            image_name="image1.tif",
+            coord_lists=coordinates,
+        )
+
+        rois = spec_exp.ls_rois_from_coords(
+            return_dataframe=True,
+            print_result=False,
+        )
+        assert len(rois) == 1
+
+    @staticmethod
+    @silent
+    def test_ls_rois() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
+
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image1.tif",
+            image_directory=TestSpecExp.images_dir,
+        )
+
+        coordinates = [[(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]]
+
+        spec_exp.add_roi_by_coords(
+            roi_name="test_roi",
+            group="test_group",
+            image_name="image1.tif",
+            coord_lists=coordinates,
+        )
+
+        all_rois = spec_exp.ls_rois(return_dataframe=True)
         assert len(all_rois) == 1
 
-        # List specific ROI
-        specific_roi = self.spec_exp.ls_rois(roi_name_list=["test_roi"], return_dataframe=True)
+        specific_roi = spec_exp.ls_rois(
+            roi_name_list=["test_roi"],
+            return_dataframe=True,
+        )
         assert len(specific_roi) == 1
 
+    @staticmethod
     @silent
-    def test_rm_rois(self) -> None:
-        """Test removing ROIs"""
-        self.spec_exp_init()
+    def test_rm_rois() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        self.spec_exp.add_groups(["test_group"])
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image1.tif", image_directory=self.images_dir)
-
-        # Add ROI by coordinates
-        coordinates: list[list[tuple[Union[int, float], Union[int, float]]]] = [
-            [(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]
-        ]
-        self.spec_exp.add_roi_by_coords(
-            roi_name="test_roi", group="test_group", image_name="image1.tif", coord_lists=coordinates
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image1.tif",
+            image_directory=TestSpecExp.images_dir,
         )
 
-        # Remove ROI
-        self.spec_exp.rm_rois(roi_name="test_roi")
-        remaining_rois = self.spec_exp.ls_rois(return_dataframe=True)
+        coordinates = [[(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]]
+
+        spec_exp.add_roi_by_coords(
+            roi_name="test_roi",
+            group="test_group",
+            image_name="image1.tif",
+            coord_lists=coordinates,
+        )
+
+        spec_exp.rm_rois(roi_name="test_roi")
+
+        remaining_rois = spec_exp.ls_rois(return_dataframe=True)
         assert len(remaining_rois) == 0
 
+    @staticmethod
     @silent
-    def test_add_standalone_specs(self) -> None:
-        """Test adding standalone spectra"""
-        self.spec_exp_init()
+    def test_add_standalone_specs() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        self.spec_exp.add_groups(["test_group"])
+        spec_exp.add_groups(["test_group"])
 
-        # Create test spectral data
-        spectral_data = [[1.0, 2.0, 3.0, 4.0, 5.0], [2.0, 3.0, 4.0, 5.0, 6.0]]
+        spectral_data = [
+            [1.0, 2.0, 3.0, 4.0, 5.0],
+            [2.0, 3.0, 4.0, 5.0, 6.0],
+        ]
 
-        # Add standalone spectra
-        self.spec_exp.add_standalone_specs(
-            group="test_group", spec_data=spectral_data, sample_name_list=["spec1", "spec2"]
+        spec_exp.add_standalone_specs(
+            group="test_group",
+            spec_data=spectral_data,
+            sample_name_list=["spec1", "spec2"],
         )
 
-        # Check if spectra were added
-        specs = self.spec_exp.ls_standalone_specs(return_dataframe=True)
+        specs = spec_exp.ls_standalone_specs(return_dataframe=True)
         assert len(specs) == 2
 
+    @staticmethod
     @silent
-    def test_ls_standalone_specs(self) -> None:
-        """Test listing standalone spectra"""
-        self.spec_exp_init()
+    def test_ls_standalone_specs() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        self.spec_exp.add_groups(["test_group"])
+        spec_exp.add_groups(["test_group"])
 
-        # Create test spectral data
-        spectral_data = [[1.0, 2.0, 3.0, 4.0, 5.0], [2.0, 3.0, 4.0, 5.0, 6.0]]
+        spectral_data = [
+            [1.0, 2.0, 3.0, 4.0, 5.0],
+            [2.0, 3.0, 4.0, 5.0, 6.0],
+        ]
 
-        # Add standalone spectra
-        self.spec_exp.add_standalone_specs(
-            group="test_group", spec_data=spectral_data, sample_name_list=["spec1", "spec2"]
+        spec_exp.add_standalone_specs(
+            group="test_group",
+            spec_data=spectral_data,
+            sample_name_list=["spec1", "spec2"],
         )
 
-        # List all spectra
-        all_specs = self.spec_exp.ls_standalone_specs(return_dataframe=True)
+        all_specs = spec_exp.ls_standalone_specs(return_dataframe=True)
         assert len(all_specs) == 2
 
-        # List specific spectrum
-        specific_spec = self.spec_exp.ls_standalone_specs(sample_name="spec1", return_dataframe=True)
+        specific_spec = spec_exp.ls_standalone_specs(
+            sample_name="spec1",
+            return_dataframe=True,
+        )
         assert len(specific_spec) == 1
 
+    @staticmethod
     @silent
-    def test_rm_standalone_specs(self) -> None:
-        """Test removing standalone spectra"""
-        self.spec_exp_init()
+    def test_rm_standalone_specs() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        self.spec_exp.add_groups(["test_group"])
+        spec_exp.add_groups(["test_group"])
 
-        # Create test spectral data
-        spectral_data = [[1.0, 2.0, 3.0, 4.0, 5.0], [2.0, 3.0, 4.0, 5.0, 6.0]]
+        spectral_data = [
+            [1.0, 2.0, 3.0, 4.0, 5.0],
+            [2.0, 3.0, 4.0, 5.0, 6.0],
+        ]
 
-        # Add standalone spectra
-        self.spec_exp.add_standalone_specs(
-            group="test_group", spec_data=spectral_data, sample_name_list=["spec1", "spec2"]
+        spec_exp.add_standalone_specs(
+            group="test_group",
+            spec_data=spectral_data,
+            sample_name_list=["spec1", "spec2"],
         )
 
-        # Remove specific spectrum
-        self.spec_exp.rm_standalone_specs(sample_name="spec1")
-        remaining_specs = self.spec_exp.ls_standalone_specs(return_dataframe=True)
+        spec_exp.rm_standalone_specs(sample_name="spec1")
+
+        remaining_specs = spec_exp.ls_standalone_specs(return_dataframe=True)
         assert len(remaining_specs) == 1
 
+    @staticmethod
     @silent
-    def test_sample_labels_management(self) -> None:
-        """Test sample labels management"""
-        self.spec_exp_init()
+    def test_sample_labels_management() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        # First add some samples (ROIs or standalone spectra)
-        self.spec_exp.add_groups(["test_group"])
-
-        # Add ROI to create samples
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image1.tif", image_directory=self.images_dir)
-
-        coordinates: list[list[tuple[Union[int, float], Union[int, float]]]] = [
-            [(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]
-        ]
-        self.spec_exp.add_roi_by_coords(
-            roi_name="test_roi", group="test_group", image_name="image1.tif", coord_lists=coordinates
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image1.tif",
+            image_directory=TestSpecExp.images_dir,
         )
 
-        # Test listing sample labels
-        labels = self.spec_exp.ls_sample_labels(return_dataframe=True)
+        coordinates = [[(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]]
+
+        spec_exp.add_roi_by_coords(
+            roi_name="test_roi",
+            group="test_group",
+            image_name="image1.tif",
+            coord_lists=coordinates,
+        )
+
+        labels = spec_exp.ls_sample_labels(return_dataframe=True)
         assert len(labels) > 0
 
-        # Test setting sample labels from dataframe
         new_labels = pd.DataFrame(
-            {"Sample_ID": labels["Sample_ID"], "Label": ["label1"] * len(labels), "Group": ["test_group"] * len(labels)}
+            {
+                "Sample_ID": labels["Sample_ID"],
+                "Label": ["label1"] * len(labels),
+                "Group": ["test_group"] * len(labels),
+            }
         )
-        self.spec_exp.sample_labels_from_df(new_labels)
 
-        # Test exporting to CSV
-        csv_path = os.path.join(self.test_dir, "test_labels.csv")
-        self.spec_exp.sample_labels_to_csv(csv_path)
+        spec_exp.sample_labels_from_df(new_labels)
+
+        csv_path = os.path.join(TestSpecExp.test_dir, "test_labels.csv")
+        spec_exp.sample_labels_to_csv(csv_path)
         assert os.path.exists(csv_path)
 
-        # Test importing from CSV
-        self.spec_exp.sample_labels_from_csv(csv_path)
-        updated_labels = self.spec_exp.ls_sample_labels(return_dataframe=True)
+        spec_exp.sample_labels_from_csv(csv_path)
+
+        updated_labels = spec_exp.ls_sample_labels(return_dataframe=True)
         assert len(updated_labels) == len(labels)
 
+    @staticmethod
     @silent
-    def test_sample_targets_management(self) -> None:
-        """Test sample targets management"""
-        self.spec_exp_init()
+    def test_sample_targets_management() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        # First add some samples
-        self.spec_exp.add_groups(["test_group"])
-
-        # Add ROI to create samples
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image1.tif", image_directory=self.images_dir)
-
-        coordinates: list[list[tuple[Union[int, float], Union[int, float]]]] = [
-            [(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]
-        ]
-        self.spec_exp.add_roi_by_coords(
-            roi_name="test_roi", group="test_group", image_name="image1.tif", coord_lists=coordinates
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image1.tif",
+            image_directory=TestSpecExp.images_dir,
         )
 
-        # Set sample labels
-        labels = self.spec_exp.ls_sample_labels(return_dataframe=True)
-        labels["Label"] = [str(i) for i in range(len(labels))]
-        self.spec_exp.sample_labels_from_df(labels)
+        coordinates = [[(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]]
 
-        # Test listing sample targets
-        targets = self.spec_exp.ls_sample_targets(return_dataframe=True)
+        spec_exp.add_roi_by_coords(
+            roi_name="test_roi",
+            group="test_group",
+            image_name="image1.tif",
+            coord_lists=coordinates,
+        )
+
+        labels = spec_exp.ls_sample_labels(return_dataframe=True)
+        labels["Label"] = [str(i) for i in range(len(labels))]
+        spec_exp.sample_labels_from_df(labels)
+
+        targets = spec_exp.ls_sample_targets(return_dataframe=True)
         assert len(targets) > 0
 
-        # Test setting sample targets from dataframe
         new_targets = pd.DataFrame(
             {
                 "Sample_ID": targets["Sample_ID"],
@@ -545,73 +733,74 @@ class TestSpecExp(unittest.TestCase):
                 "Group": ["test_group"] * len(targets),
             }
         )
-        self.spec_exp.sample_targets_from_df(new_targets)
 
-        # Test exporting to CSV
-        csv_path = os.path.join(self.test_dir, "test_targets.csv")
-        self.spec_exp.sample_targets_to_csv(csv_path)
+        spec_exp.sample_targets_from_df(new_targets)
+
+        csv_path = os.path.join(TestSpecExp.test_dir, "test_targets.csv")
+        spec_exp.sample_targets_to_csv(csv_path)
         assert os.path.exists(csv_path)
 
-        # Test importing from CSV
-        self.spec_exp.sample_targets_from_csv(csv_path)
-        updated_targets = self.spec_exp.ls_sample_targets(return_dataframe=True)
+        spec_exp.sample_targets_from_csv(csv_path)
+
+        updated_targets = spec_exp.ls_sample_targets(return_dataframe=True)
         assert len(updated_targets) == len(targets)
 
+    @staticmethod
     @silent
-    def test_save_and_load_config(self) -> None:
-        """Test saving and loading configuration"""
-        self.spec_exp_init()
+    def test_save_and_load_config() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
-        # Setup some data
-        self.spec_exp.add_groups(["test_group"])
-        self.spec_exp.add_images_by_name(group="test_group", image_name="image1.tif", image_directory=self.images_dir)
-
-        coordinates: list[list[tuple[Union[int, float], Union[int, float]]]] = [
-            [(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]
-        ]
-        self.spec_exp.add_roi_by_coords(
-            roi_name="test_roi", group="test_group", image_name="image1.tif", coord_lists=coordinates
+        spec_exp.add_groups(["test_group"])
+        spec_exp.add_images_by_name(
+            group="test_group",
+            image_name="image1.tif",
+            image_directory=TestSpecExp.images_dir,
         )
 
-        # Save configuration
-        self.spec_exp.save_data_config(copy=False)
-        self.spec_exp.load_data_config()
+        coordinates = [[(100, 100), (200, 100), (200, 200), (100, 200), (100, 100)]]
 
-        # Create a new instance and load configuration
-        new_spec_exp = SpecExp(report_directory=self.report_dir, log_loading=False)
-        new_spec_exp.load_data_config(f"SpecExp_data_configuration_{self.spec_exp.create_time}.dill")
+        spec_exp.add_roi_by_coords(
+            roi_name="test_roi",
+            group="test_group",
+            image_name="image1.tif",
+            coord_lists=coordinates,
+        )
 
-        # Check if data was loaded correctly
+        spec_exp.save_data_config(copy=False)
+        spec_exp.load_data_config()
+
+        new_spec_exp = SpecExp(
+            report_directory=TestSpecExp.report_dir,
+            log_loading=False,
+        )
+
+        new_spec_exp.load_data_config(f"SpecExp_data_configuration_{spec_exp.create_time}.dill")
+
         assert len(new_spec_exp.groups) == 1
         assert len(new_spec_exp.images) == 1
         assert len(new_spec_exp.rois) == 1
 
-    @silent
-    def test_property_access(self) -> None:
-        """Test property accessors"""
-        self.spec_exp_init()
-
-        # Test read-only properties
-        with pytest.raises(ValueError):
-            self.spec_exp.groups = ["new_group"]
+    @staticmethod
+    def test_property_access() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
 
         with pytest.raises(ValueError):
-            self.spec_exp.images = []
+            spec_exp.groups = ["new_group"]
 
         with pytest.raises(ValueError):
-            self.spec_exp.rois = []
+            spec_exp.images = []
 
-        # Test readable properties
-        assert isinstance(self.spec_exp.groups, list)
-        assert isinstance(self.spec_exp.images, list)
-        assert isinstance(self.spec_exp.rois, list)
+        with pytest.raises(ValueError):
+            spec_exp.rois = []
 
-    def test_method_alias(self) -> None:
-        """Test method alias"""
-        self.spec_exp_init()
-        spec_exp = self.spec_exp
+        assert isinstance(spec_exp.groups, list)
+        assert isinstance(spec_exp.images, list)
+        assert isinstance(spec_exp.rois, list)
 
-        # Validate consistency of identical method
+    @staticmethod
+    def test_method_alias() -> None:
+        spec_exp = TestSpecExp.spec_exp_init()
+
         assert spec_exp.add_specs == spec_exp.add_standalone_specs
         assert spec_exp.load_specs == spec_exp.load_standalone_specs
         assert spec_exp.ls_specs == spec_exp.ls_standalone_specs
@@ -631,7 +820,7 @@ class TestSpecExp(unittest.TestCase):
 
 
 # test_specexp = TestSpecExp()
-# test_specexp.setUp()
+# test_specexp.setUpClass()
 
 # test_specexp.test_initialization()
 
@@ -642,8 +831,16 @@ class TestSpecExp(unittest.TestCase):
 # test_specexp.test_ls_images()
 # test_specexp.test_rm_images()
 
-# test_specexp.test_add_rois_by_suffix()
-# test_specexp.test_add_rois_by_file()
+# test_specexp.test_add_rois_by_suffix_basic()
+# test_specexp.test_add_rois_by_suffix_exclude_roiname()
+# test_specexp.test_add_rois_by_suffix_include_roiname()
+# test_specexp.test_add_rois_by_suffix_edge_cases()
+
+# test_specexp.test_add_rois_by_file_basic()
+# test_specexp.test_add_rois_by_file_exclude_roiname()
+# test_specexp.test_add_rois_by_file_include_roiname()
+# test_specexp.test_add_rois_by_file_edge_cases()
+
 # test_specexp.test_add_roi_by_coords()
 # test_specexp.test_ls_rois()
 # test_specexp.test_rm_rois()
@@ -661,7 +858,7 @@ class TestSpecExp(unittest.TestCase):
 
 # test_specexp.test_method_alias()
 
-# test_specexp.tearDown()
+# test_specexp.tearDownClass()
 
 
 # %% Test main

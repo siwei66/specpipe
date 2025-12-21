@@ -17,6 +17,10 @@ __all__ = [
     "SpecPipe",
     "ModelEva",
     "raster_rgb_preview",
+    ### Model combiners
+    "combine_transformer_classifier",
+    "combine_transformer_regressor",
+    "factorial_transformer_chains",
     ### SpecIO functions
     "search_file",
     "envi_roi_coords",
@@ -24,13 +28,12 @@ __all__ = [
     ### Raster operation
     "croproi",
     "pixel_apply",
-    ### Model combiners
-    "combine_transformer_classifier",
-    "combine_transformer_regressor",
-    "factorial_transformer_chains",
     ## Spectral statistics tools
     ### ROI statistics
     "round_digit",
+    "make_img_only",
+    "make_roi_only",
+    "make_array_only",
     "roispec",
     "pixcount",
     "nderiv",
@@ -66,17 +69,20 @@ from .rasterop import croproi, pixel_apply
 
 ## Spectral statistics tools
 from .roistats import (
+    round_digit,
+    make_img_only,
+    make_roi_only,
+    make_array_only,
+    pixcount,
     Stats2d,
     arr_spectral_angles,
     bandhist,
     moment2d,
     nderiv,
-    pixcount,
     roi_mean,
     roi_median,
     roi_std,
     roispec,
-    round_digit,
     spectral_angle,
 )
 

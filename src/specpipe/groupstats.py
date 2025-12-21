@@ -130,7 +130,7 @@ def chain_sample_group_stats(  # noqa: C901
     # Numeric targets
     if is_regression:
         # Overall stats and default measures
-        ostats = Stats2d().stats2d(df_preprocessed.iloc[:, 2:-1].values)
+        ostats = Stats2d().summary(df_preprocessed.iloc[:, 2:-1].values)
         # y stats
         df_ystats = pd.DataFrame(np.zeros((1 + len(df_preprocessed['Group'].unique()), 1 + len(ostats.keys()))))
         df_ystats.columns = ['Group'] + list(ostats.keys())
@@ -153,7 +153,7 @@ def chain_sample_group_stats(  # noqa: C901
         # Group stats
         for ig, g in enumerate(list(df_preprocessed['Group'].unique())):
             gdata = df_preprocessed[df_preprocessed['Group'] == g]
-            gstats = Stats2d().stats2d(gdata.iloc[:, 2:-1].values)
+            gstats = Stats2d().summary(gdata.iloc[:, 2:-1].values)
             ystats_row = [str(g)]
             for m in list(gstats.keys()):
                 # Y group stats
@@ -190,7 +190,7 @@ def chain_sample_group_stats(  # noqa: C901
     # Categorical targets
     else:
         # Overall stats and default measures
-        ostats_x = Stats2d().stats2d(df_preprocessed.iloc[:, 3:-1].values)
+        ostats_x = Stats2d().summary(df_preprocessed.iloc[:, 3:-1].values)
         # y stats
         ylabel, ycount = np.unique(df_preprocessed.iloc[:, 2], return_counts=True)
         df_ystats = pd.DataFrame(np.zeros((1 + len(df_preprocessed['Group'].unique()), 1 + len(ylabel))))
@@ -211,7 +211,7 @@ def chain_sample_group_stats(  # noqa: C901
         # Group stats
         for ig, g in enumerate(list(df_preprocessed['Group'].unique())):
             gdata = df_preprocessed[df_preprocessed['Group'] == g]
-            gstats_x = Stats2d().stats2d(gdata.iloc[:, 3:-1].values)
+            gstats_x = Stats2d().summary(gdata.iloc[:, 3:-1].values)
             ylabel, ycount = np.unique(gdata.iloc[:, 2], return_counts=True)
             ycount_row = list(ycount)
             # Y stats - fill target category counts of the current group

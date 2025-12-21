@@ -217,7 +217,7 @@ def create_test_spec_exp(dir_path: str, sample_n: int = 10, n_bands: int = 4, is
     # ROIs
     roi_path = dir_path + "/test_roi.xml"
     create_test_roi_xml(roi_path, roi_count=sample_n)
-    exp1.add_rois_by_file(group="test_group", path_list=[roi_path], image_name="test_img.tif")
+    exp1.add_rois_by_file(group="test_group", path=[roi_path], image_name="test_img.tif")
 
     # Samples
     dflb = exp1.ls_sample_labels()

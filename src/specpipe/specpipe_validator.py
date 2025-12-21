@@ -356,6 +356,9 @@ def _process_validator(  # noqa: C901
 
         # Test data
         if dl_out < 8:
+            # Validate function
+            if not callable(method):
+                raise TypeError(f"Process method must be callable for non-model data levels, got type: {type(method)}")
             if dl_in == 0:
                 # Output dst image path
                 img_path = os.path.splitext(str(test_img_path).replace("\\", "/").replace("//", "/"))
@@ -451,6 +454,7 @@ def _process_validator(  # noqa: C901
 
         # Output validation
         if result is None:
+            assert hasattr(method, '__name__')
             raise ValueError(
                 f"Method '{method.__name__}' returns no data. \
                     The added method must have a return. \
@@ -511,6 +515,7 @@ def _process_validator(  # noqa: C901
                             if all_no_data:
                                 raise ValueError("All raster values are NoData")
                 except Exception as e:
+                    assert hasattr(method, '__name__')
                     raise ValueError(
                         f"Failed to open resulting raster image of {method.__name__}.\
                             \nGot path:\n{result}, \nError msg:{e}"

@@ -35,7 +35,10 @@ from specpipe.example_data import create_test_raster
 
 # Functions to test
 from specpipe.roistats import (
-    ROISpec,
+    make_img_only,
+    make_roi_only,
+    make_array_only,
+    roispec,
     Stats2d,
     arr_spectral_angles,
     axisconv,
@@ -47,21 +50,226 @@ from specpipe.roistats import (
     np_sig_digit,
     num_sig_digit,
     pixcount,
+    pixcounts,
     roi_mean,
     roi_median,
     roi_std,
-    roispec,
     round_digit,
     smopt,
     spectral_angle,
 )
 
 
-# %% test functions : ROISpec
+# %% test functions : make_img_only
+
+
+class TestMakeImgOnly(unittest.TestCase):
+
+    temp_file: tempfile._TemporaryFileWrapper
+    temp_file_path: str
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        # Create a temporary image file once for all tests
+        cls.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".tif")
+        cls.temp_file.write(b"Test image content")
+        cls.temp_file.close()
+        cls.temp_file_path = cls.temp_file.name
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        # Clean up the temporary file
+        if os.path.exists(cls.temp_file_path):
+            os.remove(cls.temp_file_path)
+
+    @staticmethod
+    def test_basic_functionality() -> None:
+        def sample_func(image_path: str, param1: int = 0, param2: int = 0) -> str:
+            return f"{image_path}-{param1}-{param2}"
+
+        img_only_func = make_img_only(sample_func, param1=5, param2=10)
+        result = img_only_func(TestMakeImgOnly.temp_file_path)
+        assert (
+            result == f"{TestMakeImgOnly.temp_file_path}-5-10"
+        ), f"Expected '{TestMakeImgOnly.temp_file_path}-5-10', got {result}"
+
+    @staticmethod
+    def test_function_name_suffix() -> None:
+        def sample_func(image_path: str) -> str:
+            return image_path
+
+        img_only_func = make_img_only(sample_func, name_suffix="custom_suffix")
+        assert (
+            img_only_func.__name__ == "sample_func_custom_suffix"
+        ), f"Expected function name 'sample_func_custom_suffix', got {img_only_func.__name__}"
+
+    @staticmethod
+    def test_fixed_args_applied() -> None:
+        def sample_func(image_path: str, a: int, b: int) -> str:
+            return f"{image_path}-{a}-{b}"
+
+        img_only_func = make_img_only(sample_func, "", 1, 2)
+        result = img_only_func(TestMakeImgOnly.temp_file_path)
+        assert (
+            result == f"{TestMakeImgOnly.temp_file_path}-1-2"
+        ), f"Expected '{TestMakeImgOnly.temp_file_path}-1-2', got {result}"
+
+    @staticmethod
+    def test_insufficient_parameters_raises_typeerror() -> None:
+        def sample_func() -> str:  # No parameters
+            return "ok"
+
+        with pytest.raises(TypeError, match="Function must accept at least 1 data parameter"):
+            make_img_only(sample_func)
+
+    @staticmethod
+    def test_non_positional_data_parameter_raises_typeerror() -> None:
+        def sample_func(*, image_path: str) -> str:  # Keyword-only first parameter
+            return image_path
+
+        with pytest.raises(TypeError, match="Data parameter 1 must be positional"):
+            make_img_only(sample_func)
+
+
+# %% test functions : make_roi_only
+
+
+class TestMakeRoiOnly(unittest.TestCase):
+
+    temp_file: tempfile._TemporaryFileWrapper
+    temp_file_path: str
+    example_roi: list[list]
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        # Create a temporary image file once for all tests
+        cls.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".tif")
+        cls.temp_file.write(b"Test image content")
+        cls.temp_file.close()
+        cls.temp_file_path = cls.temp_file.name
+
+        # Example ROI coordinates for testing
+        cls.example_roi = [[(0, 0), (0, 10), (10, 0), (0, 0)]]
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        # Clean up the temporary file
+        if os.path.exists(cls.temp_file_path):
+            os.remove(cls.temp_file_path)
+
+    @staticmethod
+    def test_basic_functionality() -> None:
+        def sample_func(image_path: str, roi_coordinates: list[list], param1: int = 0, param2: int = 0) -> str:
+            return f"{image_path}-{roi_coordinates}-{param1}-{param2}"
+
+        roi_only_func = make_roi_only(sample_func, param1=5, param2=10)
+        result = roi_only_func(TestMakeRoiOnly.temp_file_path, TestMakeRoiOnly.example_roi)
+        expected = f"{TestMakeRoiOnly.temp_file_path}-{TestMakeRoiOnly.example_roi}-5-10"
+        assert result == expected, f"Expected '{expected}', got {result}"
+
+    @staticmethod
+    def test_function_name_suffix() -> None:
+        def sample_func(image_path: str, roi_coordinates: list[list]) -> str:
+            return image_path
+
+        roi_only_func = make_roi_only(sample_func, name_suffix="custom_suffix")
+        assert (
+            roi_only_func.__name__ == "sample_func_custom_suffix"
+        ), f"Expected function name 'sample_func_custom_suffix', got {roi_only_func.__name__}"
+
+    @staticmethod
+    def test_fixed_args_applied() -> None:
+        def sample_func(image_path: str, roi_coordinates: list[list], a: int, b: int) -> str:
+            return f"{image_path}-{roi_coordinates}-{a}-{b}"
+
+        roi_only_func = make_roi_only(sample_func, "", 1, 2)
+        result = roi_only_func(TestMakeRoiOnly.temp_file_path, TestMakeRoiOnly.example_roi)
+        expected = f"{TestMakeRoiOnly.temp_file_path}-{TestMakeRoiOnly.example_roi}-1-2"
+        assert result == expected, f"Expected '{expected}', got {result}"
+
+    @staticmethod
+    def test_insufficient_parameters_raises_typeerror() -> None:
+        def sample_func(image_path: str) -> str:  # Only 1 parameter
+            return image_path
+
+        with pytest.raises(TypeError, match="Function must accept at least 2 data parameters"):
+            make_roi_only(sample_func)
+
+    @staticmethod
+    def test_non_positional_data_parameter_raises_typeerror() -> None:
+        def sample_func(*, image_path: str, roi_coordinates: list[list]) -> str:  # Keyword-only parameters
+            return image_path
+
+        with pytest.raises(TypeError, match="Data parameter 1 must be positional"):
+            make_roi_only(sample_func)
+
+
+# %% test functions : make_array_only
+
+
+class TestMakeArrayOnly(unittest.TestCase):
+
+    test_array: np.ndarray
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        # Example 2D array for testing
+        cls.test_array = np.array([[1, 2, 3], [4, 5, 6]])
+
+    @staticmethod
+    def test_basic_functionality() -> None:
+        def sample_func(data_array: np.ndarray, param1: int = 0, param2: int = 0) -> int:
+            result = data_array.sum() + param1 + param2
+            return int(result)
+
+        arr_only_func = make_array_only(sample_func, param1=5, param2=10)
+        result = arr_only_func(TestMakeArrayOnly.test_array)
+        expected = TestMakeArrayOnly.test_array.sum() + 5 + 10
+        assert result == expected, f"Expected {expected}, got {result}"
+
+    @staticmethod
+    def test_function_name_suffix() -> None:
+        def sample_func(data_array: np.ndarray) -> np.ndarray:
+            return data_array
+
+        arr_only_func = make_array_only(sample_func, name_suffix="custom_suffix")
+        assert (
+            arr_only_func.__name__ == "sample_func_custom_suffix"
+        ), f"Expected function name 'sample_func_custom_suffix', got {arr_only_func.__name__}"
+
+    @staticmethod
+    def test_fixed_args_applied() -> None:
+        def sample_func(data_array: np.ndarray, a: int, b: int) -> int:
+            result = data_array.sum() + a + b
+            return int(result)
+
+        arr_only_func = make_array_only(sample_func, "", 1, 2)
+        result = arr_only_func(TestMakeArrayOnly.test_array)
+        expected = TestMakeArrayOnly.test_array.sum() + 1 + 2
+        assert result == expected, f"Expected {expected}, got {result}"
+
+    @staticmethod
+    def test_insufficient_parameters_raises_typeerror() -> None:
+        def sample_func() -> int:  # No parameters
+            return 0
+
+        with pytest.raises(TypeError, match="Function must accept at least 1 data parameter"):
+            make_array_only(sample_func)
+
+    @staticmethod
+    def test_non_positional_data_parameter_raises_typeerror() -> None:
+        def sample_func(*, data_array: np.ndarray) -> np.ndarray:  # Keyword-only parameter
+            return data_array
+
+        with pytest.raises(TypeError, match="Data parameter 1 must be positional"):
+            make_array_only(sample_func)
+
+
+# %% test functions : roispec
 
 
 class TestROISpec(unittest.TestCase):
-    """Test cases for ROISpec class"""
+    """Test cases for roispec class"""
 
     @staticmethod
     def create_simple_polygon() -> list[list[tuple[float, float]]]:
@@ -111,12 +319,9 @@ class TestROISpec(unittest.TestCase):
             # Create test raster
             _ = create_test_raster(test_raster)
 
-            # Initialize ROISpec
-            extractor = ROISpec(as_type="float32")
-
             # Extract spectra
             polygon = TestROISpec.create_simple_polygon()
-            result = extractor.roispec(test_raster, polygon)
+            result = roispec(test_raster, polygon)
 
             # Verify results
             assert isinstance(result, np.ndarray)
@@ -137,12 +342,9 @@ class TestROISpec(unittest.TestCase):
             # Create test raster
             _ = create_test_raster(test_raster)
 
-            # Initialize ROISpec
-            extractor = ROISpec(as_type="float64")
-
             # Extract spectra from multiple polygons
             polygons = TestROISpec.create_multipolygon()
-            result = extractor.roispec(test_raster, polygons)
+            result = roispec(test_raster, polygons, as_type="float64")
 
             # Verify results
             assert isinstance(result, np.ndarray)
@@ -164,19 +366,16 @@ class TestROISpec(unittest.TestCase):
             _ = create_test_raster(test_raster)
 
             # Test float32
-            extractor_float32 = ROISpec(as_type="float32")
             polygon = TestROISpec.create_simple_polygon()
-            result_float32 = extractor_float32.roispec(test_raster, polygon)
+            result_float32 = roispec(test_raster, polygon, as_type="float32")
             assert result_float32.dtype == np.float32
 
             # Test float64
-            extractor_float64 = ROISpec(as_type="float64")
-            result_float64 = extractor_float64.roispec(test_raster, polygon)
+            result_float64 = roispec(test_raster, polygon, as_type="float64")
             assert result_float64.dtype == np.float64
 
             # Test int16
-            extractor_int16 = ROISpec(as_type="int16")
-            result_int16 = extractor_int16.roispec(test_raster, polygon)
+            result_int16 = roispec(test_raster, polygon, as_type="int16")
             assert result_int16.dtype == np.int16
 
         if os.path.exists(test_raster):
@@ -191,12 +390,9 @@ class TestROISpec(unittest.TestCase):
             # Create test raster
             _ = create_test_raster(test_raster)
 
-            # Initialize ROISpec
-            extractor = ROISpec()
-
             # Attempt extraction with empty polygon list
             with pytest.raises(ValueError, match="No valid polygon found in the given roi_coordinates"):
-                extractor.roispec(test_raster, [])
+                roispec(test_raster, [])
 
         if os.path.exists(test_raster):
             os.remove(test_raster)
@@ -204,11 +400,10 @@ class TestROISpec(unittest.TestCase):
     @staticmethod
     def test_roispec_nonexistent_file() -> None:
         """Test ROI extraction with non-existent file raises error"""
-        extractor = ROISpec()
         polygon = TestROISpec.create_simple_polygon()
 
         with pytest.raises(RasterioIOError):
-            extractor.roispec("nonexistent_file.tif", polygon)
+            roispec("nonexistent_file.tif", polygon)
 
     @staticmethod
     def test_output_shape_consistency() -> None:
@@ -221,13 +416,10 @@ class TestROISpec(unittest.TestCase):
             # Create test raster
             _ = create_test_raster(test_raster)
 
-            # Initialize ROISpec
-            extractor = ROISpec()
-
             # Extract spectra multiple times
             polygon = TestROISpec.create_simple_polygon()
-            result1 = extractor.roispec(test_raster, polygon)
-            result2 = extractor.roispec(test_raster, polygon)
+            result1 = roispec(test_raster, polygon)
+            result2 = roispec(test_raster, polygon)
 
             # Check consistency
             assert result1.shape == result2.shape
@@ -247,12 +439,8 @@ class TestROISpec(unittest.TestCase):
             # Create test raster with nodata
             _ = create_test_raster(test_raster, incl_nodata=-9999.0, dtype="float32")
 
-            # Initialize ROISpec
-            extractor = ROISpec()
-
-            # Extract spectra
             polygon = TestROISpec.create_simple_polygon()
-            result = extractor.roispec(test_raster, polygon)
+            result = roispec(test_raster, polygon)
 
             # Check for nodata values
             assert not np.any(result == -9999.0)
@@ -260,19 +448,8 @@ class TestROISpec(unittest.TestCase):
         if os.path.exists(test_raster):
             os.remove(test_raster)
 
-    @staticmethod
-    def test_constructor_with_different_types() -> None:
-        """Test ROISpec constructor with different data types"""
-        # Test with string type
-        extractor1 = ROISpec(as_type="float32")
-        assert extractor1.as_type == "float32"
 
-        # Test with numpy type
-        extractor2 = ROISpec(as_type=np.float64)
-        assert extractor2.as_type == np.float64
-
-
-# %% Test - ROISpec
+# %% Test - roispec
 
 # TestROISpec.test_roispec_single_polygon()
 # TestROISpec.test_roispec_multipolygon()
@@ -285,249 +462,239 @@ class TestROISpec(unittest.TestCase):
 
 # TestROISpec.test_roispec_nonexistent_file()
 
-# TestROISpec.test_constructor_with_different_types()
-
-
-# %% test functions : roispec
-
-
-def test_roispec_consistency() -> None:
-    """Test consistency of roispec and ROISpec.roispec"""
-    with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp:
-        test_raster = tmp.name
-
-    try:
-        # Create test raster
-        _ = create_test_raster(test_raster)
-
-        # Initialize ROISpec
-        extractor = ROISpec(as_type="float32")
-
-        # Extract spectra
-        polygon = TestROISpec.create_simple_polygon()
-        result1 = extractor.roispec(test_raster, polygon)
-        result2 = roispec(test_raster, polygon)
-
-        # Verify results
-        assert np.all(result1 == result2)
-
-    finally:
-        if os.path.exists(test_raster):
-            os.remove(test_raster)
-
-
-# %% Test - roispec
-
-# test_roispec_consistency()
-
 
 # %% test functions : pixcount
 
 
 class TestPixCount(unittest.TestCase):
+
+    tmp_path: str
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        """Create a single temporary raster file for all tests."""
+        tmp_file = tempfile.NamedTemporaryFile(suffix=".tif", delete=False)
+        tmp_file.close()
+        cls.tmp_path = tmp_file.name
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        """Clean up the temporary raster file."""
+        if os.path.exists(cls.tmp_path):
+            os.remove(cls.tmp_path)
+
     @staticmethod
     def test_basic_pixel_count() -> None:
         """Test basic pixel counting without threshold."""
-        with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp_file:
-            tmp_path = tmp_file.name
+        tmp_path = TestPixCount.tmp_path
 
-            # Create test raster
-            _ = create_test_raster(tmp_path, width=4, height=4, bands=1, dtype="float32")
+        _ = create_test_raster(tmp_path, width=4, height=4, bands=1, dtype="float32")
 
-            # Define ROI covering the entire image
-            roi_coordinates = [[(0.5, 0.5), (0.5, 3.5), (3.5, 3.5), (3.5, 0.5)]]
+        roi_coordinates = [[(0.5, 0.5), (0.5, 3.5), (3.5, 3.5), (3.5, 0.5)]]
 
-            # Test counting all pixels
-            result = pixcount(tmp_path, roi_coordinates, band=1, threshold=None)
+        result = pixcount(tmp_path, roi_coordinates, band=1, threshold=None)
 
-            # Should count all 16 pixels
-            assert result == 16
-
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        assert result == 16
 
     @staticmethod
     def test_pixel_count_with_threshold() -> None:
         """Test pixel counting with threshold filtering."""
-        with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp_file:
-            tmp_path = tmp_file.name
+        tmp_path = TestPixCount.tmp_path
 
-            # Create test data
-            data = np.arange(1, 17, dtype=np.float32).reshape((1, 4, 4))
+        data = np.arange(1, 17, dtype=np.float32).reshape((1, 4, 4))
 
-            # Create test raster
-            _ = create_test_raster(tmp_path, width=4, height=4, bands=1, dtype="float32", data=data)
+        _ = create_test_raster(
+            tmp_path,
+            width=4,
+            height=4,
+            bands=1,
+            dtype="float32",
+            data=data,
+        )
 
-            roi_coordinates = [[(0.5, 0.5), (0.5, 3.5), (3.5, 3.5), (3.5, 0.5)]]
+        roi_coordinates = [[(0.5, 0.5), (0.5, 3.5), (3.5, 3.5), (3.5, 0.5)]]
 
-            # Count pixels between 5 and 10 (inclusive)
-            result = pixcount(tmp_path, roi_coordinates, band=1, threshold=(5, 10))
+        result = pixcount(tmp_path, roi_coordinates, band=1, threshold=(5, 10))
 
-            # Should count pixels: 5,6,7,8,9,10 (6 pixels)
-            assert result == 6
-
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        assert result == 6
 
     @staticmethod
     def test_nodata_handling() -> None:
         """Test that nodata values are properly excluded."""
-        with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp_file:
-            tmp_path = tmp_file.name
+        tmp_path = TestPixCount.tmp_path
 
-            # Create data with nodata values
-            data = np.array(
-                [[[1, -9999, 3, 4], [5, 6, -9999, 8], [9, 10, 11, 12], [-9999, 14, 15, 16]]],
-                dtype=np.float32,
-            )
+        data = np.array(
+            [[[1, -9999, 3, 4], [5, 6, -9999, 8], [9, 10, 11, 12], [-9999, 14, 15, 16]]],
+            dtype=np.float32,
+        )
 
-            # Create test raster
-            _ = create_test_raster(tmp_path, width=4, height=4, bands=1, nodata_value=-9999, dtype="float32", data=data)
+        _ = create_test_raster(
+            tmp_path,
+            width=4,
+            height=4,
+            bands=1,
+            nodata_value=-9999,
+            dtype="float32",
+            data=data,
+        )
 
-            roi_coordinates = [[(0.5, 0.5), (0.5, 3.5), (3.5, 3.5), (3.5, 0.5)]]
+        roi_coordinates = [[(0.5, 0.5), (0.5, 3.5), (3.5, 3.5), (3.5, 0.5)]]
 
-            # Count all valid pixels (excluding nodata)
-            result = pixcount(tmp_path, roi_coordinates, band=1)
+        result = pixcount(tmp_path, roi_coordinates, band=1)
 
-            # Should count 13 valid pixels (16 total - 3 nodata)
-            assert result == 13
-
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        assert result == 13
 
     @staticmethod
     def test_multiple_polygons() -> None:
         """Test counting across multiple polygons."""
-        with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp_file:
-            tmp_path = tmp_file.name
+        tmp_path = TestPixCount.tmp_path
 
-            _ = create_test_raster(tmp_path, width=4, height=4, bands=1, dtype="float32")
+        _ = create_test_raster(tmp_path, width=4, height=4, bands=1, dtype="float32")
 
-            # Two separate polygons
-            roi_coordinates = [
-                [(0.5, 0.5), (0.5, 1.5), (1.5, 1.5), (1.5, 0.5)],  # Top-left 2x2
-                [(2.5, 2.5), (2.5, 3.5), (3.5, 3.5), (3.5, 2.5)],  # Bottom-right 2x2
-            ]
+        roi_coordinates = [
+            [(0.5, 0.5), (0.5, 1.5), (1.5, 1.5), (1.5, 0.5)],
+            [(2.5, 2.5), (2.5, 3.5), (3.5, 3.5), (3.5, 2.5)],
+        ]
 
-            result = pixcount(tmp_path, roi_coordinates, band=1, threshold=None)
+        result = pixcount(tmp_path, roi_coordinates, band=1, threshold=None)
 
-            # Should count 8 pixels (4 from each polygon)
-            assert result == 8
-
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        assert result == 8
 
     @staticmethod
     def test_out_of_bounds_polygon() -> None:
         """Test polygon that doesn't intersect with the raster."""
-        with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp_file:
-            tmp_path = tmp_file.name
+        tmp_path = TestPixCount.tmp_path
 
-            _ = create_test_raster(tmp_path, width=2, height=2, bands=1, dtype="float32")
+        _ = create_test_raster(tmp_path, width=2, height=2, bands=1, dtype="float32")
 
-            # Polygon completely outside raster bounds
-            roi_coordinates = [[(10.0, 10.0), (10.0, 12.0), (12.0, 12.0), (12.0, 10.0)]]
+        roi_coordinates = [[(10.0, 10.0), (10.0, 12.0), (12.0, 12.0), (12.0, 10.0)]]
 
-            result = pixcount(tmp_path, roi_coordinates, band=1, threshold=None)
+        result = pixcount(tmp_path, roi_coordinates, band=1, threshold=None)
 
-            # Should return 0 (no intersection)
-            assert result == 0
-
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        assert result == 0
 
     @staticmethod
     def test_invalid_threshold() -> None:
         """Test that invalid threshold raises ValueError."""
-        with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp_file:
-            tmp_path = tmp_file.name
+        tmp_path = TestPixCount.tmp_path
 
-            _ = create_test_raster(tmp_path, width=2, height=2, bands=1, dtype="float32")
+        _ = create_test_raster(tmp_path, width=2, height=2, bands=1, dtype="float32")
 
-            roi_coordinates = [[(0.5, 0.5), (0.5, 1.5), (1.5, 1.5), (1.5, 0.5)]]
+        roi_coordinates = [[(0.5, 0.5), (0.5, 1.5), (1.5, 1.5), (1.5, 0.5)]]
 
-            # This should raise ValueError
-            with pytest.raises(ValueError, match="Invalid threshold"):
-                pixcount(tmp_path, roi_coordinates, band=1, threshold=(10, 5))
-
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        with pytest.raises(ValueError, match="Invalid threshold"):
+            pixcount(tmp_path, roi_coordinates, band=1, threshold=(10, 5))
 
     @staticmethod
     def test_different_band() -> None:
         """Test counting from a specific band."""
-        with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp_file:
-            tmp_path = tmp_file.name
+        tmp_path = TestPixCount.tmp_path
 
-            # Create multi-band data
-            data = np.array(
-                [[[1, 2], [3, 4]], [[10, 20], [30, 40]]],
-                dtype=np.float32,  # Band 1  # Band 2
-            )
+        data = np.array(
+            [[[1, 2], [3, 4]], [[10, 20], [30, 40]]],
+            dtype=np.float32,
+        )
 
-            _ = create_test_raster(tmp_path, width=2, height=2, bands=2, dtype="float32", data=data)
+        _ = create_test_raster(
+            tmp_path,
+            width=2,
+            height=2,
+            bands=2,
+            dtype="float32",
+            data=data,
+        )
 
-            roi_coordinates = [[(0.5, 0.5), (0.5, 1.5), (1.5, 1.5), (1.5, 0.5)]]
+        roi_coordinates = [[(0.5, 0.5), (0.5, 1.5), (1.5, 1.5), (1.5, 0.5)]]
 
-            # Count from band 2 with threshold
-            result = pixcount(tmp_path, roi_coordinates, band=2, threshold=(15, 35))
+        result = pixcount(tmp_path, roi_coordinates, band=2, threshold=(15, 35))
 
-            # Band 2 values: [10,20,30,40], should count 20 and 30 (2 pixels)
-            assert result == 2
-
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        assert result == 2
 
     @staticmethod
     def test_empty_polygon_list() -> None:
         """Test with empty polygon list."""
-        with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp_file:
-            tmp_path = tmp_file.name
+        tmp_path = TestPixCount.tmp_path
 
-            _ = create_test_raster(tmp_path, width=2, height=2, bands=1, dtype="float32")
+        _ = create_test_raster(tmp_path, width=2, height=2, bands=1, dtype="float32")
 
-            # Empty polygon list
-            roi_coordinates: list[list[tuple[float, float]]] = []
+        roi_coordinates: list[list[tuple[float, float]]] = []
 
-            result = pixcount(tmp_path, roi_coordinates, band=1, threshold=None)
+        result = pixcount(tmp_path, roi_coordinates, band=1, threshold=None)
 
-            # Should return 0
-            assert result == 0
-
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        assert result == 0
 
     @staticmethod
     def test_partial_intersection() -> None:
         """Test polygon that partially intersects with the raster."""
-        with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp_file:
-            tmp_path = tmp_file.name
+        tmp_path = TestPixCount.tmp_path
 
-            _ = create_test_raster(tmp_path, width=4, height=4, bands=1, dtype="float32")
+        _ = create_test_raster(tmp_path, width=4, height=4, bands=1, dtype="float32")
 
-            # Polygon that covers only part of the raster
-            roi_coordinates = [[(2.0, 2.0), (2.0, 5.0), (5.0, 5.0), (5.0, 2.0)]]
+        roi_coordinates = [[(2.0, 2.0), (2.0, 5.0), (5.0, 5.0), (5.0, 2.0)]]
 
-            result = pixcount(tmp_path, roi_coordinates, band=1, threshold=None)
+        result = pixcount(tmp_path, roi_coordinates, band=1, threshold=None)
 
-            # Should count only the intersecting pixels
-            assert result == 4
+        assert result == 4
 
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+    @staticmethod
+    def test_pixcounts_basic() -> None:
+        """Test pixcounts basic functionalities."""
+        tmp_path = TestPixCount.tmp_path
+
+        _ = create_test_raster(tmp_path, width=4, height=4, bands=4, dtype="float32")
+
+        roi_coordinates = [[(0.5, 0.5), (0.5, 3.5), (3.5, 3.5), (3.5, 0.5)]]
+
+        df_counts = pixcounts(tmp_path, roi_coordinates, bands=[1, 2, 3, 4], thresholds=None)
+
+        assert isinstance(df_counts, pd.DataFrame)
+        assert df_counts.shape == (1, 4)
+        assert list(df_counts.columns) == [f"Band_{i + 1}" for i in range(4)]
+        assert np.sum(np.array(df_counts)) > 0
+
+    @staticmethod
+    def test_pixcounts_thresholds() -> None:
+        """Test pixcounts functionality with thresholds."""
+        tmp_path = TestPixCount.tmp_path
+
+        _ = create_test_raster(tmp_path, width=4, height=4, bands=4, dtype="float32")
+
+        roi_coordinates = [[(0.5, 0.5), (0.5, 3.5), (3.5, 3.5), (3.5, 0.5)]]
+
+        df_counts = pixcounts(
+            tmp_path,
+            roi_coordinates,
+            bands=[1, 2, 3, 4],
+            thresholds=[(10000, 10001), (-1, 10001), (10000, 10001), (-1, 10001)],
+        )
+
+        assert isinstance(df_counts, pd.DataFrame)
+        assert df_counts.shape == (1, 4)
+        assert list(df_counts.columns) == [f"Band_{i + 1}" for i in range(4)]
+        assert df_counts.iloc[0, 0] == 0
+        assert df_counts.iloc[0, 1] > 0
+        assert df_counts.iloc[0, 2] == 0
+        assert df_counts.iloc[0, 3] > 0
 
 
 # %% Test - pixcount
 
-# TestPixCount.test_basic_pixel_count()
-# TestPixCount.test_pixel_count_with_threshold()
-# TestPixCount.test_nodata_handling()
-# TestPixCount.test_multiple_polygons()
-# TestPixCount.test_out_of_bounds_polygon()
-# TestPixCount.test_invalid_threshold()
-# TestPixCount.test_different_band()
-# TestPixCount.test_empty_polygon_list()
-# TestPixCount.test_partial_intersection()
+# test_pixcount = TestPixCount()
+# test_pixcount.setUpClass()
+
+# test_pixcount.test_basic_pixel_count()
+# test_pixcount.test_pixel_count_with_threshold()
+# test_pixcount.test_nodata_handling()
+# test_pixcount.test_multiple_polygons()
+# test_pixcount.test_out_of_bounds_polygon()
+# test_pixcount.test_invalid_threshold()
+# test_pixcount.test_different_band()
+# test_pixcount.test_empty_polygon_list()
+# test_pixcount.test_partial_intersection()
+# test_pixcount.test_pixcounts_basic()
+# test_pixcount.test_pixcounts_thresholds()
+
+# test_pixcount.tearDownClass()
 
 
 # %% test functions : minbbox
@@ -1896,7 +2063,7 @@ class TestStats2d:
     def test_static_mean() -> None:
         """Test Stats2d.mean static method"""
         arr = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
-        result = Stats2d.mean(arr, axis=0)
+        result = Stats2d(axis=0).mean(arr)
         expected = np.nanmean(arr, axis=0)
 
         assert np.allclose(result, expected)
@@ -1905,7 +2072,7 @@ class TestStats2d:
     def test_static_std() -> None:
         """Test Stats2d.std static method"""
         arr = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
-        result = Stats2d.std(arr, axis=0)
+        result = Stats2d(axis=0).std(arr)
         expected = np.nanstd(arr, axis=0)
 
         assert np.allclose(result, expected)
@@ -1914,7 +2081,7 @@ class TestStats2d:
     def test_static_var() -> None:
         """Test Stats2d.var static method"""
         arr = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
-        result = Stats2d.var(arr, axis=0)
+        result = Stats2d(axis=0).var(arr)
         expected = np.nanvar(arr, axis=0)
 
         assert np.allclose(result, expected)
@@ -1924,7 +2091,7 @@ class TestStats2d:
         """Test Stats2d.skew static method"""
         arr = np.array([[1.0, 4.0, 7.0], [2.0, 6.0, 8.0], [4.0, 6.0, 9.0]])
 
-        result1 = Stats2d.skew(arr, axis=0)
+        result1 = Stats2d(axis=0).skew(arr)
 
         from scipy.stats import skew
 
@@ -1937,7 +2104,7 @@ class TestStats2d:
         """Test Stats2d.kurt static method"""
         arr = np.array([[1.0, 4.0, 7.0], [2.0, 6.0, 8.0], [4.0, 6.0, 9.0], [8.0, 6.0, 10.0]])
 
-        result1 = Stats2d.kurt(arr, axis=0)
+        result1 = Stats2d(axis=0).kurt(arr)
 
         from scipy.stats import kurtosis  # Excess kurtosis
 
@@ -1949,7 +2116,7 @@ class TestStats2d:
     def test_static_minimum() -> None:
         """Test Stats2d.minimum static method"""
         arr = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
-        result = Stats2d.minimum(arr, axis=0)
+        result = Stats2d(axis=0).minimum(arr)
         expected = np.nanmin(arr, axis=0)
 
         assert np.allclose(result, expected)
@@ -1958,7 +2125,7 @@ class TestStats2d:
     def test_static_median() -> None:
         """Test Stats2d.median static method"""
         arr = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
-        result = Stats2d.median(arr, axis=0)
+        result = Stats2d(axis=0).median(arr)
         expected = np.nanmedian(arr, axis=0)
 
         assert np.allclose(result, expected)
@@ -1967,7 +2134,7 @@ class TestStats2d:
     def test_static_maximum() -> None:
         """Test Stats2d.maximum static method"""
         arr = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
-        result = Stats2d.maximum(arr, axis=0)
+        result = Stats2d(axis=0).maximum(arr)
         expected = np.nanmax(arr, axis=0)
 
         assert np.allclose(result, expected)
@@ -2025,7 +2192,7 @@ class TestStats2d:
             ]
         )
 
-        result = Stats2d(measure="mean", axis=0).stats2d(arr)
+        result = Stats2d(measure="mean", axis=0).summary(arr)
         expected = np.nanmean(arr, axis=0)
 
         assert isinstance(result, dict)
@@ -2045,7 +2212,7 @@ class TestStats2d:
             ]
         )
 
-        result = Stats2d(measure=["mean", "std"], axis=0).stats2d(arr)
+        result = Stats2d(measure=["mean", "std"], axis=0).summary(arr)
         expected = [np.nanmean(arr, axis=0), np.nanstd(arr, axis=0)]
 
         assert isinstance(result, dict)
@@ -2067,7 +2234,7 @@ class TestStats2d:
             ]
         )
 
-        result = Stats2d().stats2d(arr)
+        result = Stats2d().summary(arr)
 
         expected_keys = ["mean", "std", "skewness", "kurtosis", "min", "median", "max"]
         for key in expected_keys:
@@ -2080,7 +2247,7 @@ class TestStats2d:
         arr = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [10.0, 11.0, 12.0]])  # Only 4 samples
 
         with pytest.raises(ValueError, match="Sample size must be at least 5"):
-            Stats2d().stats2d(arr)
+            Stats2d().summary(arr)
 
     @staticmethod
     def test_callable_measure() -> None:
@@ -2100,7 +2267,7 @@ class TestStats2d:
             assert isinstance(result, np.ndarray)
             return result
 
-        result = Stats2d(measure=custom_measure, axis=0).stats2d(arr)
+        result = Stats2d(measure=custom_measure, axis=0).summary(arr)
         expected = np.nanmean(arr, axis=0)
 
         assert isinstance(result, dict)
@@ -2255,7 +2422,7 @@ class TestArrSpectralAngles:
     def create_test_data() -> tuple[np.ndarray, np.ndarray]:
         """Create test spectra array and reference spectrum"""
         # Create sample spectra array (3 spectra, 4 bands)
-        spectra_array = np.array(
+        spec_array_2d = np.array(
             [
                 [1.0, 2.0, 3.0, 4.0],  # Spectrum 1
                 [2.0, 4.0, 6.0, 8.0],  # Spectrum 2 (scaled version of ref)
@@ -2267,15 +2434,15 @@ class TestArrSpectralAngles:
         # Create reference spectrum
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
 
-        return spectra_array, reference_spectrum
+        return spec_array_2d, reference_spectrum
 
     @staticmethod
     def test_basic_functionality() -> None:
         """Test basic functionality with valid inputs"""
-        spectra_array, reference_spectrum = TestArrSpectralAngles.create_test_data()
+        spec_array_2d, reference_spectrum = TestArrSpectralAngles.create_test_data()
 
         # Calculate spectral angles
-        result = arr_spectral_angles(spectra_array, reference_spectrum, axis=0)
+        result = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0)
 
         # Expected results
         expected = np.array([0.0, 0.0, 0.0], dtype=np.float64)
@@ -2286,12 +2453,12 @@ class TestArrSpectralAngles:
     @staticmethod
     def test_axis_1_functionality() -> None:
         """Test functionality with axis=1"""
-        spectra_array, reference_spectrum = TestArrSpectralAngles.create_test_data()
+        spec_array_2d, reference_spectrum = TestArrSpectralAngles.create_test_data()
 
         # Transpose the array to test axis=1
-        spectra_array_transposed = spectra_array.T
+        spec_array_2d_transposed = spec_array_2d.T
 
-        result = arr_spectral_angles(spectra_array_transposed, reference_spectrum, axis=1)
+        result = arr_spectral_angles(spec_array_2d_transposed, reference_spectrum, axis=1)
 
         expected = np.array([0.0, 0.0, 0.0], dtype=np.float64)
 
@@ -2301,7 +2468,7 @@ class TestArrSpectralAngles:
     @staticmethod
     def test_non_zero_angles() -> None:
         """Test with spectra that should have non-zero angles"""
-        spectra_array = np.array(
+        spec_array_2d = np.array(
             [
                 [1.0, 1.0, 1.0, 1.0],  # Different shape from reference
                 [4.0, 3.0, 2.0, 1.0],  # Reversed order
@@ -2311,7 +2478,7 @@ class TestArrSpectralAngles:
 
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
 
-        result = arr_spectral_angles(spectra_array, reference_spectrum, axis=0)
+        result = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0)
 
         # Angles should be positive and non-zero
         assert result.shape == (2,)
@@ -2321,7 +2488,7 @@ class TestArrSpectralAngles:
     @staticmethod
     def test_undefined_angles() -> None:
         """Test that zeros are handled properly"""
-        spectra_array = np.array(
+        spec_array_2d = np.array(
             [[0.0, 0.0, 0.0, 0.0], [1.0, 2.0, 3.0, 4.0]],
             dtype=np.float64,  # All zeros
         )
@@ -2329,10 +2496,10 @@ class TestArrSpectralAngles:
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
 
         with pytest.raises(ValueError):
-            arr_spectral_angles(spectra_array, reference_spectrum, axis=0, invalid_raise=True)
+            arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0, invalid_raise=True)
 
-        result = arr_spectral_angles(spectra_array, reference_spectrum, axis=0, invalid_raise=False)
-        result1 = arr_spectral_angles(spectra_array, reference_spectrum, axis=0)
+        result = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0, invalid_raise=False)
+        result1 = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0)
 
         # Should not raise error and should return valid angles
         assert result.shape == (2,)
@@ -2343,59 +2510,59 @@ class TestArrSpectralAngles:
     @staticmethod
     def test_invalid_axis() -> None:
         """Test that invalid axis raises ValueError"""
-        spectra_array, reference_spectrum = TestArrSpectralAngles.create_test_data()
+        spec_array_2d, reference_spectrum = TestArrSpectralAngles.create_test_data()
 
         with pytest.raises(ValueError, match="axis can only be 0 or 1"):
-            arr_spectral_angles(spectra_array, reference_spectrum, axis=2)
+            arr_spectral_angles(spec_array_2d, reference_spectrum, axis=2)
 
     @staticmethod
     def test_non_2d_array() -> None:
         """Test that 1D array raises ValueError"""
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
 
-        with pytest.raises(ValueError, match="input spectra_array should be 2d array like"):
+        with pytest.raises(ValueError, match="input spec_array_2d must be 2d array like"):
             arr_spectral_angles([1, 2, 3, 4], reference_spectrum)
 
     @staticmethod
     def test_nan_values() -> None:
         """Test that NaN values raise ValueError"""
-        spectra_array = np.array([[1.0, 2.0, np.nan, 4.0], [2.0, 4.0, 6.0, 8.0]], dtype=np.float64)
+        spec_array_2d = np.array([[1.0, 2.0, np.nan, 4.0], [2.0, 4.0, 6.0, 8.0]], dtype=np.float64)
 
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
 
-        with pytest.raises(ValueError, match="input spectra_array should not contain nan values"):
-            arr_spectral_angles(spectra_array, reference_spectrum)
+        with pytest.raises(ValueError, match="input spec_array_2d must not contain nan values"):
+            arr_spectral_angles(spec_array_2d, reference_spectrum)
 
     @staticmethod
     def test_dimension_mismatch() -> None:
         """Test that dimension mismatch raises ValueError"""
-        spectra_array = np.array(
+        spec_array_2d = np.array(
             [[1.0, 2.0, 3.0], [2.0, 4.0, 6.0]],
             dtype=np.float64,  # Only 3 bands
         )
 
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)  # 4 bands
 
-        with pytest.raises(ValueError, match="input spectra_array does not match with reference_spectrum"):
-            arr_spectral_angles(spectra_array, reference_spectrum)
+        with pytest.raises(ValueError, match="input spec_array_2d does not match with reference_spectrum"):
+            arr_spectral_angles(spec_array_2d, reference_spectrum)
 
     @staticmethod
     def test_empty_array() -> None:
         """Test with empty spectra array"""
-        spectra_array = np.array([[]], dtype=np.float64)  # Empty 2D array
+        spec_array_2d = np.array([[]], dtype=np.float64)  # Empty 2D array
         reference_spectrum = np.array([], dtype=np.float64)  # Empty reference
 
-        result = arr_spectral_angles(spectra_array, reference_spectrum, axis=0)
+        result = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0)
 
         assert result.shape == (1,)
 
     @staticmethod
     def test_single_spectrum() -> None:
         """Test with single spectrum in array"""
-        spectra_array = np.array([[1.0, 2.0, 3.0, 4.0]], dtype=np.float64)
+        spec_array_2d = np.array([[1.0, 2.0, 3.0, 4.0]], dtype=np.float64)
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
 
-        result = arr_spectral_angles(spectra_array, reference_spectrum, axis=0)
+        result = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0)
 
         assert result.shape == (1,)
         np.testing.assert_allclose(result, [0.0], atol=1e-6)
@@ -2403,11 +2570,11 @@ class TestArrSpectralAngles:
     @staticmethod
     def test_list_input() -> None:
         """Test that function works with list inputs"""
-        spectra_array = [[1.0, 2.0, 3.0, 4.0], [2.0, 4.0, 6.0, 8.0]]
+        spec_array_2d = [[1.0, 2.0, 3.0, 4.0], [2.0, 4.0, 6.0, 8.0]]
 
         reference_spectrum = [1.0, 2.0, 3.0, 4.0]
 
-        result = arr_spectral_angles(spectra_array, reference_spectrum, axis=0)
+        result = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0)
 
         assert result.shape == (2,)
         np.testing.assert_allclose(result, [0.0, 0.0], atol=1e-6)

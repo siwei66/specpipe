@@ -119,7 +119,7 @@ def hypert_snv(spectra_tensor: torch.Tensor) -> torch.Tensor:
 
 
 # ROI specs - roispec
-# ROI specs to spec1d - Stats2d.mean, Stats2d.median
+# ROI specs to spec1d - Stats2d().mean, Stats2d().median
 
 
 # Spec1d to Spec1d
@@ -148,7 +148,7 @@ def create_test_spec_pipe(dir_path: str, sample_n: int = 10, n_bands: int = 8, i
     pipe.add_process(2, 2, 0, arr_ori)
     pipe.add_process(2, 2, 0, arr_simple_half)
     pipe.add_process(5, 6, 0, roispec)
-    pipe.add_process(6, 7, 0, Stats2d.mean)
+    pipe.add_process(6, 7, 0, Stats2d().mean)
     if is_regression:
         pipe.add_process(7, 8, 0, RandomForestRegressor(n_estimators=6))
         pipe.add_process(7, 8, 0, KNeighborsRegressor(n_neighbors=3))
@@ -187,7 +187,7 @@ class TestSpecPipe(unittest.TestCase):
             # Add ROI - no targets
             roi_path = test_dir + "/test_roi.xml"
             create_test_roi_xml(roi_path, roi_count=10)
-            test_exp.add_rois_by_file(group="test_group", path_list=[roi_path], image_name="test_img.tif")
+            test_exp.add_rois_by_file(group="test_group", path=[roi_path], image_name="test_img.tif")
             with pytest.raises(ValueError, match="No sample target value is found"):
                 SpecPipe(test_exp)
 
@@ -327,12 +327,12 @@ class TestSpecPipe(unittest.TestCase):
                 assert len(pipe.process) == 6
                 pipe.add_process(5, 6, 0, roispec)
                 assert len(pipe.process) == 7
-                pipe.add_process(6, 7, 0, Stats2d.median)
+                pipe.add_process(6, 7, 0, Stats2d().median)
                 assert len(pipe.process) == 8
             else:
                 pipe.add_process(5, 6, 0, roispec)
                 assert len(pipe.process) == 5
-                pipe.add_process(6, 7, 0, Stats2d.median)
+                pipe.add_process(6, 7, 0, Stats2d().median)
                 assert len(pipe.process) == 6
 
         # Clear test report dir
@@ -361,7 +361,7 @@ class TestSpecPipe(unittest.TestCase):
                 pipe.add_process(0, 7, 1, print)
 
             # Invalid previous and subsequent data levels
-            pipe.add_process(6, 7, 0, Stats2d.mean)
+            pipe.add_process(6, 7, 0, Stats2d().mean)
 
         # Clear test report dir
         if os.path.exists(test_dir):

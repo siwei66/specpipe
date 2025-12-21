@@ -46,10 +46,17 @@ def croproi(
     ----------
     raster_path : str
         Source raster path.
+
     roi_coordinates : list[list[tuple[float,float]]]
         Lists of ROI polygon coordinate pairs in tuple.
+
     output_path : str
         Output raster path.
+
+    Examples
+    --------
+    >>> croproi("/image1.tif", [[(0, 0), (0, 10), (10, 0), (0, 0)]], output_path="/image1_processed.tif")
+
     """
     # Create a list of Polygons from the coordinate lists
     polygons = [Polygon(poly_coords) for poly_coords in roi_coordinates]
@@ -861,33 +868,32 @@ def pixel_apply(
     image_path : str
         Input raster image path in string.
 
-    output_path : str
-        Output raster image path in string.
-
     spectral_function : Callable, optional
         Function to apply to 1D spectra of every pixel.
         The type of the function is specified to parameter function_type
 
     function_type : Callable, optional
         Specifies the type of spectral processing function to apply. Must be one of:
-        - 'spec' :
+        * 'spec' :
             Processes individual spectra. The function must:
-            - Accept a 1D array-like as its only required input.
-            - Return 1D array of the processed spectrum.
-        - 'array' :
+            Accept a 1D array-like as its only required input.
+            Return 1D array of the processed spectrum.
+        * 'array' :
             Processes batches of spectra as a 2D array. The function must:
-            - Accept a 2D array as its only required input, where each row represents a spectrum of a pixel.
-            - Return a 2D array with the same number of rows (processed spectra).
-        - 'tensor' :
+            Accept a 2D array as its only required input, where each row represents a spectrum of a pixel.
+            Return a 2D array with the same number of rows (processed spectra).
+        * 'tensor' :
             Processes data as a 3D PyTorch tensor, optimized for multispectral data with limited number of bands. 'cuda' is applied if available.
             The function must:
-            - Accept a 3D tensor as its only required input (shape: [Channels, Height, Width]).
-            - Return a 3D tensor with identical shape except Channel axis (axis 0).
-            - Compute operations along the Channel dimension (axis 0).
-        - 'tensor_hyper' :
+            Accept a 3D tensor as its only required input (shape: [Channels, Height, Width]).
+            Return a 3D tensor with identical shape except Channel axis (axis 0).
+            Compute operations along the Channel dimension (axis 0).
+        * 'tensor_hyper' :
             Processes data as a 3D PyTorch tensor, optimized for hyperspectral data with large number of bands. 'cuda' is applied if available.
-            The function requirements are identical with the 'tensor' type, except:
-            - Compute operations along axis 1.
+            The function requirements are same as the 'tensor', except operation computed along axis 1.
+
+    output_path : str
+        Output raster image path in string. Defaults to image_path combined with '_px_app_' and function name.
 
     dtype : Union[type, str], optional
         Value data type of output array. The default is 'float32'.
@@ -911,6 +917,24 @@ def pixel_apply(
     -------
     output_path : str
         Path of processed image.
+
+    Examples
+    --------
+    Apply function accepting 2D array:
+    >>> pixel_apply("/image1.tif", array_function, "array")
+
+    Save to custom output path:
+    >>> pixel_apply("/image1.tif", array_function, "array", output_path="/image1_processed.tif")
+
+    Apply function accepting 3D hyperspectral tensor and computing along axis 0:
+    >>> pixel_apply("/image1.tif", tensor_function, "tensor")
+
+    Apply function accepting 3D hyperspectral tensor and computing along axis 1:
+    >>> pixel_apply("/image1.tif", hypertensor_function, "tensor_hyper")
+
+    Customize tile size:
+    >>> pixel_apply("/image1.tif", array_function, "array", tile_size=128)
+
     """  # noqa: E501
     # Default output path
     if output_path is None:

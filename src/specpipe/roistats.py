@@ -10,6 +10,7 @@ import warnings
 
 # Typing
 from typing import Annotated, Any, Callable, Optional, Union, overload
+import inspect
 
 # Basic data
 import numpy as np
@@ -28,124 +29,428 @@ from shapely.geometry import Polygon, box
 from .specio import arraylike_validator, simple_type_validator, RealNumber
 
 
-# %% Image and ROI functions
+# %% Round to significant numbers
 
 
-# ROI spectral data extractor
-class ROISpec:
+def num_sig_digit(v: RealNumber, sig_digit: int, mode: str = "round") -> float:
     """
-    Extract spectra from spectral raster image in a multipolygon ROI defined with vertex coordinate pairs.
+    Round a value to given significant digits. Choose mode between 'round' / 'ceil' / 'floor'.
+    """
+    if v == 0:
+        return 0.0
+    factor = 10 ** (sig_digit - 1 - math.floor(math.log10(abs(v))))  # type: ignore[arg-type]
+    # unrecognized user-defined RealNumber type
+    if mode == "round":
+        rdfunc = round
+    elif mode == "ceil":
+        rdfunc = math.ceil  # type: ignore[assignment]
+        # overloaded expression function
+    elif mode == "floor":
+        rdfunc = math.floor  # type: ignore[assignment]
+        # overloaded expression function
+    else:
+        raise ValueError(f"mode must one of 'round', 'ceil' and 'floor', but got: '{mode}'")
+    return float(rdfunc(v * factor) / factor)
+
+
+def np_sig_digit(arr_like: Annotated[Any, arraylike_validator()], sig_digit: int, mode: str = "round") -> np.ndarray:
+    """
+    Round values to given significant digits for numeric NumPy arrays. Choose mode between 'round' / 'ceil' / 'floor'.
+    """
+    arr = np.asarray(arr_like)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        log10 = np.where(arr == 0, 0, np.floor(np.log10(np.abs(arr))))
+    factor = 10 ** (sig_digit - 1 - log10)
+    if mode == "round":
+        rdfunc = np.round  # type: ignore[assignment]
+        # overloaded expression function, following the same
+    elif mode == "ceil":
+        rdfunc = np.ceil  # type: ignore[assignment]
+    elif mode == "floor":
+        rdfunc = np.floor  # type: ignore[assignment]
+    else:
+        raise ValueError(f"mode must one of 'round', 'ceil' and 'floor', but got: '{mode}'")
+    result: np.ndarray = np.asarray(rdfunc(arr_like * factor) / factor)
+    return result
+
+
+# For any scalar real number regardless of types - behavioral validation
+@overload
+def round_digit(value: RealNumber, sig_digit: int, mode: str) -> float: ...  # type: ignore[overload-cannot-match]
+
+
+# Mypy failure on GitHub, the code works and passes local mypy validation, following the same
+
+
+@overload
+def round_digit(value: tuple, sig_digit: int, mode: str) -> tuple: ...  # type: ignore[overload-cannot-match]
+
+
+@overload
+def round_digit(value: list, sig_digit: int, mode: str) -> list: ...  # type: ignore[overload-cannot-match]
+
+
+@overload
+def round_digit(value: np.ndarray, sig_digit: int, mode: str) -> np.ndarray: ...  # type: ignore[overload-cannot-match]
+
+
+@overload
+def round_digit(  # type: ignore[overload-cannot-match]
+    value: torch.Tensor, sig_digit: int, mode: str
+) -> torch.Tensor: ...
+
+
+@overload
+def round_digit(  # type: ignore[overload-cannot-match]
+    value: pd.DataFrame, sig_digit: int, mode: str
+) -> pd.DataFrame: ...
+
+
+@simple_type_validator
+def round_digit(
+    value: Union[RealNumber, Annotated[Any, arraylike_validator()]],
+    sig_digit: int,
+    mode: str = "round",
+) -> Union[float, tuple, list, np.ndarray, pd.Series, pd.DataFrame, torch.Tensor]:
+    """
+    Round values or values in arraylike to specified significant digits.
 
     Parameters
     ----------
-    as_type : Union[type,str], optional
-        Numeric data type for the output spectral values, support NumPy numeric dtypes. The default is 'float32'.
+    value : Union[float, list, tuple, np.ndarray, pd.DataFrame]
+        Number or array-like values, e.g. Numpy ndarray or pd.DataFrame.
+    sig_digit : int
+        Significant digits.
+    mode : str, optional
+        Choose between 'round' / 'ceil' / 'floor'. The default is 'round'.
+
+    Returns
+    -------
+    result : Union[float, np.ndarray]
+        Rounded value or array of values.
+
+    Examples
+    --------
+    >>> round_digit(130.33, 2)
+    >>> round_digit(0.323233, 2, 'ceil')
+    >>> round_digit(138323, 2, 'floor')
+
     """
+    if isinstance(value, (list, tuple, np.ndarray, pd.Series, pd.DataFrame, torch.Tensor)):
+        value1 = np.asarray(value)
+        result = np_sig_digit(value1, sig_digit, mode)
+        if isinstance(value, (np.ndarray, pd.Series, pd.DataFrame)):
+            value[:] = result[:]
+        elif isinstance(value, list):
+            value = result.tolist()
+        elif isinstance(value, torch.Tensor):
+            value = torch.tensor(result)
+        elif value1.ndim == 1:
+            value = tuple(result)
+        else:
+            value = tuple(tuple(map(tuple, result.tolist())))  # noqa: C414
+            # The double tuples are necessary
+        return value
+    else:
+        return num_sig_digit(value, sig_digit, mode)
+
+
+# %% Parameter binders
+
+
+@simple_type_validator
+def make_img_only(
+    func: Callable,
+    name_suffix: str = "img_only",
+    *fixed_args: object,
+    **fixed_kwargs: object,
+) -> Callable:
+    """
+    Create a function from the given function that accepts image path only, fixing other parameters.
+
+    Parameters
+    ----------
+    func : Callable
+        Original function with signature func(, *args, **kwargs)
+    name_suffix : str, optional
+        The name suffix for the output function, default is 'img_only'.
+    *fixed_args :
+        Positional arguments to fix.
+    **fixed_kwargs :
+        Keyword arguments to fix.
+
+    Returns
+    -------
+    Callable
+        A function that accepts only image path.
+
+    Examples
+    --------
+    Suppose the original function is used as follows:
+    >>> processed_img_path = image_processing_function("/image1.tif", param1=1, param2=2)
+
+    A version that only requires image path is created as follows:
+    >>> func_accept_img_path = make_img_only(image_processing_function, param1=1, param2=2)
+
+    Then use:
+    >>> processed_img_path = func_accept_img_path("/image1.tif")
+
+    """
+    n_data_args = 1
+
+    sig = inspect.signature(func)
+    params = list(sig.parameters.values())
+
+    if len(params) < n_data_args:
+        raise TypeError("Function must accept at least 1 data parameter of image path.")
+
+    data_params = params[:n_data_args]
+
+    for i, p in enumerate(data_params, start=1):
+        if p.kind not in (
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        ):
+            raise TypeError(f"Data parameter {i} must be positional.")
 
     @simple_type_validator
-    def __init__(self, as_type: Union[type, str] = "float32") -> None:
-        self.as_type = as_type
+    def img_only(
+        image_path: str,
+    ) -> Any:
+        result = func(image_path, *fixed_args, **fixed_kwargs)
+        return result
+
+    img_only.__name__ = f"{func.__name__}_{name_suffix}"
+    img_only.__qualname__ = img_only.__name__
+
+    return img_only
+
+
+@simple_type_validator
+def make_roi_only(
+    func: Callable,
+    name_suffix: str = "roi_only",
+    *fixed_args: object,
+    **fixed_kwargs: object,
+) -> Callable:
+    """
+    Create a function from the given function that accepts only image path and ROI coordinates, fixing other parameters.
+
+    Parameters
+    ----------
+    func : Callable
+        Original function with signature func(image_path, roi_coordinates, *args, **kwargs)
+    name_suffix : str, optional
+        The name suffix for the output function, default is 'roi_only'.
+    *fixed_args :
+        Positional arguments to fix.
+    **fixed_kwargs :
+        Keyword arguments to fix.
+
+    Returns
+    -------
+    Callable
+        A function that accepts only image path and ROI coordinates.
+
+    Examples
+    --------
+    Suppose the original function is used as follows:
+    >>> roi_spectra_array = roi_processing_function(
+        "/image1.tif", [[(0, 0), (0, 10), (10, 0), (0, 0)]], param1=1, param2=2)
+
+    A version that only requires image path and ROI coordinates is created as follows:
+    >>> func_accept_img_roi = make_roi_only(roi_processing_function, param1=1, param2=2)
+
+    Then use:
+    >>> roi_spectra_array = func_accept_img_roi("/image1.tif", [[(0, 0), (0, 10), (10, 0), (0, 0)]])
+
+    """
+    n_data_args = 2
+
+    sig = inspect.signature(func)
+    params = list(sig.parameters.values())
+
+    if len(params) < n_data_args:
+        raise TypeError(
+            "Function must accept at least 2 data parameters: an image path and a list of ROI coordinate lists."
+        )
+
+    data_params = params[:n_data_args]
+
+    for i, p in enumerate(data_params, start=1):
+        if p.kind not in (
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        ):
+            raise TypeError(f"Data parameter {i} must be positional.")
 
     @simple_type_validator
-    def roispec(
-        self,
+    def roi_only(
         image_path: str,
         roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]],
-    ) -> Annotated[Any, arraylike_validator(ndim=2)]:
-        """
-        Extract spectra from spectral raster image in a multipolygon ROI defined with vertex coordinate pairs.
+    ) -> Any:
+        result = func(image_path, roi_coordinates, *fixed_args, **fixed_kwargs)
+        return result
 
-        Parameters
-        ----------
-        image_path : str
-            Spectral raster image path.
+    roi_only.__name__ = f"{func.__name__}_{name_suffix}"
+    roi_only.__qualname__ = roi_only.__name__
 
-        roi_coordinates : list[list[tuple[Union[int, float],Union[int, float]]]]
-            Lists of vertex coordinate pairs of the polygons of a region of interest (ROI).
-
-        Returns
-        -------
-        pix_arr : ndarray
-            Array of pixel spectra in the specified ROI, each row represents the spectrum values of a pixel.
-        """
-        as_type = self.as_type
-        # Silencing NotGeoreferencedWarning
-        warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
-
-        # Validate roi_coordinates
-        # Number of valid polygons
-        npoly = 0
-        if len(roi_coordinates) > 0:
-            for roi_coords in roi_coordinates:
-                if len(roi_coords) >= 3:
-                    npoly = npoly + 1
-        if npoly == 0:
-            raise ValueError(f"No valid polygon found in the given roi_coordinates: {roi_coordinates}")
-
-        # For each polygon
-        for i, polygon_coords in enumerate(roi_coordinates):
-            # Create a Polygon object from the coordinates
-            polygon = Polygon(polygon_coords)
-
-            with rasterio.open(image_path) as src:
-                # Get raster bounds
-                raster_bbox = box(*src.bounds)
-                # Validate Polygon
-                if raster_bbox.intersects(polygon):
-                    # Apply the polygon mask to raster
-                    out_image, out_transform = mask(src, [polygon], crop=True, nodata=src.nodata)
-                    # Flatten the bands
-                    out_image = out_image.reshape(out_image.shape[0], -1)
-                    # Get valid pixel values
-                    out_image = out_image[:, np.sum(out_image, axis=0) > 0]
-                    out_image = out_image.astype(as_type)
-                else:
-                    raise ValueError(
-                        f"\nROI located out of raster image bounds, \ngot ROI bounds: {polygon.bounds} , \
-                            \nimage bounds: {src.bounds}"
-                    )
-
-            # Concatenate results if ROI is multipolygon
-            if i == 0:
-                out_image_total = out_image
-            else:
-                out_image_total = np.concatenate((out_image_total, out_image), axis=1)
-
-        # Type conversion
-        out_image_total = out_image_total.astype(as_type)
-
-        # Return data default to row as sample
-        out_image_total = out_image_total.T
-
-        # Recover NotGeoreferencedWarning
-        warnings.filterwarnings("default", category=rasterio.errors.NotGeoreferencedWarning)
-
-        return out_image_total
+    return roi_only
 
 
-# Fast call of ROISpec.roispec
+@simple_type_validator
+def make_array_only(
+    func: Callable,
+    name_suffix: str = "x_only",
+    *fixed_args: object,
+    **fixed_kwargs: object,
+) -> Callable:
+    """
+    Create a function from the given function that accepts a data array only, fixing other parameters.
+
+    Parameters
+    ----------
+    func : Callable
+        Original function with signature func(, *args, **kwargs)
+    name_suffix : str, optional
+        The name suffix for the output function, default is 'x_only'.
+    *fixed_args :
+        Positional arguments to fix.
+    **fixed_kwargs :
+        Keyword arguments to fix.
+
+    Returns
+    -------
+    Callable
+        A function that accepts 2D arraylike data only.
+
+    Examples
+    --------
+    Suppose the original function is used as follows:
+    >>> result = array_processing_function(array, param1=1, param2=2)
+
+    A version that only requires the array argument is created as follows:
+    >>> func_accept_arr = make_array_only(array_processing_function, param1=1, param2=2)
+
+    Then use:
+    >>> result = func_accept_arr(array)
+
+    """
+    n_data_args = 1
+
+    sig = inspect.signature(func)
+    params = list(sig.parameters.values())
+
+    if len(params) < n_data_args:
+        raise TypeError("Function must accept at least 1 data parameter of data array.")
+
+    data_params = params[:n_data_args]
+
+    for i, p in enumerate(data_params, start=1):
+        if p.kind not in (
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        ):
+            raise TypeError(f"Data parameter {i} must be positional.")
+
+    @simple_type_validator
+    def arr_only(
+        data_array_2d: Annotated[Any, arraylike_validator()],
+    ) -> Any:
+        result = func(data_array_2d, *fixed_args, **fixed_kwargs)
+        return result
+
+    arr_only.__name__ = f"{func.__name__}_{name_suffix}"
+    arr_only.__qualname__ = arr_only.__name__
+
+    return arr_only
+
+
+# %% Image and ROI functions
+
+
+# Extract ROI spectra
 @simple_type_validator
 def roispec(
-    image_path: str, roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]]
+    image_path: str,
+    roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]],
+    as_type: Union[type, str] = "float32",
 ) -> Annotated[Any, arraylike_validator(ndim=2)]:
     """
     Extract spectra from spectral raster image in a multipolygon ROI defined with vertex coordinate pairs.
-    The data type of output values are fixed to float32. Use ROISpec(as_type).roispec to customize data types in the automation pipeline.
 
     Parameters
     ----------
     image_path : str
         Spectral raster image path.
-
     roi_coordinates : list[list[tuple[Union[int, float],Union[int, float]]]]
         Lists of vertex coordinate pairs of the polygons of a region of interest (ROI).
+    as_type : Union[type, str], optional
+        Desired numeric data type for the extracted spectral values.
+        Supports NumPy numeric dtypes. Default is 'float32'.
 
     Returns
     -------
     pix_arr : ndarray
         Array of pixel spectra in the specified ROI, each row represents the spectrum values of a pixel.
+
+    Examples
+    --------
+    >>> roispec("/image1.tif", [[(0, 0), (10, 0), (0, 10), (0, 0)]])
+
     """  # noqa: E501
-    return ROISpec().roispec(image_path, roi_coordinates)
+    # Silencing NotGeoreferencedWarning
+    warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
+
+    # Validate roi_coordinates
+    # Number of valid polygons
+    npoly = 0
+    if len(roi_coordinates) > 0:
+        for roi_coords in roi_coordinates:
+            if len(roi_coords) >= 3:
+                npoly = npoly + 1
+    if npoly == 0:
+        raise ValueError(f"No valid polygon found in the given roi_coordinates: {roi_coordinates}")
+
+    # For each polygon
+    for i, polygon_coords in enumerate(roi_coordinates):
+        # Create a Polygon object from the coordinates
+        polygon = Polygon(polygon_coords)
+
+        with rasterio.open(image_path) as src:
+            # Get raster bounds
+            raster_bbox = box(*src.bounds)
+            # Validate Polygon
+            if raster_bbox.intersects(polygon):
+                # Apply the polygon mask to raster
+                out_image, out_transform = mask(src, [polygon], crop=True, nodata=src.nodata)
+                # Flatten the bands
+                out_image = out_image.reshape(out_image.shape[0], -1)
+                # Get valid pixel values
+                out_image = out_image[:, np.sum(out_image, axis=0) > 0]
+                out_image = out_image.astype(as_type)
+            else:
+                raise ValueError(
+                    f"\nROI located out of raster image bounds, \ngot ROI bounds: {polygon.bounds} , \
+                        \nimage bounds: {src.bounds}"
+                )
+
+        # Concatenate results if ROI is multipolygon
+        if i == 0:
+            out_image_total = out_image
+        else:
+            out_image_total = np.concatenate((out_image_total, out_image), axis=1)
+
+    # Type conversion
+    out_image_total = out_image_total.astype(as_type)
+
+    # Return data default to row as sample
+    out_image_total = out_image_total.T
+
+    # Recover NotGeoreferencedWarning
+    warnings.filterwarnings("default", category=rasterio.errors.NotGeoreferencedWarning)
+
+    return out_image_total
 
 
 # ROI pixel counter
@@ -157,19 +462,16 @@ def pixcount(
     threshold: Optional[tuple[Union[int, float], Union[int, float]]] = None,
 ) -> int:
     """
-    Count valid pixel number within a ROI larger than a threshold at specific band.
+    Count valid pixel number within a ROI within a threshold at a specific band.
 
     Parameters
     ----------
     image_path : str
         Spectral raster image path.
-
     roi_coordinates : list[list[tuple[Union[int, float],Union[int, float]]]]
         Lists of vertex coordinate pairs of the polygons of a region of interest (ROI).
-
     band : int, optional
         Reference band, if threshold is given, values at this band is compared with threshold.
-
     threshold : tuple[Union[int,float],Union[int,float]], optional
         The band value is compared with threshold, only pixel within the threshold are counted.
 
@@ -177,6 +479,12 @@ def pixcount(
     -------
     total_count : int
         Valid pixel number within a ROI larger than a threshold at specific band.
+
+    Examples
+    --------
+    >>> pixcount("/image1.tif", [[(0, 0), (10, 0), (0, 10), (0, 0)]], band=12)
+    >>> pixcount("/image1.tif", [[(0, 0), (10, 0), (0, 10), (0, 0)]], band=12, threshold=(1000, 3000))
+
     """
     # Silencing NotGeoreferencedWarning
     warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
@@ -211,6 +519,73 @@ def pixcount(
     warnings.filterwarnings("default", category=rasterio.errors.NotGeoreferencedWarning)
 
     return total_count
+
+
+# ROI pixel counter
+@simple_type_validator
+def pixcounts(
+    image_path: str,
+    roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]],
+    bands: list[int],
+    thresholds: Optional[list[tuple[Union[int, float], Union[int, float]]]] = None,
+) -> pd.DataFrame:
+    """
+    Count valid pixel number within a ROI within multiple thresholds at multiple specific bands.
+
+    Parameters
+    ----------
+    image_path : str
+        Spectral raster image path.
+    roi_coordinates : list[list[tuple[Union[int, float],Union[int, float]]]]
+        Lists of vertex coordinate pairs of the polygons of a region of interest (ROI).
+    bands : int, optional
+        Reference band, if threshold is given, values at this band is compared with threshold.
+    thresholds : tuple[Union[int,float],Union[int,float]], optional
+        The band value is compared with threshold, only pixel within the threshold are counted.
+
+    Returns
+    -------
+    total_count : int
+        Valid pixel number within a ROI larger than a threshold at specific band.
+
+    Examples
+    --------
+    >>> pixcounts("/image1.tif", [[(0, 0), (10, 0), (0, 10), (0, 0)]], band=[2,3])
+    >>> pixcounts("/image1.tif", [[(0, 0), (10, 0), (0, 10), (0, 0)]], band=[2,3], threshold=[(1, 200), (200, 400)])
+
+    """
+    # Validate bands and thresholds
+    if thresholds is not None:
+        if len(thresholds) != len(bands):
+            raise ValueError(
+                f"Number of thresholds does not match the number of bands, \
+                    got number of threshold: {len(thresholds)}, got number of bands: {len(bands)}."
+            )
+    else:
+        thresholds = [
+            (-1e38, 1e38),
+        ] * len(bands)
+    assert isinstance(thresholds, list)
+
+    band_names = []
+    total_counts = []
+    threshold: Optional[tuple]
+    for band, threshold in zip(bands, thresholds):
+        band_names.append(f"Band_{band}")
+        if thresholds is None:
+            threshold = None
+        total_counts.append(
+            pixcount(
+                image_path=image_path,
+                roi_coordinates=roi_coordinates,
+                band=band,
+                threshold=threshold,
+            )
+        )
+
+    df_counts = pd.DataFrame([total_counts], columns=band_names)
+
+    return df_counts
 
 
 # Find min sampling bbox from a ROI with min valid pixels
@@ -258,7 +633,7 @@ def minbbox(
 # Derivative calculator for 2d-array
 @simple_type_validator
 def nderiv(  # noqa: C901
-    data: Annotated[Any, arraylike_validator(ndim=2)],
+    data_array_2d: Annotated[Any, arraylike_validator(ndim=2)],
     n: int,
     axis: int = 1,
     padding: Union[int, float, str, None] = 'nan',
@@ -268,24 +643,21 @@ def nderiv(  # noqa: C901
 
     Parameters
     ----------
-    data : np.ndarray
+    data_array_2d : np.ndarray
         2D arraylike data.
-
     n : int
         Derivative order.
-
     axis : int, optional
         Axis along which to perform the calcuation.
-        - 0: Calculate row-wise (treat each row as a variable, while each column as a sample)
-        - 1: Calculate column-wise (treat each column as a variable, while each row as a sample)
+        * 0: Calculate row-wise (treat each row as a variable, while each column as a sample)
+        * 1: Calculate column-wise (treat each column as a variable, while each row as a sample)
         The default is 1.
-
     padding : Union[int, float, str, None], optional
         Boundary padding strategy for derivative arrays, choose between:
-            'nan' - pad with NaN.
-            'edge' - pad with edge values.
-            numeric - pad with specified number.
-            None - no padding.
+            * 'nan' - pad with NaN.
+            * 'edge' - pad with edge values.
+            * numeric - pad with specified number.
+            * None - no padding.
         If None, or nth order derivatives, the output length will be reduced by 2n along the computation axis.
         The default is 'nan'.
 
@@ -294,22 +666,29 @@ def nderiv(  # noqa: C901
     derivative : np.ndarray
         The n-th derivative of the input data along given axis in the same size.
 
-    Raises
-    ------
-    ValueError
-        If data length insufficient to compute nth derivative.
+    Examples
+    --------
+    >>> x = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    >>> nderiv(x, 1)
+    >>> nderiv(x, 2)
+    >>> nderiv(x, 2, axis=0)
+    >>> nderiv(x, 2, padding='nan')
+    >>> nderiv(x, 2, padding='edge')
 
-    ValueError
-        If given edge is not int nor float.
+    Pad with custom number:
+    >>> nderiv(x, 2, padding=0)
+
+    No padding:
+    >>> nderiv(x, 2, padding=None)
 
     """
-    data = np.asarray(data).astype("float32")
+    data_array_2d = np.asarray(data_array_2d).astype("float32")
 
     if axis == 0:
-        data = data.T
+        data_array_2d = data_array_2d.T
 
     # Validate length of data series.
-    dlen = data.shape[1]
+    dlen = data_array_2d.shape[1]
     if dlen < 2 * n:
         raise ValueError(
             f"Insufficient data length. \
@@ -318,14 +697,14 @@ def nderiv(  # noqa: C901
 
     # Compute nth derivative
     if n == 0:
-        derivative = data
+        derivative = data_array_2d
     else:
         for od in range(1, n + 1):
             # Create an array to hold the n-th derivative
-            derivative = np.zeros_like(data)
+            derivative = np.zeros_like(data_array_2d)
             for i in range(od, dlen - od):
-                derivative[:, i] = (data[:, i + 1] - data[:, i - 1]) / 2
-            data = derivative
+                derivative[:, i] = (data_array_2d[:, i + 1] - data_array_2d[:, i - 1]) / 2
+            data_array_2d = derivative
 
         # Padding
         if padding is None:
@@ -355,7 +734,7 @@ def nderiv(  # noqa: C901
 # Computing axis converter
 @simple_type_validator
 def axisconv(
-    arr2d: Annotated[Any, arraylike_validator(ndim=2, as_type=float)],
+    data_array_2d: Annotated[Any, arraylike_validator(ndim=2, as_type=float)],
     axis: int,
     astype: type,
 ) -> np.ndarray:
@@ -364,9 +743,9 @@ def axisconv(
     """
     arr: np.ndarray
     if axis == 0:
-        arr = np.asarray(arr2d).astype(astype)
+        arr = np.asarray(data_array_2d).astype(astype)
     elif axis == 1:
-        arr = np.asarray(arr2d).astype(astype).T
+        arr = np.asarray(data_array_2d).astype(astype).T
     else:
         raise ValueError(f"Axis must be 0 or 1, got: {axis}")
     return arr
@@ -399,17 +778,27 @@ def moment2d(  # noqa: C901
         Axis along which the moment is computed, axis=0 treats each row as a sample. The default is 0.
     zero_division : str
         Choose between:
-         - "add" : add a small number (1e-30) to denominator to avoid zero.
-         - "replace" : replace zero with a small number (1e-30) in the denominator.
-         - "nan" : return nan for zero divisions.
-         - "numpy" : use default approach of numpy, i.e. return nan for 0 / 0, and +/-inf for non-zero values.
-         - "raise" : raise Error for zero divisions.
+         * "add" : add a small number (1e-30) to denominator to avoid zero.
+         * "replace" : replace zero with a small number (1e-30) in the denominator.
+         * "nan" : return nan for zero divisions.
+         * "numpy" : use default approach of numpy, i.e. return nan for 0 / 0, and +/-inf for non-zero values.
+         * "raise" : raise Error for zero divisions.
         The default is "add".
 
     Returns
     -------
     mom : tuple
         Target moment.
+
+    Examples
+    --------
+    >>> x = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    >>> moment2d(x, n=1)
+    >>> moment2d(x, n=2)
+    >>> moment2d(x, n=2, axis=1)
+    >>> moment2d(x, n=2, zero_division='replace')
+    >>> moment2d(x, n=4, standardized=False)
+
     """
     # Standardize axis
     arr = axisconv(data_array_2d, axis, float)
@@ -470,7 +859,7 @@ def moment2d(  # noqa: C901
 def bandhist(
     spec_array_2d: Annotated[Any, arraylike_validator(ndim=2, as_type=float)],
     band: int,
-    bins: Union[int, list[float]],
+    bins: Union[int, Annotated[Any, arraylike_validator(ndim=1)]],
     axis: int = 0,
 ) -> tuple[float, ...]:
     """
@@ -481,13 +870,10 @@ def bandhist(
     ----------
     spec_array_2d : ndarray-like
         2D spectra data array-like. If each column is treat as a sample, set axis=1.
-
     band : int
         band index or list of band indices for computation.
-
-    bins : Union[int, list[float]]
-        DESCRIPTION. The default is 0.
-
+    bins : Union[int, Annotated[Any, arraylike_validator(ndim=1)]]
+        Number of bins, or an explicit sequence of quantile levels. The default is 0.
     axis : int, optional
         Axis along which the moment is computed, axis=0 treats each row as a sample. The default is 0.
 
@@ -495,7 +881,19 @@ def bandhist(
     -------
     values : tuple[float, ...]
         Quantile values at given bins.
+
+    Examples
+    --------
+    >>> x = np.random.randint(0, 10000, size=(100, 100))
+    >>> bandhist(x, band=1, bins=10)
+    >>> bandhist(x, band=1, bins=[500, 1000, 1500, 2000, 2500, 3000])
+    >>> bandhist(x, band=1, bins=10, axis=1)
+
     """
+    # Validate bins
+    if not isinstance(bins, int):
+        bins = list(np.array(bins))
+
     # Standardize axis
     arr = axisconv(spec_array_2d, axis, float)
 
@@ -613,8 +1011,7 @@ class Stats2d:
     """
     Statistical measure calculator for a 2D data array with each row or column as a sample.
 
-    For paralell processing, please use the following static methods:
-        - mean / std / skew / kurt / minimum / median / maximum
+    For paralell processing, please use the following static methods: mean / std / skew / kurt / minimum / median / maximum
     Or use functionn moment2d for arbitrary moments instead.
 
     Attributes
@@ -622,117 +1019,284 @@ class Stats2d:
     axis : int, optional
         Axis along which the moment is computed, axis=0 treats each row as a sample. The default is 0.
     measure : str or tuple of name and Callable or list of them, optional
-        - Common measure can be specified by name, choose between "mean", "std", "skewness", "kurtosis", "min", "median" and "max".
-        - Custom measure function should accept 2D array as its only argment, where each row represents a sample.
-        - Multiple measures can be specified in a list or tuple.
+        * Common measure can be specified by name, choose between "mean", "std", "skewness", "kurtosis", "min", "median" and "max".
+        * Custom measure function must accept 2D array as its only argment, where each row represents a sample.
+        * Multiple measures can be specified in a list or tuple.
         If not given, all aforementioned common measures are computed by default.
 
     Methods
     -------
-    - stats2d(data_array_2d):
-        Computes a set of statistical measures for the provided 2D array and returns the results as a dictionary.
-
-    - values(data_array_2d):
-        Computes the values of a single specified statistical measure for the provided 2D array.
-
-    - mean(data_array_2d):
+    stats2d
+        Summarize a set of statistical measures for the provided 2D array and returns the results as a dictionary.
+    values
+        Returns a function computing the values of a single specified statistical measure for the provided 2D array.
+        The function is named as the specified measure.
+    mean
         Computes the arithmetic mean of given 2D array.
-
-    - std(data_array_2d):
+    std
         Computes the standard deviation of given 2D array.
-
-    - skew(data_array_2d):
+    skew
         Computes the skewness of given 2D array.
-
-    - kurt(data_array_2d):
+    kurt
         Computes the kurtosis of given 2D array.
-
-    - minimum(data_array_2d):
+    minimum
         Computes the minimum value of given 2D array.
-
-    - median(data_array_2d):
+    median
         Computes the median of given 2D array.
-
-    - maximum(data_array_2d):
+    maximum
         Computes the maximum value of given 2D array.
+
+    Examples
+    --------
+    >>> stats2d = Stats2d(axis=0)
+
     """  # noqa: E501
 
     @simple_type_validator
-    def __init__(self, measure: Union[str, Callable, list[Union[str, Callable]], None] = None, axis: int = 0) -> None:
+    def __init__(self, axis: int = 0, measure: Union[str, Callable, list[Union[str, Callable]], None] = None) -> None:
+        """
+        Built-in wrapper for common statistical measures of 2D arraylike.
+
+        Parameters
+        ----------
+        axis : int, optional
+            DESCRIPTION. The default is 0.
+        measure : Union[str, Callable, list[Union[str, Callable]], None], optional
+            Statistical measures for 'Stats2d.values'. Must be specified for calling 'Stats2d.values'
+            Choose between: "mean", "std", "skewness", "kurtosis", "min", "median", "max".
+            The default is None.
+
+        Examples
+        --------
+        >>> stats2d = Stats2d(axis=0)
+
+        """
         self.measure = measure
         self.axis = axis
 
     # Simplified measures
-    @staticmethod
     @simple_type_validator
-    def mean(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
+    def mean(self, data_array_2d: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
-        Mean values of a 2D data array with each row or column as a sample. See stats2d.
+        Mean values of a 2D data array with each row or column as a sample.
+
+        Parameters
+        ----------
+        data_array_2d : ndarray-like
+            2D array-like data. Nan value is omited.
+
+        Returns
+        -------
+        np.ndarray
+            Measure values of the samples.
+
+        See Also
+        --------
+        Stats2d
+
+        Examples
+        --------
+        >>> demo_array = np.random.randint(0, 1000, size=(10, 10))
+        >>> Stats2d(axis=0).kurt(demo_array)
+
         """
-        result: np.ndarray = np.asarray(np.nanmean(data_array_2d, axis=axis))
+        result: np.ndarray = np.asarray(np.nanmean(data_array_2d, axis=self.axis))
         return result
 
-    @staticmethod
     @simple_type_validator
-    def std(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
+    def std(self, data_array_2d: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
-        Standard deviation values of a 2D data array with each row or column as a sample. See stats2d.
+        Standard deviation values of a 2D data array with each row or column as a sample.
+
+        Parameters
+        ----------
+        data_array_2d : ndarray-like
+            2D array-like data. Nan value is omited.
+
+        Returns
+        -------
+        np.ndarray
+            Measure values of the samples.
+
+        See Also
+        --------
+        Stats2d
+
+        Examples
+        --------
+        >>> demo_array = np.random.randint(0, 1000, size=(10, 10))
+        >>> Stats2d(axis=0).kurt(demo_array)
+
         """
-        result: np.ndarray = np.asarray(np.nanstd(data_array_2d, axis=axis))
+        result: np.ndarray = np.asarray(np.nanstd(data_array_2d, axis=self.axis))
         return result
 
-    @staticmethod
     @simple_type_validator
-    def var(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
+    def var(self, data_array_2d: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
-        Variance values of a 2D data array with each row or column as a sample. See stats2d.
+        Variance values of a 2D data array with each row or column as a sample.
+
+        Parameters
+        ----------
+        data_array_2d : ndarray-like
+            2D array-like data. Nan value is omited.
+
+        Returns
+        -------
+        np.ndarray
+            Measure values of the samples.
+
+        See Also
+        --------
+        Stats2d
+
+        Examples
+        --------
+        >>> demo_array = np.random.randint(0, 1000, size=(10, 10))
+        >>> Stats2d(axis=0).kurt(demo_array)
+
         """
-        result: np.ndarray = np.asarray(np.nanvar(data_array_2d, axis=axis))
+        result: np.ndarray = np.asarray(np.nanvar(data_array_2d, axis=self.axis))
         return result
 
-    @staticmethod
     @simple_type_validator
-    def skew(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
+    def skew(self, data_array_2d: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
-        Skewness values of a 2D data array with each row or column as a sample. See stats2d.
+        Skewness values of a 2D data array with each row or column as a sample.
+
+        Parameters
+        ----------
+        data_array_2d : ndarray-like
+            2D array-like data. Nan value is omited.
+
+        Returns
+        -------
+        np.ndarray
+            Measure values of the samples.
+
+        See Also
+        --------
+        Stats2d
+
+        Examples
+        --------
+        >>> demo_array = np.random.randint(0, 1000, size=(10, 10))
+        >>> Stats2d(axis=0).kurt(demo_array)
+
         """
-        result: np.ndarray = np.asarray(moment2d(data_array_2d, 3, standardized=True, axis=axis))
+        result: np.ndarray = np.asarray(moment2d(data_array_2d, 3, standardized=True, axis=self.axis))
         return result
 
-    @staticmethod
     @simple_type_validator
-    def kurt(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
+    def kurt(self, data_array_2d: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
-        Kurtosis values of a 2D data array with each row or column as a sample. See stats2d.
+        Kurtosis values of a 2D data array with each row or column as a sample.
+
+        Parameters
+        ----------
+        data_array_2d : ndarray-like
+            2D array-like data. Nan value is omited.
+
+        Returns
+        -------
+        np.ndarray
+            Measure values of the samples.
+
+        See Also
+        --------
+        Stats2d
+
+        Examples
+        --------
+        >>> demo_array = np.random.randint(0, 1000, size=(10, 10))
+        >>> Stats2d(axis=0).kurt(demo_array)
+
         """
-        result: np.ndarray = np.asarray(moment2d(data_array_2d, 4, standardized=True, axis=axis))
+        result: np.ndarray = np.asarray(moment2d(data_array_2d, 4, standardized=True, axis=self.axis))
         return result
 
-    @staticmethod
     @simple_type_validator
-    def minimum(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
+    def minimum(self, data_array_2d: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
-        Minimum values of a 2D data array with each row or column as a sample. See stats2d.
+        Minimum values of a 2D data array with each row or column as a sample.
+
+        Parameters
+        ----------
+        data_array_2d : ndarray-like
+            2D array-like data. Nan value is omited.
+
+        Returns
+        -------
+        np.ndarray
+            Measure values of the samples.
+
+        See Also
+        --------
+        Stats2d
+
+        Examples
+        --------
+        >>> demo_array = np.random.randint(0, 1000, size=(10, 10))
+        >>> Stats2d(axis=0).minimum(demo_array)
+
         """
-        result: np.ndarray = np.asarray(np.nanmin(data_array_2d, axis=axis))
+        result: np.ndarray = np.asarray(np.nanmin(data_array_2d, axis=self.axis))
         return result
 
-    @staticmethod
     @simple_type_validator
-    def median(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
+    def median(self, data_array_2d: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
-        Median values of a 2D data array with each row or column as a sample. See stats2d.
+        Median values of a 2D data array with each row or column as a sample.
+
+        Parameters
+        ----------
+        data_array_2d : ndarray-like
+            2D array-like data. Nan value is omited.
+
+        Returns
+        -------
+        np.ndarray
+            Measure values of the samples.
+
+        See Also
+        --------
+        Stats2d
+
+        Examples
+        --------
+        >>> demo_array = np.random.randint(0, 1000, size=(10, 10))
+        >>> Stats2d(axis=0).median(demo_array)
+
         """
-        result: np.ndarray = np.asarray(np.nanmedian(data_array_2d, axis=axis))
+        result: np.ndarray = np.asarray(np.nanmedian(data_array_2d, axis=self.axis))
         return result
 
-    @staticmethod
     @simple_type_validator
-    def maximum(data_array_2d: Annotated[Any, arraylike_validator(ndim=2)], axis: int = 0) -> np.ndarray:
+    def maximum(self, data_array_2d: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
-        Maximum values of a 2D data array with each row or column as a sample. See stats2d.
+        Maximum values of a 2D data array with each row or column as a sample.
+
+        Parameters
+        ----------
+        data_array_2d : ndarray-like
+            2D array-like data. Nan value is omited.
+
+        Returns
+        -------
+        np.ndarray
+            Measure values of the samples.
+
+        See Also
+        --------
+        Stats2d
+
+        Examples
+        --------
+        >>> demo_array = np.random.randint(0, 1000, size=(10, 10))
+        >>> Stats2d(axis=0).maximum(demo_array)
+
         """
-        result: np.ndarray = np.asarray(np.nanmax(data_array_2d, axis=axis))
+        result: np.ndarray = np.asarray(np.nanmax(data_array_2d, axis=self.axis))
         return result
 
     # Return stats values only, single measure only
@@ -744,10 +1308,10 @@ class Stats2d:
         """
         measure = self.measure
         if type(measure) is str:
-            result: np.ndarray = np.asarray(Stats2d(measure).stats2d(data_array_2d)[measure])
+            result: np.ndarray = np.asarray(Stats2d(measure=measure).summary(data_array_2d)[measure])
             return result
         elif callable(measure):
-            result = np.asarray(Stats2d(measure).stats2d(data_array_2d)[measure.__name__])
+            result = np.asarray(Stats2d(measure=measure).summary(data_array_2d)[measure.__name__])
             return result
         elif measure is None:
             raise ValueError("'measure' must be specified for 'Stats2d' when calling this method, got None.")
@@ -757,6 +1321,29 @@ class Stats2d:
     # Return stats values with dynamic function name of the measure
     @property
     def values(self) -> Callable:
+        """
+        Returns a function computing the values of a single specified statistical measure for the provided 2D array.
+        The function is named as the specified measure.
+
+        Parameters
+        ----------
+        data_array_2d : ndarray-like
+            2D array-like data. Nan value is omited.
+
+        Returns
+        -------
+        Callable
+            Function accepting 2D arraylike data that computes the specified statistical measure.
+
+        Examples
+        --------
+        >>> demo_array = np.random.randint(0, 1000, size=(10, 10))
+        >>> mean_function = Stats2d(axis=0, measure="mean").values
+        >>> mean_function(demo_array)
+        >>> mean_function.__name__
+
+        """
+
         def wrapper(*args, **kwargs) -> np.ndarray:  # type: ignore[no-untyped-def]
             result: np.ndarray = np.asarray(self._values(*args, **kwargs))
             return result
@@ -772,9 +1359,9 @@ class Stats2d:
 
     # Stats function, able to return multiple measures at one time
     @simple_type_validator
-    def stats2d(self, data_array_2d: Annotated[Any, arraylike_validator(ndim=2)]) -> dict[str, np.ndarray]:
+    def summary(self, data_array_2d: Annotated[Any, arraylike_validator(ndim=2)]) -> dict[str, np.ndarray]:
         """
-        Statistical measure calculator for a 2D data array with each row or column as a sample.
+        Statistical measure summary for a 2D data array with each row or column as a sample.
 
         Parameters
         ----------
@@ -785,8 +1372,17 @@ class Stats2d:
         -------
         mvalues : dict[str, np.ndarray]
             A dictionary of computed measure values, where:
-                - **Keys** (str): Names of the measures, e.g. "mean"
-                - **Values** (np.ndarray): Results for each measure
+                * **Keys** (str): Names of the measures, e.g. "mean"
+                * **Values** (np.ndarray): Results for each measure
+
+        Examples
+        --------
+        >>> demo_array = np.random.randint(0, 1000, size=(10, 10))
+        >>> Stats2d(axis=0).summary(demo_array)
+
+        Customize computed measures:
+        >>> Stats2d(axis=0, measure=["mean", "std"]).summary(demo_array)
+
         """
         measure = self.measure
         axis = self.axis
@@ -843,11 +1439,15 @@ def roi_mean(image_path: str, roi_coordinates: list[list[tuple[Union[int, float]
     ----------
     image_path : str
         Spectral raster image path.
-
     roi_coordinates : list[list[tuple[Union[int, float],Union[int, float]]]]
         Lists of vertex coordinate pairs of the polygons of a region of interest (ROI).
+
+    Examples
+    --------
+    >>> roi_mean("/image1.tif", [[(0, 0), (0, 10), (10, 0), (0, 0)]])
+
     """
-    result: np.ndarray = np.asarray(Stats2d().mean(ROISpec("float64").roispec(image_path, roi_coordinates)))
+    result: np.ndarray = np.asarray(Stats2d().mean(roispec(image_path, roi_coordinates, as_type="float64")))
     return result
 
 
@@ -859,11 +1459,15 @@ def roi_std(image_path: str, roi_coordinates: list[list[tuple[Union[int, float],
     ----------
     image_path : str
         Spectral raster image path.
-
     roi_coordinates : list[list[tuple[Union[int, float],Union[int, float]]]]
         Lists of vertex coordinate pairs of the polygons of a region of interest (ROI).
+
+    Examples
+    --------
+    >>> roi_std("/image1.tif", [[(0, 0), (0, 10), (10, 0), (0, 0)]])
+
     """
-    result: np.ndarray = np.asarray(Stats2d().std(ROISpec("float64").roispec(image_path, roi_coordinates)))
+    result: np.ndarray = np.asarray(Stats2d().std(roispec(image_path, roi_coordinates, as_type="float64")))
     return result
 
 
@@ -875,11 +1479,15 @@ def roi_median(image_path: str, roi_coordinates: list[list[tuple[Union[int, floa
     ----------
     image_path : str
         Spectral raster image path.
-
     roi_coordinates : list[list[tuple[Union[int, float],Union[int, float]]]]
         Lists of vertex coordinate pairs of the polygons of a region of interest (ROI).
+
+    Examples
+    --------
+    >>> roi_median("/image1.tif", [[(0, 0), (0, 10), (10, 0), (0, 0)]])
+
     """
-    result: np.ndarray = np.asarray(Stats2d().median(ROISpec("float64").roispec(image_path, roi_coordinates)))
+    result: np.ndarray = np.asarray(Stats2d().median(roispec(image_path, roi_coordinates, as_type="float64")))
     return result
 
 
@@ -910,10 +1518,13 @@ def spectral_angle(
     spectral_angle : float
         Spectral angle in radian.
 
-    Raises
-    ------
-    ValueError
-        If all values of a spectral vector equals zero.
+    Examples
+    --------
+    >>> spectral_angle([1, 2, 3, 4], [2, 3, 4, 5])
+
+    If invalid_raise True, error is raised for spectra with undefined spectral angle:
+    >>> spectral_angle([1, 2, 3, 4], [0, 0, 0, 0], invalid_raise=True)
+
     """
     # Convert lists to numpy arrays
     spec_1 = np.asarray(spec_1)
@@ -950,7 +1561,7 @@ def spectral_angle(
 
 # df spec angle
 def arr_spectral_angles(
-    spectra_array: Annotated[Any, arraylike_validator(ndim=2)],
+    spec_array_2d: Annotated[Any, arraylike_validator(ndim=2)],
     reference_spectrum: Annotated[Any, arraylike_validator(ndim=1)],
     axis: int = 0,
     invalid_raise: bool = False,
@@ -960,7 +1571,7 @@ def arr_spectral_angles(
 
     Parameters
     ----------
-    spectra_array : 2-dimensional array like
+    spec_array_2d : 2-dimensional array like
         2d array like of 1d spectral data series.
     reference_spectrum : 1-dimensional array like
         Reference spectrum to calculate all spectral angles between the spectra and the reference.
@@ -976,155 +1587,30 @@ def arr_spectral_angles(
     spec_angle : numpy.ndarray
         Spectral angles between given spectra and the reference spectrum in 1D array.
 
-    Raises
-    ------
-    ValueError
-        If input spectra_array is not 2d array like.
-    ValueError
-        If input spectra_array contains nan values.
-    ValueError
-        Axis can only be 0 or 1.
-    ValueError
-        If input spectra_array does not match with reference_spectrum.
+    Examples
+    --------
+    >>> arr_spectral_angles([[1, 2, 3, 4], [2, 3, 4, 5]], [1, 1, 2, 2])
+
     """
     # Data validation
-    spectra_array = np.asarray(spectra_array)
-    if spectra_array.ndim != 2:
-        raise ValueError("input spectra_array should be 2d array like.")
-    if np.isnan(spectra_array).any():
-        raise ValueError("input spectra_array should not contain nan values.")
+    spec_array_2d = np.asarray(spec_array_2d)
+    if spec_array_2d.ndim != 2:
+        raise ValueError("input spec_array_2d must be 2d array like.")
+    if np.isnan(spec_array_2d).any():
+        raise ValueError("input spec_array_2d must not contain nan values.")
     if axis == 0:
         pass
     elif axis == 1:
-        spectra_array = spectra_array.T
+        spec_array_2d = spec_array_2d.T
     else:
         raise ValueError("axis can only be 0 or 1.")
     reference_spectrum = np.asarray(reference_spectrum)
-    if len(reference_spectrum) != spectra_array.shape[1]:
-        raise ValueError("input spectra_array does not match with reference_spectrum.")
+    if len(reference_spectrum) != spec_array_2d.shape[1]:
+        raise ValueError("input spec_array_2d does not match with reference_spectrum.")
 
     # Calculating spec angles
-    npix = spectra_array.shape[0]
+    npix = spec_array_2d.shape[0]
     spec_angle: np.ndarray = np.zeros(npix)
     for i in range(npix):
-        spec_angle[i] = spectral_angle(reference_spectrum, spectra_array[i, :], invalid_raise=invalid_raise)
+        spec_angle[i] = spectral_angle(reference_spectrum, spec_array_2d[i, :], invalid_raise=invalid_raise)
     return spec_angle
-
-
-# %% Round to significant numbers
-
-
-def num_sig_digit(v: RealNumber, sig_digit: int, mode: str = "round") -> float:
-    """
-    Round a value to given significant digits. Choose mode between 'round' / 'ceil' / 'floor'.
-    """
-    if v == 0:
-        return 0.0
-    factor = 10 ** (sig_digit - 1 - math.floor(math.log10(abs(v))))  # type: ignore[arg-type]
-    # unrecognized user-defined RealNumber type
-    if mode == "round":
-        rdfunc = round
-    elif mode == "ceil":
-        rdfunc = math.ceil  # type: ignore[assignment]
-        # overloaded expression function
-    elif mode == "floor":
-        rdfunc = math.floor  # type: ignore[assignment]
-        # overloaded expression function
-    else:
-        raise ValueError(f"mode must one of 'round', 'ceil' and 'floor', but got: '{mode}'")
-    return float(rdfunc(v * factor) / factor)
-
-
-def np_sig_digit(arr_like: Annotated[Any, arraylike_validator()], sig_digit: int, mode: str = "round") -> np.ndarray:
-    """
-    Round values to given significant digits for numeric NumPy arrays. Choose mode between 'round' / 'ceil' / 'floor'.
-    """
-    arr = np.asarray(arr_like)
-    with np.errstate(divide="ignore", invalid="ignore"):
-        log10 = np.where(arr == 0, 0, np.floor(np.log10(np.abs(arr))))
-    factor = 10 ** (sig_digit - 1 - log10)
-    if mode == "round":
-        rdfunc = np.round  # type: ignore[assignment]
-        # overloaded expression function, following the same
-    elif mode == "ceil":
-        rdfunc = np.ceil  # type: ignore[assignment]
-    elif mode == "floor":
-        rdfunc = np.floor  # type: ignore[assignment]
-    else:
-        raise ValueError(f"mode must one of 'round', 'ceil' and 'floor', but got: '{mode}'")
-    result: np.ndarray = np.asarray(rdfunc(arr_like * factor) / factor)
-    return result
-
-
-# For any scalar real number regardless of types - behavioral validation
-@overload
-def round_digit(value: RealNumber, sig_digit: int, mode: str) -> float: ...  # type: ignore[overload-cannot-match]
-
-
-# Mypy failure on GitHub, the code works and passes local mypy validation, following the same
-
-
-@overload
-def round_digit(value: tuple, sig_digit: int, mode: str) -> tuple: ...  # type: ignore[overload-cannot-match]
-
-
-@overload
-def round_digit(value: list, sig_digit: int, mode: str) -> list: ...  # type: ignore[overload-cannot-match]
-
-
-@overload
-def round_digit(value: np.ndarray, sig_digit: int, mode: str) -> np.ndarray: ...  # type: ignore[overload-cannot-match]
-
-
-@overload
-def round_digit(  # type: ignore[overload-cannot-match]
-    value: torch.Tensor, sig_digit: int, mode: str
-) -> torch.Tensor: ...
-
-
-@overload
-def round_digit(  # type: ignore[overload-cannot-match]
-    value: pd.DataFrame, sig_digit: int, mode: str
-) -> pd.DataFrame: ...
-
-
-@simple_type_validator
-def round_digit(
-    value: Union[RealNumber, Annotated[Any, arraylike_validator()]],
-    sig_digit: int,
-    mode: str = "round",
-) -> Union[float, tuple, list, np.ndarray, pd.Series, pd.DataFrame, torch.Tensor]:
-    """
-    Round values or values in arraylike to specified significant digits.
-
-    Parameters
-    ----------
-    value : Union[float, list, tuple, np.ndarray, pd.DataFrame]
-        Number or array-like values, e.g. Numpy ndarray or pd.DataFrame.
-    sig_digit : int
-        Significant digits.
-    mode : str, optional
-        Choose between 'round' / 'ceil' / 'floor'. The default is 'round'.
-
-    Returns
-    -------
-    result : Union[float, np.ndarray]
-        Rounded value or array of values.
-    """
-    if isinstance(value, (list, tuple, np.ndarray, pd.Series, pd.DataFrame, torch.Tensor)):
-        value1 = np.asarray(value)
-        result = np_sig_digit(value1, sig_digit, mode)
-        if isinstance(value, (np.ndarray, pd.Series, pd.DataFrame)):
-            value[:] = result[:]
-        elif isinstance(value, list):
-            value = result.tolist()
-        elif isinstance(value, torch.Tensor):
-            value = torch.tensor(result)
-        elif value1.ndim == 1:
-            value = tuple(result)
-        else:
-            value = tuple(tuple(map(tuple, result.tolist())))  # noqa: C414
-            # The double tuples are necessary
-        return value
-    else:
-        return num_sig_digit(value, sig_digit, mode)

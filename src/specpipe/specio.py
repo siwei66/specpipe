@@ -668,6 +668,14 @@ def search_file(  # noqa: C901
     list[str]
         A list of file paths that match the search criteria.
 
+    Examples
+    --------
+    >>> search_file("/some_dir", "*abc.tif")
+    >>> search_file("/some_dir", "abc?.tif")
+    >>> search_file("/some_dir", "abc[123].tif")
+    >>> search_file("/some_dir", "abc*", end_with=".tif")
+    >>> search_file("/some_dir", "abc*", end_with=".tif", exclude_list=["mask", "test"])
+
     """  # noqa: E501
     # Init exclude_list
     if exclude_list is None:
@@ -843,7 +851,6 @@ def names_filter(
 @validate_call
 def envi_roi_coords(roi_xml_path: str) -> list[dict[str, Any]]:
     """
-
     Get vertex coordinates of Polygon ROIs from ENVI ROI xml file.
 
     Parameters
@@ -860,6 +867,10 @@ def envi_roi_coords(roi_xml_path: str) -> list[dict[str, Any]]:
     ------
     ValueError
         If no polygon for a ROI is found.
+
+    Examples
+    --------
+    >>> coord_list = envi_roi_coords("/image_roi.xml")
 
     """
     # Read ENVI ROI xml file
@@ -910,7 +921,6 @@ def envi_roi_coords(roi_xml_path: str) -> list[dict[str, Any]]:
 @validate_call
 def shp_roi_coords(roi_shp_path: str) -> list[dict[str, Any]]:
     """
-
     Get vertex coordinates of Polygon and MultiPolygon ROIs from shapefile.
 
     Parameters:
@@ -927,6 +937,10 @@ def shp_roi_coords(roi_shp_path: str) -> list[dict[str, Any]]:
     ------
     ValueError
         If geom_type is not supported.
+
+    Examples
+    --------
+    >>> coord_list = shp_roi_coords("/image_roi.shp")
 
     """
     # Read ROI shapefile as geodataframe
