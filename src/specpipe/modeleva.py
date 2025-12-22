@@ -2479,9 +2479,12 @@ class ModelEva:
                 if X_train.shape[1] < 1:
                     raise ValueError(f"Invalid X_train, got: {X_train}, type: {type(X_train)}, shape: {X_train.shape}")
                 mse1 = mse + 1e-30
-                influence[train_ind[i]] = float(np.sum((np.array(p_full) - np.array(p_loo)) ** 2, axis=0)) / (
-                    X_train.shape[1] * mse1
-                )
+                influence_numerator = np.sum((np.array(p_full) - np.array(p_loo)) ** 2, axis=0)
+                if len(influence_numerator) != 1:
+                    raise ValueError(f"Internal error: invalid influence_numerator: {influence_numerator}")
+                else:
+                    influence_numerator_num = float(influence_numerator[0])
+                influence[train_ind[i]] = influence_numerator_num / (X_train.shape[1] * mse1)
                 # Old: influence[train_ind[i]] = np.sum((p_full - p_loo) ** 2, axis=0) / (X_train.shape[1] * mse1)
 
             # Store results
