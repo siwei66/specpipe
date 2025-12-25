@@ -114,7 +114,7 @@ class ModelEva:
     Evaluation includes:
     * model validation results
     * performance metrics
-    * case analysis of residuals & Cook's distance
+    * case analysis of residuals & influence
     * scatter plot of true and predicted target values
     * residual analysis report
     * residual plot
@@ -526,12 +526,12 @@ class ModelEva:
         y = []
         for i, st in enumerate(sample_list):
             # Get predictors
-            if np.array(st[3]).ndim == 1:
+            if np.asarray(st[3]).ndim == 1:
                 Xi = np.array([st[3]])  # noqa: N806
             else:
                 raise ValueError(
                     f"Expected 1D sample data, \
-                        but got {np.array(st).ndim}D array at index {i} in the given sample_list."
+                        but got {np.asarray(st).ndim}D array at index {i} in the given sample_list."
                 )
             if i == 0:
                 X = Xi  # noqa: N806
@@ -575,7 +575,7 @@ class ModelEva:
                 sid.append(st[0])
 
         # Convert and return result in tuple of np.ndarrays
-        return (np.array(sid), tuple(xshp), np.array(y).reshape(-1, 1), X)
+        return (np.asarray(sid), tuple(xshp), np.asarray(y).reshape(-1, 1), X)
 
     # Validate specified model
     @simple_type_validator
@@ -886,7 +886,7 @@ class ModelEva:
                     sid_test=sid_test,
                     y_true_all=y,
                     fold_model=model,
-                    y_test_proba=np.array(y_test_pred_proba_df),
+                    y_test_proba=np.asarray(y_test_pred_proba_df),
                     dump_associated_data=save_fold_data,
                     attach_proba=True,
                 )
@@ -910,8 +910,8 @@ class ModelEva:
         # Old: y_pred_proba = y_pred_proba.applymap(lambda x: np.nan if pd.isna(x) else x)
 
         # Convert back to array
-        y_true_proba = np.array(y_true_proba)
-        y_pred_proba = np.array(y_pred_proba)
+        y_true_proba = np.asarray(y_true_proba)
+        y_pred_proba = np.asarray(y_pred_proba)
 
         # Unseen class
         for ri, pp_row in enumerate(y_pred_proba):
@@ -1045,7 +1045,7 @@ class ModelEva:
                 f1 = np.nan
             # Binarize the output
             y_binary = (y_true == ynames[i]).astype("int")
-            y_predi = (np.array(y_pred) == ynames[i]).astype("int")
+            y_predi = (np.asarray(y_pred) == ynames[i]).astype("int")
             fpr, tpr, _ = roc_curve(y_binary, [score[i] for score in y_pred_proba])
             roc_auc = auc(fpr, tpr)
             accuracyi = accuracy_score(y_binary, y_predi)
@@ -1203,7 +1203,7 @@ class ModelEva:
         plt.figure(figsize=figure_size)  # For ROC curve
         for i in range(len(ynames)):
             # Binarize the output
-            y_binary = np.array((y_true == ynames[i])).astype("int")
+            y_binary = np.asarray((y_true == ynames[i])).astype("int")
             fpr, tpr, _ = roc_curve(y_binary, [score[i] for score in y_pred_proba])
             roc_auc = auc(fpr, tpr)
             plt.plot(
@@ -1366,12 +1366,12 @@ class ModelEva:
 
         # Mahalanobis Distance
         mean_res = np.mean(df_res_data, axis=0)  # Mean per class
-        mean_res = np.array(mean_res)
+        mean_res = np.asarray(mean_res)
         cov_mat_res = np.cov(df_res_data, rowvar=False)  # Covariance between classes
         cov_inv_res = np.linalg.pinv(cov_mat_res)  # Pseudo-inverse for stability
         # Compute
         mahalanobis_dist = []
-        for r in np.array(df_res_data):
+        for r in np.asarray(df_res_data):
             dist = mahalanobis(r, mean_res, cov_inv_res)
             mahalanobis_dist.append(dist)
         df_res["Mahalanobis_distance_of_residual"] = mahalanobis_dist
@@ -1484,7 +1484,7 @@ class ModelEva:
         itr1 = 0
         for train_ind, test_ind in dsps:
             if not self.silent_all:
-                print(f"\rTraining Cook's distance fold: {itr1 + 1}/{len(dsps)}", end="", flush=True)
+                print(f"\rTraining influence analysis fold: {itr1 + 1}/{len(dsps)}", end="", flush=True)
             ## Get data
             # Sample ids of target values in validation
             sid_test = sid[test_ind]
@@ -1513,8 +1513,8 @@ class ModelEva:
             # Old: p_full = p_full.applymap(lambda x: np.nan if pd.isna(x) else x)
 
             # Convert back to array
-            y_p_test = np.array(y_p_test)
-            p_full = np.array(p_full)
+            y_p_test = np.asarray(y_p_test)
+            p_full = np.asarray(p_full)
 
             # Unseen class
             for ri, pp_row in enumerate(p_full):
@@ -1532,7 +1532,7 @@ class ModelEva:
 
             mse = np.mean((y_p_test - p_full) ** 2, axis=0)
 
-            # Cook's dist LOO training
+            # Cook's dist-like measure LOO training
             influence = np.zeros((X.shape[0], len(ynames)))
             for i in range(X_train.shape[0]):
                 # LOO-Model
@@ -1543,7 +1543,7 @@ class ModelEva:
                 # LOO-training-n-prediction
                 model_loo.fit(X_loo, y_loo.flatten())  # type: ignore[attr-defined]
                 # Custom model, independent runtime validated, following the same
-                # Predict on test X
+                # Predictions on test X
                 p_loo = model_loo.predict_proba(X_test)  # type: ignore[attr-defined]
                 p_loo = pd.DataFrame(p_loo, columns=model_loo.classes_)  # type: ignore[attr-defined]
                 p_loo = p_loo.reindex(columns=ynames)
@@ -1559,7 +1559,7 @@ class ModelEva:
                 # Old: p_loo = p_loo.applymap(lambda x: np.nan if pd.isna(x) else x)
 
                 # Convert back to array
-                p_loo = np.array(p_loo)
+                p_loo = np.asarray(p_loo)
 
                 # Unseen class
                 for ri, pp_row in enumerate(p_loo):
@@ -1575,7 +1575,7 @@ class ModelEva:
                             pp_row[np.isnan(pp_row)] = 0
                         p_loo[ri] = pp_row
 
-                # Calculate Cook's dist
+                # Calculate Cook's dist-like measure
                 if X_train.shape[1] < 1:
                     raise ValueError(f"Invalid X_train, got: {X_train}, type: {type(X_train)}, shape: {X_train.shape}")
                 mse1 = mse + 1e-30
@@ -1637,7 +1637,7 @@ class ModelEva:
         * model validation results
         * performance metrics
         * residual analysis report
-        * case analysis of residuals & Cook's distance
+        * case analysis of residuals & influence
         * Response Operating Characteristics plot
 
         Parameters
@@ -1758,7 +1758,7 @@ class ModelEva:
             elif type(residual_config) is dict:
                 self._classifier_residual(**residual_config)
 
-        # Cook's distance
+        # Cook's distance-like measure
         if influence_analysis_config is not None:
             if influence_analysis_config == "default":
                 self._classifier_influential_analysis()
@@ -2206,7 +2206,7 @@ class ModelEva:
         assert y_true is not None
         assert y_pred is not None
 
-        residuals = np.array(y_true) - np.array(y_pred)
+        residuals = np.asarray(y_true) - np.asarray(y_pred)
 
         # Axis parameters
         xmin = round_digit(min(np.min(y_true), np.min(y_pred)), 2, "floor")
@@ -2430,8 +2430,7 @@ class ModelEva:
             # Custom model, independent runtime validated, following the same
             p_full = model_full.predict(X_test)  # type: ignore[attr-defined]
             p_full = pd.DataFrame(p_full, columns=["y_pred"], index=sid_test)
-            mse = np.array(np.mean((y_test - p_full) ** 2, axis=0))
-            # Old: mse = np.mean((y_test - p_full) ** 2, axis=0)
+            mse = np.asarray(np.mean((y_test - p_full) ** 2, axis=0))
 
             # Replace pandas nan
             if hasattr(pd.DataFrame, 'map'):
@@ -2440,12 +2439,11 @@ class ModelEva:
             else:
                 # pandas < 2.1.0
                 p_full = p_full.applymap(lambda x: np.nan if pd.isna(x) else x)
-            # Old: p_full = p_full.applymap(lambda x: np.nan if pd.isna(x) else x)
 
             # Convert back to array
-            p_full = np.array(p_full)
+            p_full = np.asarray(p_full)
 
-            # Cook's dist LOO training
+            # Cook's dist-like measure LOO training
             influence = np.zeros((X.shape[0],))
             for i in range(X_train.shape[0]):
                 # LOO-Model
@@ -2459,7 +2457,7 @@ class ModelEva:
                 model_loo.fit(X_loo, y_loo.flatten())  # type: ignore[attr-defined]
                 # Custom model, independent runtime validated, following the same
 
-                # Predict on test X
+                # Predictions on test X
                 p_loo = model_loo.predict(X_test)  # type: ignore[attr-defined]
                 p_loo = pd.DataFrame(p_loo, columns=["y_pred"])
 
@@ -2473,29 +2471,25 @@ class ModelEva:
                 # Old: p_loo = p_loo.applymap(lambda x: np.nan if pd.isna(x) else x)
 
                 # Convert back to array
-                p_loo = np.array(p_loo)
+                p_loo = np.asarray(p_loo)
 
-                # Calculate Cook's dist
+                # Calculate Cook's dist-like measure
                 if X_train.shape[1] < 1:
                     raise ValueError(f"Invalid X_train, got: {X_train}, type: {type(X_train)}, shape: {X_train.shape}")
-                mse1 = mse + 1e-30
-                influence_numerator = np.sum((np.array(p_full) - np.array(p_loo)) ** 2, axis=0)
+                # Validate and compute numerator of regression influence measure
+                influence_numerator = np.sum((np.asarray(p_full) - np.asarray(p_loo)) ** 2, axis=0)
                 if len(influence_numerator) != 1:
-                    raise ValueError(f"Internal error: invalid influence_numerator: {influence_numerator}")
+                    raise ValueError(f"Unexpected error, invalid influence_numerator: {influence_numerator}")
                 else:
                     influence_numerator_num = float(influence_numerator[0])
+                # Validate and compute denominator of regression influence measure
+                mse1 = mse + 1e-30
                 influence_denominator = X_train.shape[1] * mse1
                 if len(influence_denominator) != 1:
-                    raise ValueError(f"Internal error: invalid influence_denominator: {influence_denominator}")
+                    raise ValueError(f"Unexpected error, invalid influence_denominator: {influence_denominator}")
                 else:
                     influence_denominator_num = float(influence_denominator[0])
                 influence[train_ind[i]] = influence_numerator_num / influence_denominator_num
-                # TODO: mse should be an array, check and coerce the whole into float
-                # influence[train_ind[i]] = influence_numerator / (
-                #     X_train.shape[1] * mse1
-                # )
-                # Old:
-                # influence[train_ind[i]] = np.sum((p_full - p_loo) ** 2, axis=0) / (X_train.shape[1] * mse1)
 
             # Store results
             influence_list.append(influence)
@@ -2553,7 +2547,7 @@ class ModelEva:
         The evaluation includes:
         * model validation results
         * performance metrics
-        * case analysis of residuals & Cook's distance
+        * case analysis of residuals & influence
         * scatter plot of true and predicted target values
         * residual analysis report
         * residual plot
@@ -2634,7 +2628,7 @@ class ModelEva:
             Configuration of influence analysis. The default is 'default', using default settings.
             If None, Influence analysis is skipped.
 
-            When enabled, calculates the Cook's distance-like influence of each sample on the model's predictions using a Leave-One-Out (LOO) approach.
+            When enabled, calculates the Cook's distance-like influence measure of each sample on the model's predictions using a Leave-One-Out (LOO) approach.
             Please note this computation is highly time-consuming for large sample size. To save time, use a simple validation method or set this to None.
 
             The parameters of validation include:
@@ -2714,7 +2708,7 @@ class ModelEva:
                     f"If provided, roc_plot must be None or a dictionary of arguments, but got: {residual_plot_config}"
                 )
 
-        # Cook's distance
+        # Cook's distance-like measure
         if influence_analysis_config is not None:
             if influence_analysis_config == "default":
                 self._regressor_influential_analysis()
@@ -2816,8 +2810,8 @@ class ModelEva:
         Dump data and model of a validation fold. Train_test data split is deemed as one-fold.
         """
         # Validate sample IDs
-        sid_train = np.array(sid_train).flatten()
-        sid_test = np.array(sid_test).flatten()
+        sid_train = np.asarray(sid_train).flatten()
+        sid_test = np.asarray(sid_test).flatten()
 
         # Report fold data
         df_y_true_all = pd.DataFrame(y_true_all, columns=["y_true"], index=self._sid)
