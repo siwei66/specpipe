@@ -54,7 +54,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/siwei66/specpipe"
 Repository = "https://github.com/siwei66/specpipe"
-Documentation = "https://github.com/siwei66/specpipe#readme"
+Documentation = "https://siwei66.github.io/specpipe/"
 Issues = "https://github.com/siwei66/specpipe/issues"
 
 [project.optional-dependencies]
