@@ -89,6 +89,11 @@ exclude_patterns = [
     '.DS_Store',
 ]
 
+# -- Linkcheck configuration -------------------------------------------------
+linkcheck_ignore = [
+    r'https://doi\.org/.*'
+]
+
 # -- HTML output -------------------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
