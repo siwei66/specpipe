@@ -24,8 +24,9 @@ def lci(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute LCI (Leaf Chlorophyll Index) of 2D arraylike of 1D spectra data series.
+    Compute LCI (Leaf Chlorophyll Index) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Narmilan, A.; Gonzalez, F.; Salgadoe, A.S.A.; Kumarasiri, U.W.L.M.; Weerasinghe, H.A.S.; Kulasekara, B.R.
         Predicting Canopy Chlorophyll Content in Sugarcane Crops Using Machine Learning Algorithms and Spectral Vegetation Indices Derived from UAV Multispectral Imagery.
         Remote Sens. 2022, 14, 1140.
@@ -33,17 +34,21 @@ def lci(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')

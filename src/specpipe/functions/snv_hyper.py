@@ -20,18 +20,28 @@ def snv_hyper(data: Annotated[Any, arraylike_validator(ndim=3)]) -> torch.Tensor
     SNV (Standard Normal Variate) function for image pixel spectrum correction in SpecPipe pipelines.
     This function is for optimized GPU-accelerated application.
 
-    Process input data level: 4 - 'pixel_hyperspecs_tensor'
-    Process output data level: 4 - 'pixel_hyperspecs_tensor'
+        Process input data level: 4 - 'pixel_hyperspecs_tensor'
+
+        Process output data level: 4 - 'pixel_hyperspecs_tensor'
 
     Parameters
     ----------
-    data : torch.Tensor-like, optional
-        2D arraylike spectral data to process.
+    data : 3D array-like (n_samples, n_bands, 1)
+        Three-dimensional array containing 2D spectral data to be processed.
+        The size of the third dimension must be exactly 1.
 
     Returns
     -------
     torch.Tensor
         SNV transformed spectral data.
+
+    Examples
+    --------
+    >>> snv_hyper([[[1], [2], [3], [4], [5], [6]], [[2], [2], [4], [4], [6], [6]]])
+
+    Incorporation into pipeline for image processing, for SpecPipe instance ``pipe``:
+
+        >>> pipe.add_process(4, 4, 0, snv_hyper)
     """
     import numpy as np  # noqa: W291
     import torch  # noqa: W291

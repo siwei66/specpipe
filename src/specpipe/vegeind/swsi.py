@@ -24,8 +24,9 @@ def swsi1(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute SWSI1 (Salinity and Water Stress Index 1) of 2D arraylike of 1D spectra data series.
+    Compute SWSI1 (Salinity and Water Stress Index 1) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         S. Hamzeh, A.A. Naseri, S.K. AlaviPanah, B. Mojaradi, H.M. Bartholomeus, J.G.P.W. Clevers, M. Behzad,
         Estimating salinity stress in sugarcane fields with spaceborne hyperspectral vegetation indices,
         International Journal of Applied Earth Observation and Geoinformation,
@@ -37,17 +38,21 @@ def swsi1(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')
@@ -74,7 +79,7 @@ def swsi1(
     band4 = 972
     if (min(wavelength) > band1) | (max(wavelength) < band4):
         raise ValueError(
-            'Index requires wavelength range (band1, band4) '
+            f'Index requires wavelength range ({band1}, {band4}) '
             + f'exceeds given wavelength range ({min(wavelength)}, {max(wavelength)}).'
         )
 
@@ -114,8 +119,9 @@ def swsi2(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute SWSI2 (Salinity and Water Stress Index 2) of 2D arraylike of 1D spectra data series.
+    Compute SWSI2 (Salinity and Water Stress Index 2) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         S. Hamzeh, A.A. Naseri, S.K. AlaviPanah, B. Mojaradi, H.M. Bartholomeus, J.G.P.W. Clevers, M. Behzad,
         Estimating salinity stress in sugarcane fields with spaceborne hyperspectral vegetation indices,
         International Journal of Applied Earth Observation and Geoinformation,
@@ -127,17 +133,21 @@ def swsi2(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')
@@ -164,7 +174,7 @@ def swsi2(
     band4 = 11507
     if (min(wavelength) > band1) | (max(wavelength) < band4):
         raise ValueError(
-            'Index requires wavelength range (band1, band4) '
+            f'Index requires wavelength range ({band1}, {band4}) '
             + f'exceeds given wavelength range ({min(wavelength)}, {max(wavelength)}).'
         )
 
@@ -204,8 +214,10 @@ def swsi3(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute SWSI3 (Salinity and Water Stress Index 3) of 2D arraylike of 1D spectra data series.
+    Compute SWSI3 (Salinity and Water Stress Index 3) of 2D array-like of 1D spectra data series.
+
     The calculation is based on:
+
         S. Hamzeh, A.A. Naseri, S.K. AlaviPanah, B. Mojaradi, H.M. Bartholomeus, J.G.P.W. Clevers, M. Behzad,
         Estimating salinity stress in sugarcane fields with spaceborne hyperspectral vegetation indices,
         International Journal of Applied Earth Observation and Geoinformation,
@@ -217,17 +229,21 @@ def swsi3(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')
@@ -254,7 +270,7 @@ def swsi3(
     band4 = 1174
     if (min(wavelength) > band1) | (max(wavelength) < band4):
         raise ValueError(
-            'Index requires wavelength range (band1, band4) '
+            f'Index requires wavelength range ({band1}, {band4}) '
             + f'exceeds given wavelength range ({min(wavelength)}, {max(wavelength)}).'
         )
 

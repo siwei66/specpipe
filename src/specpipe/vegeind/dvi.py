@@ -24,25 +24,30 @@ def dvi(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute DVI (Difference Vegetation Index) of 2D arraylike of 1D spectra data series.
+    Compute DVI (Difference Vegetation Index) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Richardson, Arthur J., and C. L. Wiegand.
         Distinguishing vegetation from soil background information
         Photogrammetric engineering and remote sensing 43, no. 12 (1977): 1541-1552.
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')

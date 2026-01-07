@@ -64,7 +64,7 @@ from .specio import (
     simple_type_validator,
     unc_path,
 )
-from .specpipe_validator import (
+from .pipeline_validator import (
     _target_type_validation_for_serialization,
     _dl_val,
     _data_level_seq_validator,
@@ -73,7 +73,7 @@ from .specpipe_validator import (
     _classifier_validator,
     _regressor_validator,
 )
-from .specpipe_processor import (
+from .pipeline_processor import (
     _preprocessing_sample,
     _ModelMethod,
     _model_evaluator,
@@ -92,32 +92,55 @@ global ModelEva
 
 class SpecPipe:
     """
-    Design and implement a processing and modeling pipeline for spectral experiment datasets.
+    Design and implement processing and modeling pipelines on spectral experiment datasets.
 
-
-    Attributes:
-    -----------
+    Attributes
+    ----------
     spec_exp : SpecExp
-        Instance of SpecExp configuring spectral experiment datasets. See SpecExp for details.
+        Instance of SpecExp configuring spectral experiment datasets. See ``SpecExp`` for details.
 
-    process : list[tuple[str, str, str, str, int, Callable, int, int]]
+    process : list of tuple
         Added process items.
+        Each tuple represents a process definition and contains:
 
-    process_chains : list[tuple[str, ...]]
-        Generated full-factorial process chains.
+            process_id : str
+            process_label : str
+            input_data_level : str
+            output_data_level : str
+            application_sequence : int
+            method : callable
+            full_application_sequence : int
+            alternative_number : int
 
+    process_steps : list of tuple of str
+        Processes of each pipeline step, each tuple represents a step.
+        The processes are represented in process ID.
 
-    Methods:
+    process_chains : list of tuple of str
+        Generated full-factorial processing chains, each tuple represents a processing chain.
+        The processes are represented in process ID.
+
+    custom_chains : list of tuple of str
+        Customized subset of the full-factorial ``process_chains``.
+
+    create_time : str
+        Creation date and time of this SpecPipe isntance.
+
+    See Also
     --------
+    SpecExp
+
+    Methods
+    -------
     add_process
-        Add a processing method with defined input/output data levels and application sequence to the pipeline.
-        A processing method can be a preprocessing function or a model for evaluation.
+        Add a processing method with defined input/output data levels and application sequence.
+        The method can be a preprocessing function or a model for evaluation.
 
     ls_process
         List process items filtered by process properties.
 
     rm_process
-        Remove added processes by ID, Process_label, Data_level, Application_sequence and Method.
+        Remove added processes by ID, process_label, data_level, application_sequence, or method.
 
     add_model
         Add a model to the pipeline.
@@ -126,41 +149,49 @@ class SpecPipe:
         List model process items filtered by given properties.
 
     rm_model
-        Remove added models by model_id, model_label and model method (object).
+        Remove added models by model_id, model_label, or model method (object).
 
-    process_chains_to_df (Alias: ls_process_chains)
-        List process chains in a dataframe. Returns the default full factorial process chains.
-        Output is a dataframe, where each row represents a processing chain with process IDs.
+    process_chains_to_df
+        List process chains in a dataframe. Returns default full-factorial process chains.
+        Each row represents a processing chain with process IDs.
+
+        Alias: ls_process_chains
 
     custom_chains_from_df
-        Customize processing chains and update chains using chain dataframe.
-        Once custom chains are created, SpecPipe will prioritize their execution, bypassing the original full-factorial chains.
+        Customize processing chains and update chains using a chain dataframe.
+        Custom chains are prioritized over default full-factorial chains.
 
-    custom_chains_to_df (Alias: ls_custom_chains)
+    custom_chains_to_df
         List custom chains in a dataframe.
 
+        Alias: ls_custom_chains
+
     ls_chains
-        List the process chains in the pipeline execution.
-        Returns custom chains if configured, otherwise returns default full factorial chains.
+        List process chains in the pipeline execution.
+        Returns custom chains if configured, otherwise default full-factorial chains.
 
     save_pipe_config
-        Save current pipeline configurations to files in the root of report directory.
+        Save current pipeline configurations to files in the root of the report directory.
+
+        Alias: save_config
 
     load_pipe_config
-        Load SpecPipe configurations from dill file.
+        Load SpecPipe configurations from a dill file.
+
+        Alias: load_config
 
     test_run
-        Run the pipeline of all processing chains using simplified test data. This method is executed automatically prior to each formal run.
+        Run all processing chains using simplified test data.
+        Executed automatically prior to each formal run.
 
     preprocessing
-        Implement preprocessing steps of all processing chains on the entire dataset and output modeling-ready sample_list data to files.
+        Apply preprocessing steps of all chains on the entire dataset and output modeling-ready sample_list data to files.
 
     model_evaluation
-        Evaluating added models on sample data from all preprocessing chains.
+        Evaluate added models on sample data from all preprocessing chains.
 
     run
-        Run pipeline of given processes on SpecExp instance (corresponding manager of spectral experiment data).
-        Full-factorial test is applied to multiple processes of identical sequence.
+        Run the pipelines of given processes on a ``SpecExp`` instance.
 
     report_summary
         Retrieve summary of reports in the console, including performance summary and marginal performances among processes.
@@ -170,16 +201,29 @@ class SpecPipe:
 
     Examples
     --------
-    For created SpecExp instance 'exp':
-    >>> pipe = SpecPipe(exp)
+    Create a ``SpecPipe`` instance using a prepared ``SpecExp`` instance ``exp``::
 
+        >>> pipe = SpecPipe(exp)
     """  # noqa: E501
 
     @simple_type_validator
     def __init__(self, spec_exp: SpecExp) -> None:  # noqa: C901
-        ## Experiment data manager - SpecExp
+
         # Validate SpecExp integrity
         _spec_exp_validator(spec_exp)
+
+        ## Private internal attributes
+        self.__sample_targets: list[tuple[str, str, Union[str, bool, int, float], str]] = spec_exp.sample_targets
+        self.__is_target_numeric: bool = self._check_target_numeric(spec_exp)
+        self.__band_wavelength: Optional[tuple[Union[int, float], ...]] = None
+        self.__pretest_data: Optional[dict[str, Any]] = None
+        self.__sample_data: list[dict[str, Any]] = []
+        self.__tested: bool = False
+        self.__preprocess_result_path: list[str] = []
+
+        ## Experiment data manager - SpecExp
+        # Validate SpecExp integrity
+        # _spec_exp_validator(spec_exp)
 
         # SpecExp
         # SpecExp._groups: [0 group]
@@ -189,10 +233,10 @@ class SpecPipe:
 
         # Sample target values
         # [0 fixed sample id, 1 user assinged labels, 2 Target values]
-        self._sample_targets: list[tuple[str, str, Union[str, bool, int, float], str]] = spec_exp.sample_targets
+        # self.__sample_targets: list[tuple[str, str, Union[str, bool, int, float], str]] = spec_exp.sample_targets
 
         # Is_target_numeric according to sample target values
-        self._is_target_numeric: bool = self._check_target_numeric(spec_exp)
+        # self.__is_target_numeric: bool = self._check_target_numeric(spec_exp)
 
         # Report directory
         self._report_directory: str = self.spec_exp._report_directory
@@ -209,28 +253,28 @@ class SpecPipe:
         # Custom chains for custom partly test
         self._custom_chains: list = []
 
-        # Band wavelength
-        self._band_wavelength: Optional[tuple] = None
+        # Band wavelengths of the pixel spectra of the images (_pretest_data['spec1d']) - No use
+        # self.__band_wavelength: Optional[tuple[Union[int, float], ...]] = None
 
         # Pre-execution test data
         # Sample data format - ROI: {ID, label, target, img_path, roi_coords}
         # Sample data format - standalone spec: {ID, label, target, spec1d: tuple}
         # Sample data format - test: {img_path, test_img_path, roi_coords, test_roi_coords, roitable, spec1d}
-        self._pretest_data: Optional[dict[str, Any]] = None
+        # self.__pretest_data: Optional[dict[str, Any]] = None
         self._pretest_data_init()
 
         # Pipeline creating time
         self._create_time: str = datetime.now().strftime("created_at_%Y-%m-%d_%H-%M-%S")
 
         # Input sample data
-        self._sample_data: list[dict[str, Any]] = []
+        # self.__sample_data: list[dict[str, Any]] = []
 
         # test_run status
         # Set False for any process modification, set True after successful calling of 'test_run'
-        self._tested: bool = False
+        # self.__tested: bool = False
 
         # Sample preprocessing result paths
-        self._preprocess_result_path: list[str] = []
+        # self.__preprocess_result_path: list[str] = []
 
     ## Mutable properties
     @property
@@ -259,34 +303,30 @@ class SpecPipe:
     @spec_exp.setter
     def spec_exp(self, spec_exp: SpecExp) -> None:
         if isinstance(spec_exp, SpecExp):
-            self._tested = False
+            self.__tested = False
             self._spec_exp_updater(spec_exp)
         else:
             raise ValueError(f"{self.__class__.__name__}.spec_exp must be a SpecExp instance")
 
-    # Alias method
-    def update_spec_exp(self, spec_exp: SpecExp) -> None:
-        self.spec_exp = spec_exp
-
     @property
-    def band_wavelength(self) -> Optional[tuple]:
+    def _band_wavelength(self) -> Optional[tuple[Union[int, float], ...]]:
         return self._band_wavelength
 
-    @band_wavelength.setter
-    def band_wavelength(self, value: Optional[tuple]) -> None:
+    @_band_wavelength.setter
+    def _band_wavelength(self, value: Optional[tuple[Union[int, float], ...]]) -> None:
         if value is not None:
             value = tuple(value)
-            if self._pretest_data is None:
+            if self.__pretest_data is None:
                 raise ValueError(
-                    "Internal Error: 'SpecPipe.pretest_data' is None. \
+                    "Internal Error: 'SpecPipe._pretest_data' is None. \
                         Pre-execution test data initialization fails. Please report."
                 )
-            if len(value) != len(self._pretest_data["spec1d"]):
+            if len(value) != len(self.__pretest_data["spec1d"]):
                 raise ValueError(
                     f"The number of band wavelengths ({len(value)}) does not match \
-                        the number of bands ({len(self._pretest_data['spec1d'])})."
+                        the number of bands ({len(self.__pretest_data['spec1d'])})."
                 )
-            v0 = 0
+            v0: Union[int, float] = 0
             for v in value:
                 if (type(v) is not float) | (type(v) is not int):
                     raise TypeError(f"Band wavelengths must be numeric, got type: {type(v)}.")
@@ -296,24 +336,24 @@ class SpecPipe:
                     v0 = v
                 else:
                     raise ValueError(f"Band wavelengths must be in an ascending order without ties, got: {value}")
-        self._band_wavelength = value
+        self.__band_wavelength = value
 
     ## Read only or immuatable properties
     @property
-    def sample_targets(self) -> list[tuple[str, str, Union[str, bool, int, float], str]]:
-        return self._sample_targets
+    def _sample_targets(self) -> list[tuple[str, str, Union[str, bool, int, float], str]]:
+        return self.__sample_targets
 
-    @sample_targets.setter
-    def sample_targets(self, value: list[tuple[str, str, Union[str, bool, int, float], str]]) -> None:
-        raise ValueError("sample_targets cannot be modified in SpecPipe, please update using 'SpecExp' instead")
+    @_sample_targets.setter
+    def _sample_targets(self, value: list[tuple[str, str, Union[str, bool, int, float], str]]) -> None:
+        raise ValueError("_sample_targets cannot be modified in SpecPipe, please update using 'SpecExp' instead")
 
     @property
-    def is_target_numeric(self) -> bool:
-        return self._is_target_numeric
+    def _is_target_numeric(self) -> bool:
+        return self.__is_target_numeric
 
-    @is_target_numeric.setter
-    def is_target_numeric(self, value: bool) -> None:
-        raise ValueError("is_target_numeric cannot be modified in SpecPipe, please update using 'SpecExp' instead")
+    @_is_target_numeric.setter
+    def _is_target_numeric(self, value: bool) -> None:
+        raise ValueError("_is_target_numeric cannot be modified in SpecPipe, please update using 'SpecExp' instead")
 
     @property
     def process(self) -> list[tuple[str, str, str, str, int, Callable, int, int]]:
@@ -348,36 +388,36 @@ class SpecPipe:
         raise ValueError("custom_chains cannot be modified directly, use 'custom_chains_from_df' to set custom_chains")
 
     @property
-    def sample_data(self) -> list[dict[str, Any]]:
-        return self._sample_data
+    def _sample_data(self) -> list[dict[str, Any]]:
+        return self.__sample_data
 
-    @sample_data.setter
-    def sample_data(self, value: list[dict[str, Any]]) -> None:
-        raise ValueError("sample_data cannot be modified")
-
-    @property
-    def pretest_data(self) -> Optional[dict]:
-        return self._pretest_data
-
-    @pretest_data.setter
-    def pretest_data(self, value: Optional[dict]) -> None:
-        raise ValueError("pretest_data cannot be modified")
+    @_sample_data.setter
+    def _sample_data(self, value: list[dict[str, Any]]) -> None:
+        raise ValueError("_sample_data cannot be modified")
 
     @property
-    def preprocess_result_path(self) -> list[str]:
-        return self._preprocess_result_path
+    def _pretest_data(self) -> Optional[dict]:
+        return self.__pretest_data
 
-    @preprocess_result_path.setter
-    def preprocess_result_path(self, value: list[str]) -> None:
-        raise ValueError("preprocess_result_path cannot be modified")
+    @_pretest_data.setter
+    def _pretest_data(self, value: Optional[dict]) -> None:
+        raise ValueError("_pretest_data cannot be modified")
 
     @property
-    def tested(self) -> bool:
-        return self._tested
+    def _preprocess_result_path(self) -> list[str]:
+        return self.__preprocess_result_path
 
-    @tested.setter
-    def tested(self, value: bool) -> None:
-        raise ValueError("tested is immutable and cannot be modified")
+    @_preprocess_result_path.setter
+    def _preprocess_result_path(self, value: list[str]) -> None:
+        raise ValueError("_preprocess_result_path cannot be modified")
+
+    @property
+    def _tested(self) -> bool:
+        return self.__tested
+
+    @_tested.setter
+    def _tested(self, value: bool) -> None:
+        raise ValueError("_tested is immutable and cannot be modified")
 
     @property
     def create_time(self) -> str:
@@ -400,6 +440,11 @@ class SpecPipe:
                 is_numeric = False
         return is_numeric
 
+    # Alias method
+    @simple_type_validator
+    def update_spec_exp(self, spec_exp: SpecExp) -> None:
+        self.spec_exp = spec_exp
+
     # SpecExp-related initializer / updater
     @simple_type_validator
     def _spec_exp_updater(self, spec_exp: SpecExp) -> None:
@@ -412,7 +457,7 @@ class SpecPipe:
             raise ValueError("Given SpecExp instance is invalid") from e
         try:
             self._spec_exp = spec_exp
-            self._sample_targets = spec_exp.sample_targets
+            self.__sample_targets = spec_exp.sample_targets
             self._is_regression = self._check_target_numeric(spec_exp)
             self._report_directory = spec_exp._report_directory
             self._pretest_data_init()
@@ -421,7 +466,7 @@ class SpecPipe:
         except Exception as e:
             # Roll back when fail in test
             self._spec_exp = spec_exp_old
-            self._sample_targets = spec_exp_old.sample_targets
+            self.__sample_targets = spec_exp_old.sample_targets
             self._is_regression = self._check_target_numeric(spec_exp_old)
             self._report_directory = spec_exp_old._report_directory
             self._pretest_data_init()
@@ -521,7 +566,7 @@ class SpecPipe:
                 "spec1d": spec1d,
             }
 
-            self._pretest_data = test_data_pre
+            self.__pretest_data = test_data_pre
 
         ### For standalone spectral samples
         # Pretest_data: [img_path, test_img_path, roi_coords, test_roi_coords, roitable, spec1d]
@@ -556,7 +601,7 @@ class SpecPipe:
                 "roi_specs": roitable,
                 "spec1d": spec1d,
             }
-            self._pretest_data = test_data_pre
+            self.__pretest_data = test_data_pre
 
     # Process function validator - pretest validator
     # Data levels:
@@ -575,9 +620,9 @@ class SpecPipe:
         Validate process method of specified input data level before execution of entire processing chain.
         """
         # Pretest_data validation for static typing
-        if self._pretest_data is None:
+        if self.__pretest_data is None:
             raise ValueError(
-                "Internal Error: 'SpecPipe.pretest_data' is None. \
+                "Internal Error: 'SpecPipe._pretest_data' is None. \
                     Pre-execution test data initialization fails. Please report."
             )
 
@@ -588,7 +633,7 @@ class SpecPipe:
             dl_out = _dl_val(output_data_level)[0]
 
             # Test image path
-            test_img_path = self._pretest_data["test_img_path"]
+            test_img_path = self.__pretest_data["test_img_path"]
 
             # Test data
             if dl_out < 8:
@@ -663,12 +708,12 @@ class SpecPipe:
                     # Process image and return path of processed image
                     result = pixel_apply(test_img_path, method, "tensor_hyper", output_path, progress=False)
                 elif dl_in == 5:
-                    result = method(test_img_path, self._pretest_data["roi_coords"])
+                    result = method(test_img_path, self.__pretest_data["roi_coords"])
                 elif dl_in == 6:
-                    testing_data = self._pretest_data["roi_specs"]
+                    testing_data = self.__pretest_data["roi_specs"]
                     result = method(testing_data)
                 elif dl_in == 7:
-                    testing_data = self._pretest_data["spec1d"]
+                    testing_data = self.__pretest_data["spec1d"]
                     result = method(testing_data)
                 else:
                     raise ValueError("Input data level cannot be 'model' or 8 (corresponding index).")
@@ -793,7 +838,7 @@ class SpecPipe:
                 # Model method is not validated here
                 return method
 
-            testing_data = self._pretest_data["spec1d"]
+            testing_data = self.__pretest_data["spec1d"]
             result = method(testing_data)
 
             # Output validation
@@ -851,187 +896,277 @@ class SpecPipe:
         influence_analysis_config: Union[str, dict[str, Any], None] = "default",
     ) -> None:
         """
-        Add a model to the pipeline.
-        The model process must accept 1D data (7 / 'spec1d') and has a output data level of 8 / 'model'.
-        All models have same application sequence.
+        Add a model evaluation process to the processing pipeline.
 
+        The added model operates on 1D data (data level ``7`` / ``"spec1d"``) and producing model-level output (data level ``8`` / ``"model"``).
+        All models share a unified application sequence within the pipeline.
 
         Parameters
         ----------
-        ** Model adding parameters **
-        model_method : sklearn-style model object
+        model_method : object
             Sklearn-style model object.
-            The regressor class must have methods of 'fit' and 'predict'.
-            The classifier class must have methods of 'predict_proba'.
+
+            Regression models must implement ``fit`` and ``predict``.
+            Classification models must additionally implement ``predict_proba``.
 
         model_label : str, optional
-            Custom label for the added model. The default is ''.
+            Custom label for the added model.
+
+            If None, a label is automatically generated.
 
         test_error_raise : bool, optional
-            The model is validated on highly simplified mock data before being added to the pipeline.
-            If True, an error is raised if the validation fails. If False, the error is suppressed and only a warning is issued.
-            The default is True. Set to False if you are confident the model will work with your actual data despite a validation failure.
+            Whether to raise error when the model fails in validation using simplified mock data before added to the pipeline.
 
+            If True, an exception is raised, otherwise only a warning is issued. Default is True.
 
-        ** Modeling parameters **
-        is_regression : Optional[bool]
-            Whether regression model is applied.
-            If None, it is automatically determined using the type of target values in the sample list. The default is None.
+        is_regression : bool, optional
+            Whether the model is a regression model.
 
-        validation_method : str
-            Validation method, Choose between:
-            * "loo" :
-                Leave-one-out cross-validation.
-            * "k-fold" (e.g. "5-fold") :
-                K-fold cross validation, k is the number of folds.
-            * "m-n-split" (e.g. "70-30-split") :
-                Train-test split. m% training, n% testing (only test set used for evaluation).
-            The default is '2-fold'.
+            If None, the model type is inferred from sample target values.
+            Default is None.
 
-        unseen_threshold : float = 0.0
-            For classification models trained on data with missing classes, a sample is assigned to a unknown class if its highest predicted probability among the known classes is below the unseen_threshold.
-            No use for regression.
+        validation_method : str, optional
+            Validation strategy for model evaluation.
+            Supported formats include:
 
-        x_shape: Optional[tuple[int]]
-            Shape of independent variables if the method use shaped sample data.
-            In the current version, the parameter has no effect.
+            - ``"loo"`` for leave-one-out cross-validation
+            - ``"k-fold"`` (e.g. ``"5-fold"``) for k-fold cross-validation
+            - ``"m-n-split"`` (e.g. ``"70-30-split"``) for train-test split
 
-        result_backup : bool
-            Whether copies of result files are saved, if True, copy files with modeling time are saved in addition.
+            Default is ``"2-fold"``.
 
+        unseen_threshold : float, optional
+            Classification-only parameter.
 
-        ** Model validation and evaluation configurations **
-        data_split_config : Union[str,dict], optional
-            Configuration of data_split options in dictionary. The type of data spliting is specified by the 'ModelEva' object.
-            The default is 'default'.
-            The parameters of data split include:
-            * random_state : Optional[int], optional
-                Random state for data splitting and shuffling. If None, random_state is not fixed.
+            If the highest predicted class probability of a sample is below this threshold, the sample is assigned to an unknown class.
+            Default is 0.0.
 
-        validation_config : Union[str,dict], optional
-            Configuration of validation options. The default is 'default', using default settings.
+        x_shape : tuple of int, optional
+            Expected shape of independent variables for models requiring structured input. Default is None.
 
-            The parameters of validation include:
-            * unseen_threshold : Optional[float]
-                For classification models trained on data with missing classes, a sample is assigned to a unknown class if its highest predicted probability among the known classes is below the unseen_threshold.
-                Regression validation_config does not have this argumente.
-            * use_original_shape : bool
-                Whether the sample data is reshaped to its original shape.
-                If False, the flattened data is used. The default is False.
-            * save_fold_model: bool
-                Whether to save model of each fold. The default is True.
-            * save_fold_data: bool
-                Whether to save training and validation data of each fold. The default is True.
-                Saving fold data and fold models could consuming significant storage when applied to large data with large sample size with large fold numbers.
+            Currently ignored.
 
-        metrics_config : Union[str,dict,None], optional
-            Configuration of metrics options. The default is 'default', using default settings.
-            If None, the performance metrics computation is skipped.
+        result_backup : bool, optional
+            Whether to save timestamped backup copies of result files.
+            Default is False.
 
-        roc_plot_config : Union[str,dict,None], optional
-            For classification only. Configuration of plotting Response Operating Characteristics curves in dictionary.
-            The default is 'default'.
-            The parameters of scatter_plot and its default values are listed as follows:
-            * plot_title : str = 'ROC Curve',
-            * title_size : Union[int,float] = 26,
-            * title_pad : Union[int,float,None] = None,
-            * figure_size : tuple[Union[int,float],Union[int,float]] = (8, 8),
-            * plot_margin : tuple[float,float,float,float] = (0.15, 0.95, 0.9, 0.13), # (left,right,top,bottom) Margin
-            * plot_line_with : Union[int,float] = 3,
-            * plot_line_alpha : float = 0.8,
-            * diagnoline_width : Union[int,float] = 3,
-            * x_axis_limit : Optional[tuple[Union[int,float],Union[int,float]]] = None,
-            * x_axis_label : str = 'False Positive Rate',
-            * x_axis_label_size : Union[int,float] = 26,
-            * x_tick_size : Union[int,float] = 24,
-            * x_tick_number : int = 6,
-            * y_axis_limit : Optional[tuple[Union[int,float],Union[int,float]]] = None,
-            * y_axis_label : str = 'True Positive Rate',
-            * y_axis_label_size : Union[int,float] = 26,
-            * y_tick_size : Union[int,float] = 24,
-            * y_tick_number : int = 6,
-            * axis_line_size_left : Union[int,float,None] = 1.5,
-            * axis_line_size_right : Union[int,float,None] = 1.5,
-            * axis_line_size_top : Union[int,float,None] = 1.5,
-            * axis_line_size_bottom : Union[int,float,None] = 1.5,
-            * legend : bool = True,
-            * legend_location : str = 'lower right',
-            * legend_fontsize : Union[int,float] = 20,
-            * legend_title : str = '',
-            * legend_title_fontsize : Union[int,float] = 24,
-            * background_grid : bool = False,
-            * show_plot : bool = False
-            None refers to default values.
+        data_split_config : str or dict, optional
+            Additional data splitting configuration.
 
-        scatter_plot_config : Union[str,dict,None], optional
-            For regression only. Configuration of scatter_plot options in dictionary.
-            The default is 'default'.
-            The parameters of scatter_plot and its default values are listed as follows:
-            * plot_title : str = '',
-            * title_size : Union[int,float] = 26,
-            * title_pad : Union[int,float,None] = None,
-            * figure_size : tuple[Union[int,float],Union[int,float]] = (8, 8),
-            * plot_margin : tuple[float,float,float,float] = (0.2, 0.95, 0.95, 0.15), # (left,right,top,bottom) Margin
-            * plot_line_with : Union[int,float] = 3,
-            * point_size : Union[int,float] = 120,
-            * point_color : str = 'firebrick',
-            * point_alpha : float = 0.7,
-            * x_axis_limit : Optional[tuple[Union[int,float],Union[int,float]]] = None,
-            * x_axis_label : str = 'Predicted target values',
-            * x_axis_label_size : Union[int,float] = 26,
-            * x_tick_values : Optional[list[Union[int,float]]] = None,
-            * x_tick_size : Union[int,float] = 24,
-            * x_tick_number : int = 5,
-            * y_axis_limit : Optional[tuple[Union[int,float],Union[int,float]]] = None,
-            * y_axis_label : str = 'Residuals',
-            * y_axis_label_size : Union[int,float] = 26,
-            * y_tick_values : Optional[list[Union[int,float]]] = None,
-            * y_tick_size : Union[int,float] = 24,
-            * y_tick_number : int = 5,
-            * axis_line_size_left : Union[int,float,None] = 1.5,
-            * axis_line_size_right : Union[int,float,None] = 1.5,
-            * axis_line_size_top : Union[int,float,None] = 1.5,
-            * axis_line_size_bottom : Union[int,float,None] = 1.5,
-            * background_grid : bool = False,
-            * show_plot : bool = False
+            If a dictionary of parameters is provided, it may include:
 
-        residual_config : Union[str,dict[str,Any],None]
-            Configuration of residual analysis options. The default is 'default', using default settings.
-            If None, the residual analysis is skipped.
+            ``random_state`` : int, Random state for splitting and shuffling.
 
-        residual_plot_config: Union[str,dict,None], optional
-            For regression only. Configuration of residual plot parameters is same as scatter_plot_config.
-            See 'scatter_plot_config' for details.
-            The parameters is same as 'scatter_plot'.
+            Default is ``"default"``, which uses the default plotting behavior.
 
-        influence_analysis_config : Union[str,dict,None], optional
-            Configuration of influence analysis. The default is 'default', using default settings.
-            If None, Influence analysis is skipped.
+        validation_config : str or dict, optional
+            Validation behavior configuration.
 
-            When enabled, calculates the Cook's distance-like influence of each sample on the model's predictions using a Leave-One-Out (LOO) approach.
-            Please note this computation is highly time-consuming for large sample size. To save time, use a simple validation method or set this to None.
+            If a dictionary of parameters is provided, it may include:
 
-            The parameters of validation include:
-            * validation_method : bool, optional
-                Independent validation_method for leave-one-out analysis of data point influence.
-                Default is using model validation method if it is train-test split, and "2-fold" if the model validation method is "k-fold" or "loo".
-            * random_state : None, optional
-                random state for data splitting. If None, the random state is not fixed. The default is None.
+                ``unseen_threshold`` : float
+                    If an unseen class for the training data exists, a test sample is predicted to the unseen class if the predicted probabilities of seen classes is lower than this threshold.
+                    Default is 0 (Only predict seen classes).
+                ``use_original_shape`` : bool
+                    Whether data shape is applied for the model. Currently no use. Default is False.
+                ``save_fold_model`` : bool
+                    Whether models of the validation folds are saved to files. Default is True.
+                ``save_fold_data`` : bool
+                    Whether models of the validation folds are saved to files. Default is True.
+
+            Default is ``"default"``, which uses the default plotting behavior.
+
+        metrics_config : str or dict or None, optional
+            Metrics computation configuration.
+
+            If None, metric computation is skipped.
+            Default is ``"default"``. Currently only ``"default"`` is supported.
+
+        roc_plot_config : str or dict or None, optional
+            Receiver Operating Characteristic (ROC) plotting configuration for classification models.
+
+            No use for regression models.
+
+            If None, ROC plot generation is skipped.
+
+            If a dictionary of parameters is provided, it may include:
+
+                ``plot_title`` : str
+                    title of the ROC plot. Default is 'ROC Curve'.
+                ``title_size`` : int or float
+                    font size of the plot title. Default is 26.
+                ``title_pad`` : int or float or None
+                    padding between the title and the plot. Default is None.
+                ``figure_size`` : tuple of 2 (float or int)
+                    figure size as (width, height). Default is (8, 8).
+                ``plot_margin`` : tuple of 4 float
+                    plot margins as (left, right, top, bottom). Default is (0.15, 0.95, 0.9, 0.13).
+                ``plot_line_width`` : int or float
+                    line width of the ROC curve. Default is 3.
+                ``plot_line_alpha`` : float
+                    alpha value of the ROC curve line. Default is 0.8.
+                ``diagnoline_width`` : int or float
+                    line width of the diagonal reference line. Default is 3.
+                ``x_axis_limit`` : tuple of 2 (float or int) or None
+                    x-axis limits as (min, max). Default is None.
+                ``x_axis_label`` : str
+                    label of the x-axis. Default is 'False Positive Rate'.
+                ``x_axis_label_size`` : int or float
+                    font size of the x-axis label. Default is 26.
+                ``x_tick_size`` : int or float
+                    font size of x-axis tick labels. Default is 24.
+                ``x_tick_number`` : int
+                    number of x-axis ticks. Default is 6.
+                ``y_axis_limit`` : tuple of 2 (float or int) or None
+                    y-axis limits as (min, max). Default is None.
+                ``y_axis_label`` : str
+                    label of the y-axis. Default is 'True Positive Rate'.
+                ``y_axis_label_size`` : int or float
+                    font size of the y-axis label. Default is 26.
+                ``y_tick_size`` : int or float
+                    font size of y-axis tick labels. Default is 24.
+                ``y_tick_number`` : int
+                    number of y-axis ticks. Default is 6.
+                ``axis_line_size_left`` : int or float or None
+                    line width of the left axis spine. Default is 1.5.
+                ``axis_line_size_right`` : int or float or None
+                    line width of the right axis spine. Default is 1.5.
+                ``axis_line_size_top`` : int or float or None
+                    line width of the top axis spine. Default is 1.5.
+                ``axis_line_size_bottom`` : int or float or None
+                    line width of the bottom axis spine. Default is 1.5.
+                ``legend`` : bool
+                    whether to display the legend. Default is True.
+                ``legend_location`` : str
+                    legend location string accepted by matplotlib. Default is 'lower right'.
+                ``legend_fontsize`` : int or float
+                    font size of legend entries. Default is 20.
+                ``legend_title`` : str
+                    legend title text. Default is empty.
+                ``legend_title_fontsize`` : int or float
+                    font size of the legend title. Default is 24.
+                ``background_grid`` : bool
+                    whether to show a background grid. Default is False.
+                ``show_plot`` : bool
+                    whether to display the plot interactively. Default is False.
+
+            Default is ``"default"``, which uses the default plotting behavior.
+
+        scatter_plot_config : str or dict or None, optional
+            Scatter plot configuration for regression models.
+
+            If None, scatter plot generation is skipped.
+
+            If a dictionary of parameters is provided, it may include:
+
+                ``plot_title`` : str
+                    plot title text. Default is ''.
+                ``title_size`` : int or float
+                    font size of the plot title. Default is 26.
+                ``title_pad`` : int or float or None
+                    padding between the title and the plot. Default is None.
+                ``figure_size`` : tuple of 2 (float or int)
+                    figure size in inches as (width, height). Default is (8, 8).
+                ``plot_margin`` : tuple of 4 float
+                    plot margins as (left, right, top, bottom). Default is (0.2, 0.95, 0.95, 0.15).
+                ``plot_line_width`` : int or float
+                    line width of plotted curves. Default is 3.
+                ``point_size`` : int or float
+                    size of plotted points. Default is 120.
+                ``point_color`` : str
+                    color of plotted points. Default is 'firebrick'.
+                ``point_alpha`` : float
+                    transparency of plotted points. Default is 0.7.
+                ``x_axis_limit`` : tuple of 2 (float or int) or None
+                    limits of the x-axis. Default is None.
+                ``x_axis_label`` : str
+                    label of the x-axis. Default is 'Predicted target values'.
+                ``x_axis_label_size`` : int or float
+                    font size of the x-axis label. Default is 26.
+                ``x_tick_values`` : list of int or float or None
+                    explicit tick values for the x-axis. Default is None.
+                ``x_tick_size`` : int or float
+                    font size of x-axis ticks. Default is 24.
+                ``x_tick_number`` : int
+                    number of x-axis ticks. Default is 5.
+                ``y_axis_limit`` : tuple of 2 (float or int) or None
+                    limits of the y-axis. Default is None.
+                ``y_axis_label`` : str
+                    label of the y-axis. Default is 'Residuals'.
+                ``y_axis_label_size`` : int or float
+                    font size of the y-axis label. Default is 26.
+                ``y_tick_values`` : list of int or float or None
+                    explicit tick values for the y-axis. Default is None.
+                ``y_tick_size`` : int or float
+                    font size of y-axis ticks. Default is 24.
+                ``y_tick_number`` : int
+                    number of y-axis ticks. Default is 5.
+                ``axis_line_size_left`` : int or float or None
+                    line width of the left axis spine. Default is 1.0.
+                ``axis_line_size_right`` : int or float or None
+                    line width of the right axis spine. Default is 1.5.
+                ``axis_line_size_top`` : int or float or None
+                    line width of the top axis spine. Default is 1.5.
+                ``axis_line_size_bottom`` : int or float or None
+                    line width of the bottom axis spine. Default is 1.5.
+                ``background_grid`` : bool
+                    whether to display background grid lines. Default is False.
+                ``show_plot`` : bool
+                    whether to display the plot immediately. Default is False.
+
+            Default is ``"default"``, which uses the default plotting behavior.
+
+        residual_config : str or dict or None, optional
+            Residual analysis configuration.
+
+            If None, residual analysis is skipped.
+            Default is ``"default"``, which uses the default plotting behavior.
+
+        residual_plot_config : str or dict or None, optional
+            Residual plot configuration for regression models.
+
+            If None, residual plot generation is skipped.
+
+            If a dictionary of parameters is provided, the available parameters are same as ``scatter_plot_config``.
+
+            Default is ``"default"``, which uses the default plotting behavior.
+
+        influence_analysis_config : str or dict or None, optional
+            Influence analysis configuration. When enabled, computes a Cook's distance–like influence measure for each sample using a Leave-One-Out (LOO) approach.
+
+            If None, influence analysis is skipped.
+
+            Note: This computation can be very time-consuming for large datasets. For such cases, consider using a simple validation method or setting this option to None.
+
+            If a dictionary of parameters is provided, it may include:
+
+                ``validation_method`` : bool, optional
+                    whether to use independent validation for leave-one-out influence analysis.
+                ``random_state`` : int or None, optional
+                    random state for data splitting.
+
+            Default is ``"default"``, which uses the default plotting behavior.
+
+        See Also
+        --------
+        add_process
 
         Examples
         --------
-        For created SpecExp instance 'exp':
-        >>> pipe = SpecPipe(exp)
+        Create a ``SpecPipe`` instance from an existing SpecExp object::
 
-        >>> from sklearn.neighbors import KNeighborsClassifier
-        >>> knn = KNeighborsClassifier(n_neighbors=3)
-        >>> pipe.add_model(knn, validation_method="2-fold")
+            >>> pipe = SpecPipe(exp)
 
-        Use different validation method in model evaluation:
-        >>> pipe.add_model(knn, validation_method="10-fold")
-        >>> pipe.add_model(knn, validation_method="60-40-split")
-        >>> pipe.add_model(knn, validation_method="loo")
+        Add a model with a specified validation method::
 
+            >>> from sklearn.neighbors import KNeighborsClassifier
+            >>> knn = KNeighborsClassifier(n_neighbors=3)
+            >>> pipe.add_model(knn, validation_method="5-fold")
+
+        Use different validation strategies::
+
+            >>> pipe.add_model(knn, validation_method="60-40-split")
+            >>> pipe.add_model(knn, validation_method="loo")
         """  # noqa: E501
 
         # Process general parameters
@@ -1112,49 +1247,59 @@ class SpecPipe:
         return_result: bool = False,
     ) -> Optional[pd.DataFrame]:
         """
-        List model process items filtered by given properties.
-        If a property is not specified, the property will be ignored in filtering.
-        If return_df is set True, a complete dataframe of processes is returned, if False, a simplified dataframe is printed.
+        List added model evaluation processes based on filtering conditions.
+
+        If a filter criterion is not provided or None, the corresponding filter is not applied.
 
         Parameters
         ----------
         model_id : str, optional
-            Model (process) ID. The default is None.
+            Model evaluation process ID. Default is None.
 
         model_label : str, optional
-            Custom model_label. The default is None.
+            Custom model label. Default is None.
 
-        model_method : Union[str,object], optional
-            Model object. The default is None.
+        model_method : str or object, optional
+            Model object or method. Default is None.
 
         exact_match : bool, optional
-            If False, any process with property value containing the specified value is removed.
-            The default is True.
+            If False, any process with a property value containing the specified value is included. Default is True.
 
         print_result : bool, optional
-            Whether simplified results are printed. The default is True.
+            If True, simplified results are printed. Default is True.
 
         return_result : bool, optional
-            Whether a complete resulting dataframe is returned. The default is False.
+            If True, a complete resulting DataFrame is returned. Default is False.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+            If ``return_result=True``, returns a pandas DataFrame of matched model evaluation processes.
+
+            If ``return_result=False``, returns None.
 
         Examples
         --------
-        For created SpecExp instance 'exp':
-        >>> pipe = SpecPipe(exp)
-        >>> from sklearn.neighbors import KNeighborsClassifier
-        >>> knn = KNeighborsClassifier(n_neighbors=3)
-        >>> pipe.add_model(knn, validation_method="2-fold")
+        For a prepared ``SpecExp`` instance ``exp``::
 
-        List all models:
-        >>> pipe.ls_model()
+            >>> pipe = SpecPipe(exp)
+            >>> from sklearn.neighbors import KNeighborsClassifier
+            >>> knn = KNeighborsClassifier(n_neighbors=3)
+            >>> pipe.add_model(knn, validation_method='2-fold')
 
-        Return model items in dataframe:
-        >>> pipe.ls_model(return_result=True)
+        List all models::
 
-        Filter result by model label:
-        >>> pipe.ls_model(model_label='KNeighbor', exact_match=False)
+            >>> pipe.ls_model()
 
-        """  # noqa: E501
+        Return model items as a DataFrame::
+
+            >>> df = pipe.ls_model(return_result=True)
+
+        Filter results by model label::
+
+            >>> pipe.ls_model(model_label='KNeighbor', exact_match=False)
+        """
+
         # List models
         if return_result:
             return self.ls_process(
@@ -1194,39 +1339,42 @@ class SpecPipe:
         exact_match: bool = True,
     ) -> None:
         """
-        Remove added models by model_id, model_label and model method (object).
-        If a property is not specified, the property criterion will be ignored.
+        Remove added model evaluation processes from this SpecPipe instance based on filtering conditions.
+
+        If a filter criterion is not provided or None, the corresponding filter is not applied.
 
         Parameters
         ----------
         model_id : str, optional
-            Model (process) ID. The default is None.
+            Model evaluation process ID. Default is None.
 
         model_label : str, optional
-            Custom model label. The default is None.
+            Custom model label. Default is None.
 
-        model_method : Union[str,Callable,object], optional
-            Method object. The default is None.
+        model_method : str or object, optional
+            Method object or model. Default is None.
 
         exact_match : bool, optional
-            If False, any process with property value containing the specified value is removed.
-            The default is True.
+            If False, any process with a property value containing the specified value is removed. Default is True.
 
         Examples
         --------
-        For created SpecExp instance 'exp':
-        >>> pipe = SpecPipe(exp)
-        >>> from sklearn.neighbors import KNeighborsClassifier
-        >>> knn = KNeighborsClassifier(n_neighbors=3)
-        >>> pipe.add_model(knn, validation_method="2-fold")
+        For a prepared ``SpecExp`` instance ``exp``::
 
-        Remove all models:
-        >>> pipe.rm_model()
+            >>> pipe = SpecPipe(exp)
+            >>> from sklearn.neighbors import KNeighborsClassifier
+            >>> knn = KNeighborsClassifier(n_neighbors=3)
+            >>> pipe.add_model(knn, validation_method='2-fold')
 
-        Remove certain model:
-        >>> pipe.rm_model(model_label='KNeighbor')
+        Remove all models::
 
+            >>> pipe.rm_model()
+
+        Remove a specific model::
+
+            >>> pipe.rm_model(model_label='KNeighbor')
         """
+
         self.rm_process(
             process_id=model_id,
             process_label=model_label,
@@ -1272,155 +1420,162 @@ class SpecPipe:
         Add a processing method with defined input/output data levels and application sequence to the pipeline.
         A processing method can be a preprocessing function or a model for evaluation.
 
-
         Parameters
         ----------
-        ** Process general parameters **
-        input_data_level : Union[str, int]
-            Input data level for the process method, choose between:
-            * 0 or 'image' :
-                    Method directly applied to raster images.
-                    The function must accepts input raster image path as the first parameter and output raster image path as the second parameter.
+        input_data_level : int or str
+            Input data level for the process method. Options:
 
-            * 1 or 'pixel_spec' :
-                    Method applied to the 1D spectra of every pixel of the raster image, accepting pixel 1D spectra as input.
+                ``0`` or ``"image"``:
+                    Method applied to raster images. Function must accept input raster path as first parameter and output path as second.
+                ``1`` or ``"pixel_spec"``
+                    Method applied to 1D spectra of each pixel.
+                ``2`` or ``"pixel_specs_array"``
+                    Method applied to 2D NumPy array of pixel spectra. Each row is a pixel spectrum.
+                ``3`` or ``"pixel_specs_tensor"``
+                    Method applied to 3D PyTorch Tensor [C, H, W], calculation along axis 0.
+                ``4`` or ``"pixel_hyperspecs_tensor"``
+                    Method applied to 3D hyperspectral Tensor [C, H, W], calculation along axis 1.
+                ``5`` or ``"image_roi"``
+                    Method applied to ROI of raster image, receiving raster path and ROI coordinates from SpecExp.
+                ``6`` or ``"roi_specs"``
+                    Method applied to 2D array of ROI spectra, each row is a pixel.
+                ``7`` or ``"spec1d"``
+                    Method applied to 1D sample spectra or flattened data.
 
-            * 2 or 'pixel_specs_array' :
-                    Method applied to the 1D spectra of every pixel of the raster image, accepting 2D spectral NumPy array as input, where each data row represents a pixel spectrum.
+        output_data_level : int or str
+            Output data level. Options:
 
-            * 3 or 'pixel_specs_tensor' :
-                    Method applied to the 1D spectra of every pixel of the raster image, accepting 3D spectral PyTorch Tensor as input, whose shape is [C, H, W].
-                    C - Channel (Bands), H - Height (Raster rows), W - Width (Raster columns). The calculation must be performed along axis 0 (Channel axis).
-
-            * 4 or 'pixel_hyperspecs_tensor' :
-                    Method applied to the 1D spectra of every pixel of the raster image, accepting pixel 3D hyperspectral PyTorch Tensor as input, optimized for hyperspectral image data.
-                    The input shape must be [C, H, W] (see 'pixel_specs_tensor'), but the calculation must be performed along axis 1.
-
-            * 5 or 'image_roi' :
-                    Method applied to Region of Interest (ROI) of raster image, accepting raster image path and ROI coordinates from 'SpecExp' as input.
-
-            * 6 or 'roi_specs' :
-                    Method applied to 2D array of spectra or spectral measures in a sample ROI, where each row represents the data of a pixel.
-
-            * 7 or 'spec1d' :
-                    Method applied to 1D spectral data or flattened 1D spectral data and accepts 1D array-like.
-
-            Methods are executed in ascending order of their input_data_level.
-            If the input_data_level > 5, the input_data_level must equal to the output_data_level of the preceding process.
-
-        output_data_level : Union[str, int]
-            Output data level:
-
-            * 0 or 'image' :
-                    If method outputs a raster image file and returns its path.
-
-            * 1 or 'pixel_spec' :
-                    Output same as image, while the input data level is 'pixel_spec'.
-
-            * 2 or 'pixel_specs_array' :
-                    Output same as image, while the input data level is 'pixel_specs_array'.
-
-            * 3 or 'pixel_specs_tensor' :
-                    Output same as image, while the input data level is 'pixel_specs_tensor'.
-
-            * 4 or 'pixel_hyperspecs_tensor' :
-                    Output same as image, while the input data level is 'pixel_hyperspecs_tensor'.
-
-            * 5 or 'image_roi' :
-                    Currently not available.
-
-            * 6 or 'roi_specs' :
-                    If the method output a 2D array of spectra or spectral measures, where each row represents a spectrum.
-
-            * 7 or 'spec1d' :
-                    If the method output a 1D array-like spectral data or flattened 1D spectral data.
-
-            * 8 or 'model' :
-                    If the method is used for modeling and outputs model evaluation reports. The model method only accepts 'spec1d' level input data. Image data can be flattened and provided with shape.
-
-            Methods with identical input_data_level and application_sequence must have identical output_data_level.
-            If the output_data_level > 5, the output_data_level must equal to the input_data_level of the following process.
+                ``0`` or ``"image"``
+                    Returns raster image path.
+                ``1`` or ``"pixel_spec"``
+                    Same as input "pixel_spec".
+                ``2`` or ``"pixel_specs_array"``
+                    Same as input "pixel_specs_array".
+                ``3`` or ``"pixel_specs_tensor"``
+                    Same as input "pixel_specs_tensor".
+                ``4`` or ``"pixel_hyperspecs_tensor"``
+                    Same as input "pixel_hyperspecs_tensor".
+                ``5`` or ``"image_roi"``
+                    Currently unavailable.
+                ``6`` or ``"roi_specs"``
+                    Returns 2D array of ROI spectra.
+                ``7`` or ``"spec1d"``
+                    Returns 1D array-like spectral data.
+                ``8`` or ``"model"``
+                    Used for modeling, accepts "spec1d" input.
 
         application_sequence : int
-            Application sequence number of a method in an input data level.
-            If two methods have identical input data levels, method with lower application sequence number is applied first.
+            Sequence number of the method within the same input data level. Lower numbers execute first.
 
-        method : Callable or sklearn-style model object
-            Method function or model object. The input and output should be defined according to the input and output data levels, see 'input_data_level' and 'output_data_level'.
-            For modeling, this parameter accepts a sklearn-style model object with method 'fit', 'predict' and 'predict_proba' for classifier.
+        method : callable or object
+            Method function or sklearn-style model object. Input/output must match data levels. For modeling, accepts sklearn-style objects with 'fit', 'predict', and 'predict_proba'.
 
         process_label : str, optional
-            Custom label for the added process. The default is ''.
+            Custom label for the process. Default is empty string.
 
         test_error_raise : bool, optional
-            The process method is validated on highly simplified mock data before being added to the pipeline.
-            If True, an error is raised if the validation fails. If False, the error is suppressed and only a warning is issued.
-            The default is True. Set to False if you are confident the method will work with your actual data despite a validation failure.
+            Whether to raise error when the process fails in validation using simplified mock data before added to the pipeline.
 
+            If True, an exception is raised, otherwise only a warning is issued. Default is True.
 
-        ** Modeling parameters **
-        See 'SpecPipe.add_model'.
+        is_regression : bool, optional
+            Whether the model is a regression model.
+            See ``add_model`` for details.
 
+        validation_method : str, optional
+            Validation strategy for model evaluation.
+            See ``add_model`` for details.
 
-        ** Model evaluation parameters **
-        See 'SpecPipe.add_model'.
+        unseen_threshold : float, optional
+            Classification-only parameter.
+            See ``add_model`` for details.
+
+        x_shape : tuple of int, optional
+            Expected shape of independent variables for models requiring structured input. Currently ignored.
+            See ``add_model`` for details.
+
+        result_backup : bool, optional
+            Whether to save timestamped backup copies of result files.
+            See ``add_model`` for details.
+
+        data_split_config : str or dict, optional
+            Additional data splitting configuration.
+            See ``add_model`` for details.
+
+        validation_config : str or dict, optional
+            Validation behavior configuration.
+            See ``add_model`` for details.
+
+        metrics_config : str or dict or None, optional
+            Metrics computation configuration.
+            See ``add_model`` for details.
+
+        roc_plot_config : str or dict or None, optional
+            Receiver Operating Characteristic (ROC) plotting configuration for classification models.
+            See ``add_model`` for details.
+
+        scatter_plot_config : str or dict or None, optional
+            Scatter plot configuration for regression models.
+            See ``add_model`` for details.
+
+        residual_config : str or dict or None, optional
+            Residual analysis configuration.
+            See ``add_model`` for details.
+
+        residual_plot_config : str or dict or None, optional
+            Residual plot configuration for regression models.
+            See ``add_model`` for details.
+
+        influence_analysis_config : str or dict or None, optional
+            Influence analysis configuration.
+            See ``add_model`` for details.
+
+        See Also
+        --------
+        add_model
+        make_img_func
+        make_roi_func
+        make_array_func
+        pixel_apply
 
         Examples
         --------
-        For created SpecExp instance 'exp':
-        >>> pipe = SpecPipe(exp)
+        For prepared ``SpecExp`` instance ``exp``::
 
-        Add an image processor that accepts image path and returns processed image path:
-        >>> pipe.add_process('image', 'image', application_sequence=0, method=img_processor)
+            >>> pipe = SpecPipe(exp)
 
-        Or use data level index:
-        >>> pipe.add_process(0, 0, 0, img_processor)
+        Add an image processor accepting image path and returning processed path::
 
-        Customize method name:
-        >>> pipe.add_process(0, 0, 0, img_processor, "img_proc")
+            >>> pipe.add_process('image', 'image', 0, img_processor)
 
-        Add another image processor for next step:
-        >>> pipe.add_process('image', 'image', application_sequence=1, method=img_processor)
+        Or using numeric level indices::
 
-        Apply an array function to the pixel spectra of an image:
-        >>> from specpipe.functions import snv
-        >>> pipe.add_process(
-                input_data_level="pixel_specs_array",
-                output_data_level="pixel_specs_array",
-                application_sequence=0,
-                method=snv,
-            )
+            >>> pipe.add_process(0, 0, 0, img_processor)
 
-        Or use data level index:
-        >>> pipe.add_process(2, 2, 0, snv)
+        Customize method name::
 
-        Use GPU application:
-        >>> from specpipe.functions import snv_hyper
-        >>> pipe.add_process(4, 4, 0, snv_hyper)
+            >>> pipe.add_process(0, 0, 0, img_processor, process_label='img_proc')
 
-        Process for extracting ROI spectra:
-        >>> from specpipe import roispecs
-        >>> pipe.add_process('image_roi', 'roispecs', 0, roispecs)
-        Or:
-        >>> pipe.add_process(5, 6, 0, roispecs)
+        Apply function to pixel spectra array::
 
-        Process to compute ROI statistics:
-        >>> from specpipe import roi_mean
-        >>> pipe.add_process('image_roi', 'spec1d', 0, roi_mean)
-        >>> pipe.add_process(5, 7, 0, roi_mean)
+            >>> from specpipe.functions import snv
+            >>> pipe.add_process('pixel_specs_array', 'pixel_specs_array', 0, snv)
 
-        Process to process ROI spectra, using denoiser as an example:
-        >>> from specpipe.denoiser import LocalPolynomial
-        >>> pipe.add_process(6, 6, 0, LocalPolynomial(5, polynomial_order=2).savitzky_golay_filter)
+        GPU processing example::
 
-        Extract statistics from ROI spectra, using mean values as an example:
-        >>> from specpipe.roistats import Stats2d
-        >>> pipe.add_process(6, 7, 0, Stats2d(measure='mean').values)
+            >>> from specpipe.functions import snv_hyper
+            >>> pipe.add_process(4, 4, 0, snv_hyper)
 
-        Process 1D sample spectra:
-        >>> pipe.add_process(7, 7, 0, LocalPolynomial(5, polynomial_order=2).savitzky_golay_filter)
+        Denoiser on ROI spectra::
 
+            >>> from specpipe.denoiser import LocalPolynomial
+            >>> pipe.add_process(6, 6, 0, LocalPolynomial(5, polynomial_order=2).savitzky_golay_filter)
+
+        Process 1D sample spectra::
+
+            >>> pipe.add_process(7, 7, 0, LocalPolynomial(5, polynomial_order=2).savitzky_golay_filter)
         """  # noqa: E501
+
         # Validate Data_level
         dl_in = _dl_val(input_data_level)
         dl_in_name = dl_in[1]
@@ -1461,7 +1616,7 @@ class SpecPipe:
                     method=method,
                     input_data_level=input_data_level,
                     output_data_level=output_data_level,
-                    pretest_data=self.pretest_data,
+                    pretest_data=self._pretest_data,
                     standalone_specs_sample=self.spec_exp.standalone_specs_sample,
                     report_directory=self.report_directory,
                 )
@@ -1501,7 +1656,7 @@ class SpecPipe:
             # Validate is_regression
             if is_regression is None:
                 try:
-                    self.sample_targets[0][2] + 1  # type: ignore[operator]
+                    self._sample_targets[0][2] + 1  # type: ignore[operator]
                     # Behavior-based type check after serialization, safe approach for serialization
                     is_regression = True
                 except Exception:
@@ -1534,7 +1689,7 @@ class SpecPipe:
             )
 
         # Change process test status
-        self._tested = False
+        self.__tested = False
 
         # Add process item
         proc_item = (
@@ -1551,439 +1706,6 @@ class SpecPipe:
         # Sort processes and update process_steps and process_chains
         self._generate_process_steps()
         self._generate_process_chains()
-
-    # Sort processes
-    # Format of associated attribute:
-    # [0 Process_ID, 1 Process_label, 2 Input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
-    def _sort_proc(self) -> None:
-        """
-        Sort added processes
-        """
-        if len(self._process) > 1:
-            # Sort processes
-            proc_df = pd.DataFrame(
-                self._process,
-                columns=[
-                    "Process_ID",
-                    "Process_label",
-                    "Input_data_level",
-                    "Output_data_level",
-                    "Application_sequence",
-                    "Method_callable",
-                    "Full_app_seq",
-                    "Alternative_number",
-                ],
-            )
-            proc_sorted = proc_df.sort_values(by=["Full_app_seq", "Alternative_number"])
-            proc_sorted = np.array(proc_sorted)
-            proc = [tuple(pit) for pit in proc_sorted]
-            # Update processes
-            self._process = proc
-
-    # Generate process steps
-    # Format of associated attribute:
-    # [0 Process_ID, 1 Process_label, 2 Input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
-    def _generate_process_steps(self) -> None:
-        """
-        Generates process steps of Process_IDs, representing a sequential workflow of added process items.
-        Length of the chain list represents the total number of proccessing steps.
-        """
-        if len(self._process) > 0:
-            # Sort process
-            self._sort_proc()
-            # Grow a process tree
-            pchain = []
-            fseq = -1
-            pti = -1
-            p_item: tuple[str, str, str, str, int, Callable, int, int]
-            for p_item in self._process:
-                if p_item[6] != fseq:
-                    pchain.append([p_item[0]])
-                    fseq = p_item[6]
-                    pti = pti + 1
-                else:
-                    pchain[pti].append(p_item[0])
-            # Update tree
-            self._process_steps = pchain
-        else:
-            raise ValueError("No process added")
-
-    # Number to mixed radix vector
-    @simple_type_validator
-    def _num_to_mixed_radix(self, number: int, shape: Union[list[int], tuple[int]]) -> list[int]:
-        """
-        Converts a given integer number into the index of a mixed-radix numeral system with given shape
-        """
-        digits = []
-        for radix in reversed(shape):
-            digits.append(number % radix)
-            number = number // radix
-        return list(reversed(digits))
-
-    # Generate process chains
-    def _generate_process_chains(self) -> None:
-        """
-        Generates a list of all actual chains of added process items in execution.
-        Each chain corresponds to an unique final results.
-        """
-        process_steps = self._process_steps
-        # Get number of chains and chain shape
-        nchain = 1
-        chain_shape = []
-        for proc_ids in process_steps:
-            nids = len(proc_ids)
-            chain_shape.append(nids)
-            nchain = nchain * nids
-        # Fill the chain table
-        pcs = np.full((nchain, len(chain_shape)), np.nan, dtype="O")
-        for i in range(pcs.shape[0]):
-            sidi = self._num_to_mixed_radix(i, chain_shape)
-            for j in range(pcs.shape[1]):
-                pcs[i, j] = process_steps[j][sidi[j]]
-        # Update process chains
-        self._process_chains = [tuple(pc) for pc in pcs]
-
-    # Generate process id - label reference table
-    def _process_id_label_ref(self) -> np.ndarray:
-        """Generate process id - label reference table, return the table [proc_id, label]"""
-        ref_table = []
-        for proc in self.process:
-            if proc[1] != "":
-                label_name = proc[1]
-            else:
-                label_name = proc[5].__name__
-            ref_table.append((proc[0], label_name))
-        result: np.ndarray = np.array(ref_table)
-        return result
-
-    # Convert process ID to process label
-    def _process_id_to_label(self, process_id: str, ref_table: np.ndarray) -> str:
-        """Convert process ID to process label"""
-        proc_label_item = ref_table[ref_table[:, 0] == process_id]
-        if len(proc_label_item) == 1:
-            return str(proc_label_item[0, 1])
-        elif len(proc_label_item) == 0:
-            raise ValueError(f"Got invalid process ID '{process_id}', no corresponding process label found.")
-        else:
-            raise ValueError(
-                f"Process ID '{process_id}' has multiple label references: {proc_label_item[:, 1]}. \
-                    This indicates corrupted process data."
-            )
-
-    # List process chains
-    @simple_type_validator
-    def ls_process_chains(
-        self, print_label: bool = True, return_label: bool = False
-    ) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame], None]:
-        """
-        List process chains.
-
-        Returns the default full factorial process chains.
-        For custom chains, use 'ls_custom_chains'.
-
-        Output is a dataframe, where each row represents a processing chain with process IDs.
-
-        Parameters
-        ----------
-        print_label : bool, optional
-            If True, prints chains using chain label. The default is True.
-
-        return_label : bool, optional
-            If True, return additional dataframe of process labels. The default is False.
-
-        Examples
-        --------
-        For created SpecPipe instance 'pipe':
-        >>> pipe.ls_process_chains()
-
-        Or equivalent:
-        >>> pipe.process_chains_to_df()
-
-        Return label display in addition to process ID display:
-        >>> pipe.ls_process_chains(return_label=True)
-
-        """
-        if len(self._process_chains) > 0:
-            df_chains = pd.DataFrame(
-                self._process_chains,
-                columns=["Step_" + str(i) for i in range(len(self._process_chains[0]))],
-            )
-            if return_label or print_label:
-                df_chains_label = copy.deepcopy(df_chains)
-                ref_table = self._process_id_label_ref()
-                for i in range(df_chains.shape[0]):
-                    for j in range(df_chains.shape[1]):
-                        df_chains_label.iloc[i, j] = self._process_id_to_label(df_chains.iloc[i, j], ref_table)
-                if print_label:
-                    with pd.option_context("display.max_rows", None, "display.max_columns", None):
-                        print(df_chains_label)
-                if return_label:
-                    return df_chains, df_chains_label
-                else:
-                    return df_chains
-            else:
-                return df_chains
-        else:
-            print("No process chain found")
-            return None
-
-    # Alias
-    process_chains_to_df = ls_process_chains
-
-    # Save pipeline configurations
-    @simple_type_validator
-    def save_pipe_config(self, copy: bool = False, save_spec_exp_config: bool = True) -> None:
-        """
-        Save current pipeline configurations to files in the root of report directory.
-
-        Parameters
-        ----------
-        copy : bool, optional
-            Whether to create a backup copy of configuration files. The default is True.
-
-        save_spec_exp_config : bool, optional
-            Whether to save data configurations of SpecExp. The default is True.
-
-        Examples
-        --------
-        For created SpecPipe instance 'pipe':
-        >>> pipe.save_pipe_config()
-        Or:
-        >>> pipe.save_config()
-
-        Save copy as well:
-        >>> pipe.save_pipe_config(copy=True)
-
-        """
-        # Create save dir
-        report_dir = self.report_directory + "SpecPipe_configuration/"
-        if not os.path.exists(unc_path(report_dir)):
-            os.makedirs(unc_path(report_dir))
-
-        # Get configs
-        df_process = self.ls_process(print_result=False, return_result=True)
-        df_full_chains, df_full_chains_label = self.ls_process_chains(print_label=False, return_label=True)
-        df_exec_chains, df_exec_chains_label = self.ls_chains(print_label=False, return_label=True)
-
-        # Save configs
-        df_process.to_csv(unc_path(report_dir + "SpecPipe_added_process.csv"), index=False)
-        df_full_chains.to_csv(unc_path(report_dir + "SpecPipe_full_factorial_chains_in_ID.csv"), index=False)
-        df_full_chains_label.to_csv(unc_path(report_dir + "SpecPipe_full_factorial_chains_in_label.csv"), index=False)
-        df_exec_chains.to_csv(unc_path(report_dir + "SpecPipe_exec_chains_in_ID.csv"), index=False)
-        df_exec_chains_label.to_csv(unc_path(report_dir + "SpecPipe_exec_chains_in_label.csv"), index=False)
-
-        # Save SpecPipe
-        with open(unc_path(f"{report_dir}SpecPipe_pipeline_configuration_{self.create_time}.dill"), 'wb') as f:
-            dill.dump(self, f)
-
-        # Save copies
-        if copy:
-            # Prevent duplication
-            time.sleep(1.0)
-            # Dump copy
-            cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            df_process.to_csv(unc_path(report_dir + f"SpecPipe_added_process_{cts}.csv"), index=False)
-            df_full_chains.to_csv(unc_path(report_dir + f"SpecPipe_full_factorial_chains_in_ID_{cts}.csv"), index=False)
-            df_full_chains_label.to_csv(
-                unc_path(report_dir + f"SpecPipe_full_factorial_chains_in_label_{cts}.csv"), index=False
-            )
-            df_exec_chains.to_csv(unc_path(report_dir + f"SpecPipe_exec_chains_in_ID_{cts}.csv"), index=False)
-            df_exec_chains_label.to_csv(unc_path(report_dir + f"SpecPipe_exec_chains_in_label_{cts}.csv"), index=False)
-            with open(
-                unc_path(report_dir + f"SpecPipe_pipeline_configuration_{self.create_time}_copy_at_{cts}.dill"), 'wb'
-            ) as f:
-                dill.dump(self, f)
-
-        # Save SpecExp
-        if save_spec_exp_config:
-            self.spec_exp.save_data_config(copy=copy)
-
-        # Print output path
-        print(
-            f"\nSpecPipe configurations saved to: \
-              {report_dir}SpecPipe_pipeline_configuration_{self.create_time}.dill\n"
-        )
-
-    # Alias
-    save_config = save_pipe_config
-
-    # Load pipeline configurations
-    @simple_type_validator
-    def load_pipe_config(self, config_file_path: str = "") -> None:
-        """
-        Load SpecPipe configurations from dill file.
-
-        Parameters
-        ----------
-        config_file_path : str, optional
-            Configuration file path of 'SpecExp_data_configuration_(creating-time).dill'.
-            The path can be absolute path of the dill file or its relative path to report directory.
-            If not given, the path will be '(SpecExp.report_directory)/SpecExp_configuration/SpecExp_data_configuration_(SpecExp.create_time).dill'
-
-        Examples
-        --------
-        For created SpecPipe instance 'pipe':
-        >>> pipe.save_pipe_config()
-
-        Load from default path:
-        >>> pipe.load_pipe_config()
-        Or:
-        >>> pipe.load_config()
-
-        Load from custom configuration file path:
-        >>> pipe.load_pipe_config("/pipe_config.dill")
-
-        """  # noqa: E501
-        # Load path
-        if config_file_path == "":
-            dump_path0 = (
-                self.report_directory
-                + "SpecPipe_configuration/"
-                + f"SpecPipe_pipeline_configuration_{self.create_time}.dill"
-            )
-        elif ("/" not in config_file_path) & ("\\" not in config_file_path):
-            dump_path0 = self.report_directory + "SpecPipe_configuration/" + config_file_path
-        else:
-            dump_path0 = config_file_path
-
-        # Load to instance
-        with open(unc_path(dump_path0), 'rb') as f:
-            loaded_instance = dill.load(f)
-        self.__dict__.update(loaded_instance.__dict__)
-
-    # Alias
-    load_config = load_pipe_config
-
-    # Read process chains from dataframe
-    @simple_type_validator
-    def custom_chains_from_df(
-        self,
-        # process_chain_dataframe: Annotated[Any, AfterValidator(dataframe_validator())]
-        process_chain_dataframe: Annotated[Any, dataframe_validator()],
-    ) -> None:
-        """
-        Customize processing chains and update chains using chain dataframe.
-
-        Once custom chains are created, SpecPipe will prioritize their execution, bypassing the original full chains.
-
-        Read custom process chains from process chain dataframe:
-            Columns must be ['Step_1', 'Step_2', ...] and the length must be identical as the column length of process_chains.
-            All values should be valid process IDs
-
-        It is recommended to modify the dataframe from method 'process_chains_to_df' and set the modified dataframe as custom chains.
-
-        Examples
-        --------
-        For created SpecPipe instance 'pipe':
-        >>> df_chain = pipe.process_chains_to_df()
-
-        After modification, load the modified:
-        >>> pipe.custom_chains_from_df(df_chain_modified)
-
-        """  # noqa: E501
-        # Validate chain df
-        process_chain_dataframe = dataframe_validator(dtype="str", ncol=len(self._process_chains[0]))(
-            process_chain_dataframe
-        )
-
-        # Convert chain df to list
-        cchain = [tuple(row) for row in process_chain_dataframe.to_numpy()]
-        full_chain = self._process_chains
-
-        # Validate given custom chains
-        for ind, ccr in enumerate(cchain):
-            if ccr not in full_chain:
-                raise ValueError(
-                    f"\nInvalid process chain in given chains: \n{ccr}, \nRow index of invalid chain: {ind}"
-                )
-
-        # Change process test status
-        self._tested = False
-
-        # Update
-        self._custom_chains = cchain
-
-    # List custom process chains
-    @simple_type_validator
-    def ls_custom_chains(
-        self, print_label: bool = True, return_label: bool = False
-    ) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame], None]:
-        """
-        List custom process chains.
-
-        Output is a dataframe, where each row represents a processing chain with process IDs.
-
-        Parameters
-        ----------
-        print_label : bool, optional
-            If True, prints chains using chain label. The default is True.
-
-        return_label : bool, optional
-            If True, return additional dataframe of process labels. The default is False.
-
-        Examples
-        --------
-        For created SpecPipe instance 'pipe':
-        >>> df_chain = pipe.ls_custom_chains()
-
-        """
-        if len(self._custom_chains) > 0:
-            df_chains = pd.DataFrame(
-                self._custom_chains,
-                columns=["Step_" + str(i) for i in range(len(self._custom_chains[0]))],
-            )
-            if return_label or print_label:
-                df_chains_label = copy.deepcopy(df_chains)
-                ref_table = self._process_id_label_ref()
-                for i in range(df_chains.shape[0]):
-                    for j in range(df_chains.shape[1]):
-                        df_chains_label.iloc[i, j] = self._process_id_to_label(df_chains.iloc[i, j], ref_table)
-                if print_label:
-                    with pd.option_context("display.max_rows", None, "display.max_columns", None):
-                        print(df_chains_label)
-                if return_label:
-                    return df_chains, df_chains_label
-                else:
-                    return df_chains
-            else:
-                return df_chains
-        else:
-            print("No custom chain configured")
-            return None
-
-    # Alias
-    custom_chains_to_df = ls_custom_chains
-
-    # List default chains
-    @simple_type_validator
-    def ls_chains(
-        self, print_label: bool = True, return_label: bool = False
-    ) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame], None]:
-        """
-        List the process chains in the pipeline execution.
-        Returns custom chains if configured, otherwise returns default full factorial chains.
-
-        Output is a dataframe, where each row represents a processing chain with process IDs.
-
-        Parameters
-        ----------
-        print_label : bool, optional
-            If True, prints chains using chain label. The default is True.
-
-        return_label : bool, optional
-            If True, return additional dataframe of process labels. The default is False.
-
-        Examples
-        --------
-        For created SpecPipe instance 'pipe':
-        >>> df_chain = pipe.ls_chains()
-
-        """
-        if len(self._custom_chains) > 0:
-            result = self.ls_custom_chains(print_label, return_label)
-        else:
-            result = self.ls_process_chains(print_label, return_label)
-        return result
 
     # Get matched and unmatched process items
     # Format of associated attribute:
@@ -2123,76 +1845,102 @@ class SpecPipe:
         return_result: bool = False,
     ) -> Optional[pd.DataFrame]:
         """
-        List process items filtered by process properties.
-        If a property is not specified, the property will be ignored in filtering.
-        If return_df is set True, a complete dataframe of processes is returned, if False, a simplified dataframe is printed.
+        List process items based on filtering conditions.
+        If a filter criterion is not provided, the corresponding filter is not applied.
 
         Parameters
         ----------
         process_id : str, optional
-            Process ID. The default is None.
+            Process ID.
+            The default is None.
 
         process_label : str, optional
-            Custom process_label. The default is None.
-
-        input_data_level : Union[str,int], optional
-            See SpecPipe.add_process.
+            Custom process label.
             The default is None.
 
-        output_data_level : Union[str,int], optional
-            See SpecPipe.add_process.
+        input_data_level : str or int, optional
+            Input data level of the process.
+
+            See ``add_process`` for available options.
             The default is None.
 
-        application_sequence : int, optional
-            Exact sequence number or sequence number range of the method in a data level.
-            Range must be specified in tuple.
+        output_data_level : str or int, optional
+            Output data level of the process.
+
+            See ``add_process`` for available options.
             The default is None.
 
-        method : Union[str,object,Callable], optional
-            Method function or function name. The default is None.
+        application_sequence : int or tuple of int, optional
+            Exact sequence number or a sequence number range within a data level.
 
-        full_application_sequence : int, optional
-            Exact sequence number or sequence number range of the method in the entire pipeline.
-            Range must be specified in tuple.
+            Ranges must be specified as a tuple.
+            The default is None.
+
+        method : str or callable or object, optional
+            Method function, method name, or method object.
+            The default is None.
+
+        full_application_sequence : int or tuple of int, optional
+            Exact sequence number or a sequence number range within the entire pipeline.
+            Ranges must be specified as a tuple.
             The default is None.
 
         exact_match : bool, optional
-            If False, any process with property value containing the specified value is removed.
+            If False, processes whose property values partially match the specified value are included.
             The default is True.
 
         print_df : bool, optional
-            If simplified results are printed. The default is True.
+            Whether to print simplified matched process items.
+            The default is True.
 
         return_df : bool, optional
-            If a complete resulting dataframe is returned. The default is False.
+            Whether to return a dataframe of matched process items.
+            The default is False.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+            If ``return_df=True``, returns a pandas DataFrames of matched process items.
+
+            If ``return_df=False``, returns None.
+
+        See Also
+        --------
+        add_process
 
         Examples
         --------
-        For created SpecExp instance 'exp':
-        >>> pipe = SpecPipe(exp)
+        For prepared ``SpecExp`` instance ``exp``::
 
-        >>> from specpipe.functions import snv
-        >>> pipe.add_process(2, 2, 0, snv)
+            >>> pipe = SpecPipe(exp)
+            >>> from specpipe.functions import snv
+            >>> pipe.add_process(2, 2, 0, snv)
 
-        List all added processes:
-        >>> pipe.ls_process()
+        List all added processes::
 
-        List processes by input data level:
-        >>> pipe.ls_process(input_data_level=2)
+            >>> pipe.ls_process()
 
-        List processes by output data level:
-        >>> pipe.ls_process(output_data_level=2)
+        List processes by input data level::
 
-        List processes by method:
-        >>> pipe.ls_process(method='snv')
+            >>> pipe.ls_process(input_data_level=2)
 
-        List processes by method by part of the method name string:
-        >>> pipe.ls_process(method='nv', exact_match=False)
+        List processes by output data level::
 
-        Return results instead of print:
-        >>> df_process = pipe.ls_process(print_df=False, return_df=True)
+            >>> pipe.ls_process(output_data_level=2)
 
+        List processes by method::
+
+            >>> pipe.ls_process(method='snv')
+
+        List processes by partial method name::
+
+            >>> pipe.ls_process(method='nv', exact_match=False)
+
+        Return results instead of printing::
+
+            >>> df_process = pipe.ls_process(print_df=False, return_df=True)
         """  # noqa: E501
+
         # Get matched processes
         matched = self._get_process(
             process_id,
@@ -2244,17 +1992,6 @@ class SpecPipe:
         else:
             raise ValueError("At least one of return_result or print_result must be True.")
 
-    # Update custom process chains
-    def _update_custom_chains(self) -> None:
-        if len(self._custom_chains) > 0:
-            # Remove non-existed chains
-            new_chains = []
-            for chain in self._custom_chains:
-                if chain in self._process_chains:
-                    new_chains.append(chain)
-            # Update
-            self._custom_chains = new_chains
-
     # Remove process
     # Format of associated attribute:
     # [0 Process_ID, 1 Process_label, 2 Input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
@@ -2275,62 +2012,89 @@ class SpecPipe:
         exact_match: bool = True,
     ) -> None:
         """
-        Remove added processes by ID, Process_label, Data_level, Application_sequence and Method.
-        If a property is not specified, the property criterion will be ignored.
+        Remove process items based on filtering conditions.
+        If a filter criterion is not provided, the corresponding filter is not applied.
 
         Parameters
         ----------
         process_id : str, optional
-            Process ID. The default is None.
+            Process ID.
+            The default is None.
 
         process_label : str, optional
-            Custom process_label. The default is None.
-
-        input_data_level : Union[str,int], optional
-            See SpecPipe.add_process.
+            Custom process label.
             The default is None.
 
-        output_data_level : Union[str,int], optional
-            See SpecPipe.add_process.
+        input_data_level : str or int, optional
+            Input data level of the process.
+            See ``add_process`` for available options.
             The default is None.
 
-        application_sequence : int, optional
-            Exact sequence number or sequence number range of the method in a data level.
-            Range must be specified in tuple.
+        output_data_level : str or int, optional
+            Output data level of the process.
+            See ``add_process`` for available options.
             The default is None.
 
-        method : Union[str,Callable,object], optional
-            Method function or function name. The default is None.
+        application_sequence : int or tuple of int, optional
+            Exact sequence number or a sequence number range within a data level.
+            Ranges must be specified as a tuple.
+            The default is None.
+
+        method : str or callable or object, optional
+            Method function, method name, or method object.
+            The default is None.
+
+        full_application_sequence : int or tuple of int, optional
+            Exact sequence number or a sequence number range within the entire pipeline.
+            Ranges must be specified as a tuple.
+            The default is None.
 
         exact_match : bool, optional
-            If False, any process with property value containing the specified value is removed.
+            If False, processes whose property values partially match the specified
+            value are included.
             The default is True.
+
+        print_df : bool, optional
+            Whether to print simplified matched process items.
+            The default is True.
+
+        return_df : bool, optional
+            Whether to return a dataframe of matched process items.
+            The default is False.
+
+        See Also
+        --------
+        add_process
 
         Examples
         --------
-        For created SpecExp instance 'exp':
-        >>> pipe = SpecPipe(exp)
+        For prepared ``SpecExp`` instance ``exp``::
 
-        >>> from specpipe.functions import snv
-        >>> pipe.add_process(2, 2, 0, snv)
+            >>> pipe = SpecPipe(exp)
+            >>> from specpipe.functions import snv
+            >>> pipe.add_process(2, 2, 0, snv)
 
-        Remove all added processes:
-        >>> pipe.rm_process()
+        Remove all added processes::
 
-        Remove processes by input data level:
-        >>> pipe.rm_process(input_data_level=2)
+            >>> pipe.rm_process()
 
-        Remove processes by output data level:
-        >>> pipe.rm_process(output_data_level=2)
+        Remove processes by input data level::
 
-        Remove processes by method:
-        >>> pipe.rm_process(method='snv')
+            >>> pipe.rm_process(input_data_level=2)
 
+        Remove processes by output data level::
+
+            >>> pipe.rm_process(output_data_level=2)
+
+        Remove processes by method::
+
+            >>> pipe.rm_process(method='snv')
         """
+
         # Not applied parameters
         full_application_sequence = None
         # Change process test status
-        self._tested = False
+        self.__tested = False
 
         # Filter processes
         matched, unmatched = self._get_process(
@@ -2392,6 +2156,542 @@ class SpecPipe:
             else:
                 print("\nNo matched process found")
 
+    # Update custom process chains
+    def _update_custom_chains(self) -> None:
+        if len(self._custom_chains) > 0:
+            # Remove non-existed chains
+            new_chains = []
+            for chain in self._custom_chains:
+                if chain in self._process_chains:
+                    new_chains.append(chain)
+            # Update
+            self._custom_chains = new_chains
+
+    # Sort processes
+    # Format of associated attribute:
+    # [0 Process_ID, 1 Process_label, 2 Input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
+    def _sort_proc(self) -> None:
+        """
+        Sort added processes
+        """
+        if len(self._process) > 1:
+            # Sort processes
+            proc_df = pd.DataFrame(
+                self._process,
+                columns=[
+                    "Process_ID",
+                    "Process_label",
+                    "Input_data_level",
+                    "Output_data_level",
+                    "Application_sequence",
+                    "Method_callable",
+                    "Full_app_seq",
+                    "Alternative_number",
+                ],
+            )
+            proc_sorted = proc_df.sort_values(by=["Full_app_seq", "Alternative_number"])
+            proc_sorted = np.array(proc_sorted)
+            proc = [tuple(pit) for pit in proc_sorted]
+            # Update processes
+            self._process = proc
+
+    # Generate process steps
+    # Format of associated attribute:
+    # [0 Process_ID, 1 Process_label, 2 Input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
+    def _generate_process_steps(self) -> None:
+        """
+        Generates process steps of Process_IDs, representing a sequential workflow of added process items.
+        Length of the chain list represents the total number of proccessing steps.
+        """
+        if len(self._process) > 0:
+            # Sort process
+            self._sort_proc()
+            # Grow a process tree
+            pchain = []
+            fseq = -1
+            pti = -1
+            p_item: tuple[str, str, str, str, int, Callable, int, int]
+            for p_item in self._process:
+                if p_item[6] != fseq:
+                    pchain.append([p_item[0]])
+                    fseq = p_item[6]
+                    pti = pti + 1
+                else:
+                    pchain[pti].append(p_item[0])
+            # Update tree
+            self._process_steps = pchain
+        else:
+            raise ValueError("No process added")
+
+    # Number to mixed radix vector
+    @simple_type_validator
+    def _num_to_mixed_radix(self, number: int, shape: Union[list[int], tuple[int]]) -> list[int]:
+        """
+        Converts a given integer number into the index of a mixed-radix numeral system with given shape
+        """
+        digits = []
+        for radix in reversed(shape):
+            digits.append(number % radix)
+            number = number // radix
+        return list(reversed(digits))
+
+    # Generate process chains
+    def _generate_process_chains(self) -> None:
+        """
+        Generates a list of all actual chains of added process items in execution.
+        Each chain corresponds to an unique final results.
+        """
+        process_steps = self._process_steps
+        # Get number of chains and chain shape
+        nchain = 1
+        chain_shape = []
+        for proc_ids in process_steps:
+            nids = len(proc_ids)
+            chain_shape.append(nids)
+            nchain = nchain * nids
+        # Fill the chain table
+        pcs = np.full((nchain, len(chain_shape)), np.nan, dtype="O")
+        for i in range(pcs.shape[0]):
+            sidi = self._num_to_mixed_radix(i, chain_shape)
+            for j in range(pcs.shape[1]):
+                pcs[i, j] = process_steps[j][sidi[j]]
+        # Update process chains
+        self._process_chains = [tuple(pc) for pc in pcs]
+
+    # Generate process id - label reference table
+    def _process_id_label_ref(self) -> np.ndarray:
+        """Generate process id - label reference table, return the table [proc_id, label]"""
+        ref_table = []
+        for proc in self.process:
+            if proc[1] != "":
+                label_name = proc[1]
+            else:
+                label_name = proc[5].__name__
+            ref_table.append((proc[0], label_name))
+        result: np.ndarray = np.array(ref_table)
+        return result
+
+    # Convert process ID to process label
+    def _process_id_to_label(self, process_id: str, ref_table: np.ndarray) -> str:
+        """Convert process ID to process label"""
+        proc_label_item = ref_table[ref_table[:, 0] == process_id]
+        if len(proc_label_item) == 1:
+            return str(proc_label_item[0, 1])
+        elif len(proc_label_item) == 0:
+            raise ValueError(f"Got invalid process ID '{process_id}', no corresponding process label found.")
+        else:
+            raise ValueError(
+                f"Process ID '{process_id}' has multiple label references: {proc_label_item[:, 1]}. \
+                    This indicates corrupted process data."
+            )
+
+    # List process chains
+    @simple_type_validator
+    def ls_process_chains(
+        self, print_label: bool = True, return_label: bool = False
+    ) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame], None]:
+        """
+        List process chains. Returns the default full-factorial process chains.
+
+        Returns a dataframe where each row represents a processing chain with process IDs.
+        For custom chains, use ``ls_custom_chains``.
+
+        Parameters
+        ----------
+        print_label : bool, optional
+            If True, prints chains using chain label. Default is True.
+
+        return_label : bool, optional
+            If True, returns an additional dataframe of process labels. Default is False.
+
+        Returns
+        -------
+        pandas.DataFrame or tuple of pandas.DataFrame or None
+            If ``return_label=False``, returns a ``pandas.DataFrame`` of process chains in process IDs.
+
+            If ``return_label=True``, returns a tuple of 2 ``pandas.DataFrame`` of process chains in IDs and labels.
+
+            If no process is added to this SpecPipe instance, returns None.
+
+        See Also
+        --------
+        ls_custom_chains
+
+        Notes
+        -----
+        This method is also available as ``process_chains_to_df``.
+
+        Examples
+        --------
+        For prepared ``SpecPipe`` instance ``pipe``::
+
+            >>> pipe.ls_process_chains()
+
+        Or equivalent::
+
+            >>> pipe.process_chains_to_df()
+
+        Return label display in addition to process ID display::
+
+            >>> pipe.ls_process_chains(return_label=True)
+        """
+
+        if len(self._process_chains) > 0:
+            df_chains = pd.DataFrame(
+                self._process_chains,
+                columns=["Step_" + str(i) for i in range(len(self._process_chains[0]))],
+            )
+            if return_label or print_label:
+                df_chains_label = copy.deepcopy(df_chains)
+                ref_table = self._process_id_label_ref()
+                for i in range(df_chains.shape[0]):
+                    for j in range(df_chains.shape[1]):
+                        df_chains_label.iloc[i, j] = self._process_id_to_label(df_chains.iloc[i, j], ref_table)
+                if print_label:
+                    with pd.option_context("display.max_rows", None, "display.max_columns", None):
+                        print(df_chains_label)
+                if return_label:
+                    return df_chains, df_chains_label
+                else:
+                    return df_chains
+            else:
+                return df_chains
+        else:
+            print("No process chain found")
+            return None
+
+    # Alias
+    process_chains_to_df = ls_process_chains
+
+    # Read process chains from dataframe
+    @simple_type_validator
+    def custom_chains_from_df(
+        self,
+        # process_chain_dataframe: Annotated[Any, AfterValidator(dataframe_validator())]
+        process_chain_dataframe: Annotated[Any, dataframe_validator()],
+    ) -> None:
+        """
+        Customize processing chains and update chains using a chain dataframe.
+
+        Once custom chains are created, SpecPipe will prioritize their execution, bypassing the original full-factorial chains.
+
+        Parameters
+        ----------
+        process_chain_dataframe : pandas.DataFrame-like
+            A process chain dataframe.
+
+            Must be a subset of the original full-factorial chains.
+            Columns must be ['Step_1', 'Step_2', ...] and the length must match the column length of ``process_chains``.
+            And all values must be valid process IDs of SpecPipe.
+
+            It is recommended to modify the dataframe obtained from ``process_chains_to_df`` to get the custom process chain dataframe.
+
+        See Also
+        --------
+        ls_process_chains
+        process_chains_to_df
+
+        Examples
+        --------
+        For prepared ``SpecPipe`` instance ``pipe``::
+
+            >>> df_chain = pipe.process_chains_to_df()
+
+        After modification, load the modified dataframe::
+
+            >>> pipe.custom_chains_from_df(df_chain_modified)
+        """  # noqa: E501
+
+        # Validate chain df
+        process_chain_dataframe = dataframe_validator(dtype="str", ncol=len(self._process_chains[0]))(
+            process_chain_dataframe
+        )
+
+        # Convert chain df to list
+        cchain = [tuple(row) for row in process_chain_dataframe.to_numpy()]
+        full_chain = self._process_chains
+
+        # Validate given custom chains
+        for ind, ccr in enumerate(cchain):
+            if ccr not in full_chain:
+                raise ValueError(
+                    f"\nInvalid process chain in given chains: \n{ccr}, \nRow index of invalid chain: {ind}"
+                )
+
+        # Change process test status
+        self.__tested = False
+
+        # Update
+        self._custom_chains = cchain
+
+    # List custom process chains
+    @simple_type_validator
+    def ls_custom_chains(
+        self, print_label: bool = True, return_label: bool = False
+    ) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame], None]:
+        """
+        List customized process chains.
+
+        Returns a dataframe where each row represents a processing chain with process IDs.
+
+        Parameters
+        ----------
+        print_label : bool, optional
+            If True, prints chains using chain label. Default is True.
+
+        return_label : bool, optional
+            If True, returns an additional dataframe of process labels. Default is False.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+            If ``return_label=False``, returns a ``pandas.DataFrame`` of process chains in process IDs.
+
+            If ``return_label=True``, returns a tuple of 2 ``pandas.DataFrame`` of process chains in IDs and labels.
+
+            If no custom chain is specified in this SpecPipe instance, returns None.
+
+        See Also
+        --------
+        ls_process_chains
+
+        Notes
+        -----
+        This method is also available as ``custom_chains_to_df``.
+
+        Examples
+        --------
+        For prepared ``SpecPipe`` instance ``pipe``::
+
+            >>> df_chain = pipe.ls_custom_chains()
+        """
+
+        if len(self._custom_chains) > 0:
+            df_chains = pd.DataFrame(
+                self._custom_chains,
+                columns=["Step_" + str(i) for i in range(len(self._custom_chains[0]))],
+            )
+            if return_label or print_label:
+                df_chains_label = copy.deepcopy(df_chains)
+                ref_table = self._process_id_label_ref()
+                for i in range(df_chains.shape[0]):
+                    for j in range(df_chains.shape[1]):
+                        df_chains_label.iloc[i, j] = self._process_id_to_label(df_chains.iloc[i, j], ref_table)
+                if print_label:
+                    with pd.option_context("display.max_rows", None, "display.max_columns", None):
+                        print(df_chains_label)
+                if return_label:
+                    return df_chains, df_chains_label
+                else:
+                    return df_chains
+            else:
+                return df_chains
+        else:
+            print("No custom chain configured")
+            return None
+
+    # Alias
+    custom_chains_to_df = ls_custom_chains
+
+    # List default chains
+    @simple_type_validator
+    def ls_chains(
+        self, print_label: bool = True, return_label: bool = False
+    ) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame], None]:
+        """
+        List process chains for the pipeline execution.
+
+        Returns custom process chains if they are specified; otherwise, returns the default full-factorial process chains.
+
+        Returns a dataframe where each row represents a processing chain with process IDs.
+
+        Parameters
+        ----------
+        print_label : bool, optional
+            If True, prints chains using chain label. Default is True.
+
+        return_label : bool, optional
+            If True, returns an additional dataframe of process labels. Default is False.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+            If ``return_label=False``, returns a ``pandas.DataFrame`` of process chains in process IDs.
+
+            If ``return_label=True``, returns a tuple of 2 ``pandas.DataFrame`` of process chains in IDs and labels.
+
+            If no custom chain is specified in this SpecPipe instance, returns None.
+
+        See Also
+        --------
+        ls_process_chains
+        ls_custom_chains
+
+        Examples
+        --------
+        For created ``SpecPipe`` instance ``pipe``::
+
+            >>> df_chain = pipe.ls_chains()
+        """  # noqa: E501
+        if len(self._custom_chains) > 0:
+            result = self.ls_custom_chains(print_label, return_label)
+        else:
+            result = self.ls_process_chains(print_label, return_label)
+        return result
+
+    # Save pipeline configurations
+    @simple_type_validator
+    def save_pipe_config(self, copy: bool = False, save_spec_exp_config: bool = True) -> None:
+        """
+        Save the current pipeline configuration files to the root of the report directory.
+
+        Parameters
+        ----------
+        copy : bool, optional
+            Whether to create a backup copy of the configuration files.
+            The default is True.
+
+        save_spec_exp_config : bool, optional
+            Whether to save the data configuration of the associated ``SpecExp`` instance of this SpecPipe instance.
+            The default is True.
+
+        Notes
+        -----
+        This method is also available as ``save_config``.
+
+        Examples
+        --------
+        For a created SpecPipe instance ``pipe``::
+
+            >>> pipe.save_pipe_config()
+
+        Or equivalently::
+
+            >>> pipe.save_config()
+
+        Save a backup copy as well::
+
+            >>> pipe.save_pipe_config(copy=True)
+        """
+
+        # Create save dir
+        report_dir = self.report_directory + "SpecPipe_configuration/"
+        if not os.path.exists(unc_path(report_dir)):
+            os.makedirs(unc_path(report_dir))
+
+        # Get configs
+        df_process = self.ls_process(print_result=False, return_result=True)
+        df_full_chains, df_full_chains_label = self.ls_process_chains(print_label=False, return_label=True)
+        df_exec_chains, df_exec_chains_label = self.ls_chains(print_label=False, return_label=True)
+
+        # Save configs
+        df_process.to_csv(unc_path(report_dir + "SpecPipe_added_process.csv"), index=False)
+        df_full_chains.to_csv(unc_path(report_dir + "SpecPipe_full_factorial_chains_in_ID.csv"), index=False)
+        df_full_chains_label.to_csv(unc_path(report_dir + "SpecPipe_full_factorial_chains_in_label.csv"), index=False)
+        df_exec_chains.to_csv(unc_path(report_dir + "SpecPipe_exec_chains_in_ID.csv"), index=False)
+        df_exec_chains_label.to_csv(unc_path(report_dir + "SpecPipe_exec_chains_in_label.csv"), index=False)
+
+        # Save SpecPipe
+        with open(unc_path(f"{report_dir}SpecPipe_pipeline_configuration_{self.create_time}.dill"), 'wb') as f:
+            dill.dump(self, f)
+
+        # Save copies
+        if copy:
+            # Prevent duplication
+            time.sleep(1.0)
+            # Dump copy
+            cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            df_process.to_csv(unc_path(report_dir + f"SpecPipe_added_process_{cts}.csv"), index=False)
+            df_full_chains.to_csv(unc_path(report_dir + f"SpecPipe_full_factorial_chains_in_ID_{cts}.csv"), index=False)
+            df_full_chains_label.to_csv(
+                unc_path(report_dir + f"SpecPipe_full_factorial_chains_in_label_{cts}.csv"), index=False
+            )
+            df_exec_chains.to_csv(unc_path(report_dir + f"SpecPipe_exec_chains_in_ID_{cts}.csv"), index=False)
+            df_exec_chains_label.to_csv(unc_path(report_dir + f"SpecPipe_exec_chains_in_label_{cts}.csv"), index=False)
+            with open(
+                unc_path(report_dir + f"SpecPipe_pipeline_configuration_{self.create_time}_copy_at_{cts}.dill"), 'wb'
+            ) as f:
+                dill.dump(self, f)
+
+        # Save SpecExp
+        if save_spec_exp_config:
+            self.spec_exp.save_data_config(copy=copy)
+
+        # Print output path
+        print(
+            f"\nSpecPipe configurations saved to: \
+              {report_dir}SpecPipe_pipeline_configuration_{self.create_time}.dill\n"
+        )
+
+    # Alias
+    save_config = save_pipe_config
+
+    # Load pipeline configurations
+    @simple_type_validator
+    def load_pipe_config(self, config_file_path: str = "") -> None:
+        """
+        Load SpecPipe configuration from a dill file.
+
+        Parameters
+        ----------
+        config_file_path : str, optional
+            Path to the SpecPipe configuration dill file.
+
+            Can be a file path or the file name in the report directory of this SpecPipe instance.
+
+            If not provided or empty, the path will be:
+
+                ``(SpecPipe.spec_exp.report_directory)/SpecPipe_configuration/SpecPipe_pipeline_configuration_created_at_(SpecExp.create_time).dill``.
+
+            Default is empty string.
+
+        See Also
+        --------
+        save_pipe_config
+
+        Notes
+        -----
+        This method is also available as ``load_config``.
+
+        Examples
+        --------
+        For a created SpecPipe instance ``pipe``::
+
+            >>> pipe.save_pipe_config()
+
+        Load from the default configuration path::
+
+            >>> pipe.load_pipe_config()
+
+        Or equivalently::
+
+            >>> pipe.load_config()
+
+        Load from a custom configuration file path::
+
+            >>> pipe.load_pipe_config("/pipe_config.dill")
+        """  # noqa: E501
+
+        # Load path
+        if config_file_path == "":
+            dump_path0 = (
+                self.report_directory
+                + "SpecPipe_configuration/"
+                + f"SpecPipe_pipeline_configuration_{self.create_time}.dill"
+            )
+        elif ("/" not in config_file_path) & ("\\" not in config_file_path):
+            dump_path0 = self.report_directory + "SpecPipe_configuration/" + config_file_path
+        else:
+            dump_path0 = config_file_path
+
+        # Load to instance
+        with open(unc_path(dump_path0), 'rb') as f:
+            loaded_instance = dill.load(f)
+        self.__dict__.update(loaded_instance.__dict__)
+
+    # Alias
+    load_config = load_pipe_config
+
     # Construct initial sample data from SpecExp
     # Sample data format - ROI: {ID, label, target, img_path, roi_coords}
     # Sample data format - standalone spec: {ID, label, target, spec1d: tuple}
@@ -2416,7 +2716,7 @@ class SpecPipe:
                 ][0]
                 sdata["roi_coords"] = roit[5]
                 sample_data.append(sdata)
-            self._sample_data = sample_data
+            self.__sample_data = sample_data
 
         # Standalone spectra (level ind 7)
         # Standalone spectrum item format: [0 id, 1 group, 2 use_type, 3 sample_name, 4 spectral_data_list]
@@ -2429,7 +2729,7 @@ class SpecPipe:
                 sdata["target"] = [tg[2] for tg in self.spec_exp.sample_targets if tg[0] == st[0]][0]
                 sdata["spec1d"] = tuple(st[4])
                 sample_data.append(sdata)
-            self._sample_data = sample_data
+            self.__sample_data = sample_data
 
         else:
             raise ValueError(
@@ -2456,44 +2756,48 @@ class SpecPipe:
         save_preprocessed_images: bool = False,
     ) -> Optional[dict]:
         """
-        Run the pipeline of all processing chains using simplified test data. This method is executed automatically prior to each formal run.
+        Run the pipeline of all processing chains using simplified test data.
+        This method is executed automatically prior to each formal run.
 
         Parameters
         ----------
         test_modeling : bool, optional
             Whether added models are tested.
-            If False, only first chain is tested. The default is True.
+            If False, only the first chain is tested. The default is True.
 
         return_result : bool, optional
-            Whether returned results of the processes are returned.
+            Whether results of the processes are returned.
             If True, results of all tested steps are returned in a list. The default is False.
 
-        dump_result : bool. optional
-            Whether test results are dumped in chains. The default is True.
+        dump_result : bool, optional
+            Whether test results are stored in the chains. The default is True.
 
         dump_backup : bool, optional
-            Whether backup for the step result is dumped. The backup file is named with the datetime of dumping.
+            Whether backup of the step results is stored.
+            The backup file is named with the datetime of dumping.
 
         Returns
         -------
-        status_results : Optional[list[dict[list,list]]]
-            List of all tested steps in dictionary:
-            * Dictionary keys must be the list of applied processes of a processing chain.
-            * Dictionary values must be list of processing results of the applied processes at all the steps of the processing chain.
+        list of dict of list or None
+            List of all tested steps in a dictionary.
+
+            Dictionary keys are the list of applied processes of a processing chain.
+
+            Dictionary values are lists of processing results of the applied processes for all steps of the processing chain.
 
         Examples
         --------
-        For created SpecPipe instance 'pipe':
-        >>> pipe.test_run()
+        For a created SpecPipe instance ``pipe``::
 
+            >>> pipe.test_run()
         """  # noqa: E501
 
         # Test data
-        if self._pretest_data is not None:
-            test_data: dict[str, Any] = copy.deepcopy(self._pretest_data)
+        if self.__pretest_data is not None:
+            test_data: dict[str, Any] = copy.deepcopy(self.__pretest_data)
         else:
             raise ValueError(
-                "Internal Error: 'SpecPipe.pretest_data' is None. \
+                "Internal Error: 'SpecPipe._pretest_data' is None. \
                     Pre-execution test data initialization fails. Please report."
             )
 
@@ -2528,7 +2832,7 @@ class SpecPipe:
             if len(self.ls_model(print_result=False, return_result=True)) > 0:
                 self._test_model(status_results, self.spec_exp.report_directory)
             # Change process test status
-            self._tested = True
+            self.__tested = True
 
         if return_result:
             return status_results
@@ -2668,58 +2972,69 @@ class SpecPipe:
         skip_test: bool = False,
     ) -> None:
         """
-        Implement preprocessing steps of all processing chains on the entire dataset and output modeling-ready sample_list data to files.
+        Run preprocessing steps of all processing chains on the entire dataset and output modeling-ready sample_list data to files.
 
         Parameters
         ----------
         result_directory : str, optional
-            Directory to save the final preprocess results. The default is using the report_directory of given SpecExp.
+            Directory to save the final preprocess results.
+            Default is the ``report_directory`` of the ``SpecExp`` instance of this ``SpecPipe`` instance.
 
         n_processor : int
-            The number of processor to use in the preprocessing. The default is 1 (Parallel processing is not applied).
+            Number of processors to use in preprocessing.
 
-            Windows Note: When using n_processor > 1 on Windows, all main codes in the working script must be placed within block "if __name__ == '__main__':".
-            This requirement comes from 'pathos', which uses dill for object serialization and is essential for parallel execution of the package functions.
+            Default is ``1`` (parallel processing is not applied).
+
+            Windows note: when using ``n_processor > 1`` on Windows, all excecutable code in the working script must be placed within::
+
+                if __name__ == '__main__':
 
         dump_backup : bool, optional
-            Create backup files of result with time stamp. The default is False.
+            Create backup files of results with timestamp. Default is False.
 
         keep_chain_results : bool, optional
-            Whether step results of the chains are kept, if False, the step results will be removed after preprocessing. The default is True.
+            Whether step results of the chains are kept.
+            If False, step results are removed after preprocessing. Default is True.
 
         final_result_only : bool, optional
-            If True, only results of final steps are saved for the chain results. The default is True.
+            If True, only results of final steps are saved for the chain results. Default is True.
 
         resume : bool
-            If True, the computation will resume from preprocessing progress logs.
-            Apply 'resume' after breaks to avoid repeated preprocessing of the processed samples. The default is False.
+            If True, computation resumes from preprocessing progress logs.
+            Apply ``resume`` to avoid repeated preprocessing after interruption.
+            Default is False.
 
         to_csv : bool
-            If True, the final results of preprocessing is also saved to CSV files in addition to dill files. The default is True.
+            If True, final preprocessing results are also saved to CSV files in addition to ``dill`` files.
+            Default is True.
 
         show_progress : bool, optional
-            Show processing progress. The default is True.
+            Show processing progress. Default is True.
 
         save_config : bool, optional
-            Save SpecPipe configurations. The default is True.
+            Save ``SpecPipe`` configurations. Default is True.
 
         summary : bool, optional
-            Whether to summarize preprocessed data and target value. The default is True.
+            Whether to summarize preprocessed data and target values. Default is True.
 
-        geo_reference_warning: bool, optional
-            Whether to suppress GeoReferenceWarning, if False, the warning is suppressed. The default is False.
+        geo_reference_warning : bool, optional
+            Whether to suppress GeoReferenceWarning. If False, the warning is suppressed.
+            Default is False.
 
-        skip_test: bool, optional
-            Whether skip test execution completely. Test execution valiates every processing chain and serves as a safeguard against runtime errors in a long formal execution.
+        skip_test : bool, optional
+            Whether to skip test execution completely.
+            Test execution validates every processing chain and serves as a safeguard against runtime errors in long formal execution.
+            Default is False.
 
         Examples
         --------
-        For created SpecPipe instance 'pipe':
-        >>> pipe.preprocessing()
+        For created ``SpecPipe`` instance ``pipe``::
 
-        Pipeline level multiprocessing:
-        >>> pipe.preprocessing(n_processor=10)
+            >>> pipe.preprocessing()
 
+        Pipeline-level multiprocessing::
+
+            >>> pipe.preprocessing(n_processor=10)
         """  # noqa: E501
         # Prompt "if __name__ == '__main__':" protection for windows multiprocessing
         if n_processor > 1:
@@ -2747,7 +3062,7 @@ class SpecPipe:
             self.save_pipe_config(copy=True)
 
         # Added chain testing
-        if not self.tested and not skip_test:
+        if not self._tested and not skip_test:
             self.test_run(test_modeling=False, return_result=False, dump_result=False, dump_backup=False)
 
         # Default result_directory
@@ -2785,7 +3100,7 @@ class SpecPipe:
 
         # Group stats for preprocessing
         if summary:
-            _ = sample_group_stats(self.report_directory, is_regression=self.is_target_numeric)
+            _ = sample_group_stats(self.report_directory, is_regression=self._is_target_numeric)
 
         # Recover NotGeoreferencedWarning
         warnings.simplefilter("default", NotGeoreferencedWarning)
@@ -2835,7 +3150,7 @@ class SpecPipe:
 
         # Check running log and subset sample data
         if not resume:
-            rest_sample_data = self.sample_data
+            rest_sample_data = self._sample_data
         else:
             if not os.path.exists(unc_path(log_dir_path)):
                 os.makedirs(unc_path(log_dir_path))
@@ -2846,12 +3161,12 @@ class SpecPipe:
                     for f in os.listdir(unc_path(log_dir_path))
                     if os.path.isfile(unc_path(log_dir_path + f))
                 ]
-                existed_samples = [sd["ID"] for sd in self.sample_data]
+                existed_samples = [sd["ID"] for sd in self._sample_data]
                 finished_samples = [sdid for sdid in finished_samples if sdid in existed_samples]
             if len(finished_samples) > 0:
-                rest_sample_data = [sd for sd in self.sample_data if sd["ID"] not in finished_samples]
+                rest_sample_data = [sd for sd in self._sample_data if sd["ID"] not in finished_samples]
             else:
-                rest_sample_data = self.sample_data
+                rest_sample_data = self._sample_data
 
         # Initialize preprocessing status for image operation
         preprocess_status = self._init_preprocessing_status()
@@ -2859,7 +3174,7 @@ class SpecPipe:
         # Preprocessing of all data and generate sample_list data of all chains
         if show_progress:
             print("\nPreprocess samples ...")
-        self._preprocess_result_path = []
+        self.__preprocess_result_path = []
 
         # Sequential compute
         if n_processor <= 1:
@@ -2885,7 +3200,7 @@ class SpecPipe:
                     update_progress_log=True,
                     preprocess_status=preprocess_status,
                 )
-                self._preprocess_result_path.append(pti)
+                self.__preprocess_result_path.append(pti)
 
         # Parallel compute
         else:
@@ -2936,7 +3251,7 @@ class SpecPipe:
             # Validate returning path list
             if len(preprocess_result_paths) != len(rest_sample_data):
                 raise ValueError(
-                    f"\nIncomplete preprocessing results, expected number of results: {len(self.sample_data)}, \
+                    f"\nIncomplete preprocessing results, expected number of results: {len(self._sample_data)}, \
                         got: {len(preprocess_result_paths)}"
                 )
             for pti in preprocess_result_paths:
@@ -2945,7 +3260,7 @@ class SpecPipe:
                 elif not os.path.exists(unc_path(pti)):
                     raise ValueError(f"\nGot invalid path: {pti}")
             # Update preprocess result file paths
-            self._preprocess_result_path = preprocess_result_paths
+            self.__preprocess_result_path = preprocess_result_paths
 
         # Clear log after finishing whole preprocessing
         if os.path.exists(unc_path(log_dir_path)):
@@ -2969,7 +3284,7 @@ class SpecPipe:
         # Validate preprocessing result file paths
         sd_paths = [
             f"{preprocess_result_dir}Step_results/PreprocessingResult_sample_{sd['label']}.dill"
-            for sd in self.sample_data
+            for sd in self._sample_data
         ]
         for sdp in sd_paths:
             if not os.path.exists(unc_path(sdp)):
@@ -3078,6 +3393,7 @@ class SpecPipe:
             'completion_status': manager.list(),
             'processed_image_init': manager.list(),
             'lock': manager.Lock(),
+            'preprocess_resume_test_num': manager.Value('i', -1),
         }
         return preprocess_status
 
@@ -3094,45 +3410,55 @@ class SpecPipe:
         summary: bool = True,
     ) -> None:
         """
-        Evaluating added models on sample data from all preprocessing chains.
-
-        Specify modeling and evaluation parameters when adding models.
+        Evaluate added models on processed sample data from all preprocessing chains.
+        Modeling and evaluation behavior is configured when models are added to the pipeline.
 
         Parameters
         ----------
-        n_processor : int, optional
-            The number of processor to use in the preprocessing. The default is 1 (Parallel processing is not applied).
+        n_processor : int
+            Number of processors to use in preprocessing.
 
-            Windows Note: When using n_processor > 1 on Windows, all main codes in the working script must be placed within block "if __name__ == '__main__':".
-            This requirement comes from 'pathos', which uses dill for object serialization and is essential for parallel execution of the package functions.
+            Default is ``1`` (parallel processing is not applied).
 
-        resume : bool, optional
-            If True, the computation will resume from preprocessing progress logs.
-            Apply 'resume' after breaks to avoid repeated preprocessing of the processed samples. The default is False.
+            Windows note: when using ``n_processor > 1`` on Windows, all excecutable code in the working script must be placed within::
+
+                if __name__ == '__main__':
+
+        resume : bool
+            If True, computation resumes from preprocessing progress logs.
+
+            Use ``resume`` to avoid repeated preprocessing after interruption.
+            Default is False.
 
         report_directory : str, optional
-            Directory for saving modeling reports. The default is using the report_directory of given SpecExp.
+            Directory to save modeling and evaluation reports.
+            Default is the ``report_directory`` of the input ``SpecExp`` instance of this ``SpecPipe`` instance.
 
         show_progress : bool, optional
-            Show processing progress. The default is True.
+            Show processing progress. Default is True.
 
         save_config : bool, optional
-            Save SpecPipe configurations. The default is True.
+            Save ``SpecPipe`` configurations. Default is True.
 
         summary : bool, optional
-            Whether to summarize performance metrics and marginal performance metrics.
-            The marginal performances of different processes at each step are compared using Mann-Whitney U test.
-            The default is True.
+            Whether to summarize overall and marginal performance.
+            Marginal performance metrics at each processing step is compared using the Mann–Whitney U test.
+            Default is True.
+
+        See Also
+        --------
+        preprocessing
 
         Examples
         --------
-        For created SpecPipe instance 'pipe':
-        >>> pipe.preprocessing()
-        >>> pipe.model_evaluation()
+        For a prepared ``SpecPipe`` instance ``pipe``::
 
-        Pipeline level multiprocessing:
-        >>> pipe.model_evaluation(n_processor=10)
+            >>> pipe.preprocessing()
+            >>> pipe.model_evaluation()
 
+        Pipeline-level multiprocessing::
+
+            >>> pipe.model_evaluation(n_processor=10)
         """  # noqa: E501
 
         # Prompt "if __name__ == '__main__':" protection for windows multiprocessing
@@ -3362,78 +3688,107 @@ class SpecPipe:
         skip_test: bool = False,
     ) -> None:
         """
-        Run pipeline of given processes on SpecExp instance (corresponding manager of spectral experiment data).
-        Full-factorial test is applied to multiple processes of identical sequence.
-        Processes are configured using method 'add_process'.
+        Run entire pipelines of specified processes of this ``SpecPipe`` instance on provided ``SpecExp`` instance.
+        Processes are configured using method ``add_process`` and ``add_model``.
 
         Parameters
         ----------
         result_directory : str, optional
-            Directory to save the preprocess results and modeling reports.
-            The default is using the report_directory of given SpecExp.
+            Directory to save preprocessing and model evaluation reports.
+            Default is the ``report_directory`` of the input ``SpecExp`` instance of this ``SpecPipe`` instance.
 
-        n_processor : int
-            The number of processor to use in the preprocessing.
-            The default is -1, which automatically uses sequential processing for Windows and (maximum available CPUs - 1) processors for other OS.
-            Set to -2 to use (maximum available CPUs - 1) processors on Windows.
+        n_processor : int, optional
+            Number of processors to use during pipeline execution.
 
-            Windows Note: When using n_processor > 1 on Windows, all main codes in the working script must be placed within block "if __name__ == '__main__':".
-            This requirement comes from 'pathos', which uses dill for object serialization and is essential for parallel execution of the package functions.
+            Default is -1, which does not apply parallel execution on Windows and applies parallel execution using (maximum available CPUs - 1) processors on other operating systems.
+
+            Set to -2 to force (maximum available CPUs - 1) processors on Windows.
+
+            Windows note: when using ``n_processor > 1`` or ``n_processor = -2`` on Windows, all excecutable code in the working script must be placed within::
+
+                if __name__ == '__main__':
 
         test_model : bool, optional
-            Whether tests added models, if False, the model testing will be skipped. The default is True.
-            The tests use minimal sample sizes, this can cause error for some models.
+            Whether to test added models before formal execution.
 
-        pipe_parallel_for_modeling : bool
-            If True, the pipeline-level parallel computing is not applied to modeling.
-            If modeling method using multiprocessing internally or using GPU acceleration, set True to prevent duplicated parallelism.
+            If False, model testing is skipped.
+            Tests use minimal sample sizes, which may cause errors for some models.
+            Default is True.
+
+        pipe_parallel_for_modeling : bool, optional
+            Whether to disable pipeline-level parallelism during modeling.
+
+            Set to True when the modeling method already uses multiprocessing or GPU acceleration to avoid nested parallel execution.
+            Default is False.
 
         dump_backup : bool, optional
-            Create backup files of result with time stamp. The default is False.
+            Whether to create timestamped backup files of results.
+            Default is False.
 
         step_result : bool, optional
-            Whether step results of the chains are kept, if False, the step results will be removed after preprocessing. The default is True.
+            Whether to retain intermediate step results for each processing chain.
 
-        resume : bool
-            If True, the computation resumes from last saved checkpoint in the preprocessing progress logs.
-            Useful for continuing interrupted runs to avoid redundant processing. The default is False.
+            If False, intermediate results are removed after preprocessing.
+            Default is True.
 
-        sample_data_to_csv : bool
-            If True, the sample data after preprocessing is written to CSV files in addition. The default is True.
+        resume : bool, optional
+            Whether to resume execution from the last saved preprocessing checkpoint.
+
+            This avoids redundant processing after interruptions.
+            Default is False.
+
+        sample_data_to_csv : bool, optional
+            Whether to additionally save preprocessed sample data as CSV files.
+            Default is True.
 
         show_progress : bool, optional
-            Show processing progress. The default is True.
+            Whether to display execution progress.
+            Default is True.
 
         save_config : bool, optional
-            Save SpecPipe configurations. The default is True.
+            Whether to save SpecPipe configuration files.
+            Default is True.
 
         summary : bool, optional
-            Whether to summarize the preprocessed data, performance metrics and marginal performance metrics.
-            The marginal performances of different processes at each step are compared using Mann-Whitney U test.
-            The default is True.
+            Whether to summarize preprocessed data, performance metrics, and marginal performance metrics.
+            Marginal performance at each step is compared using the Mann–Whitney U test.
+            Default is True.
 
-        geo_reference_warning: bool, optional
-            Whether to suppress GeoReferenceWarning, if False, the warning is suppressed. The default is False.
+        geo_reference_warning : bool, optional
+            Whether to suppress GeoReferenceWarning messages.
+            If False, warnings are suppressed.
+            Default is False.
 
-        skip_test: bool, optional
-            Whether skip test execution completely. Test execution valiates every processing chain and serves as a safeguard against runtime errors in a long formal execution.
+        skip_test : bool, optional
+            Whether to skip test execution entirely.
+            Test execution validates all processing chains and serves as a safeguard against runtime errors during long executions.
+            Default is False.
+
+        See Also
+        --------
+        preprocessing
+        model_evaluation
 
         Examples
         --------
-        For created SpecPipe instance 'pipe':
-        >>> pipe.run()
+        For a prepared ``SpecPipe`` instance ``pipe``::
 
-        Pipeline level multiprocessing:
-        >>> pipe.run(n_processor=10)
+            >>> pipe.run()
 
-        Automatically use number of CPU cores:
-        >>> pipe.run(n_processor=-1)
+        Pipeline-level multiprocessing::
 
-        For Windows users, force multiprocessing:
-        >>> if __name__ == '__main__': pipe.run(n_processor=10)
-        >>> if __name__ == '__main__': pipe.run(n_processor=-2)
-        Please note all codes must be placed within "if __name__ == '__main__':" for windows multiprocessing.
+            >>> pipe.run(n_processor=10)
 
+        Automatically determine CPU usage::
+
+            >>> pipe.run(n_processor=-1)
+
+        Windows multiprocessing::
+
+            >>> if __name__ == '__main__':
+            ...     pipe.run(n_processor=10)
+            >>> if __name__ == '__main__':
+            ...     pipe.run(n_processor=-2)
         """  # noqa: E501
 
         # Validate processor
@@ -3524,23 +3879,31 @@ class SpecPipe:
     # For get results in console
     def report_summary(self) -> dict:
         """
-        Retrieve summary of reports in the console, including performance summary and marginal performances among processes.
+        Retrieve summary of generated reports in the console.
+        The summary includes performance summary and marginal performances among added processes of each pipeline step.
 
-        The output is a dictionary of report dataframes, includes:
+        Returns
+        -------
+        dict
+            A dictionary of pandas DataFrames with the following contents:
+
             For regression:
-                * Performance summary
-                * Marginal R2 of the steps with multiple processes.
+
+            - Performance summary.
+            - Marginal R2 of the steps with multiple processes.
 
             For classification:
-                * Macro- and micro-average performance summary
-                * Marginal macro- and micro-average AUC of the steps with multiple processes.
+
+            - Macro- and micro-average performance summary.
+            - Marginal macro- and micro-average AUC of the steps with multiple processes.
 
         Examples
         --------
-        For SpecPipe instance 'pipe' after running:
-        >>> result_summary = pipe.report_summary()
+        For ``SpecPipe`` instance ``pipe`` after running::
 
+            >>> result_summary = pipe.report_summary()
         """  # noqa: E501
+
         # Validate pipeline running completion
         if os.path.exists(unc_path(self.report_directory + "Modeling/sample_targets_stats.csv")):
             result = group_stats_report(self.report_directory)
@@ -3555,28 +3918,35 @@ class SpecPipe:
         """
         Retrieve major model evaluation reports of every processing chain in the console.
 
-        The output is a list of dictionaries. Each dictionary of processing chain includes:
-            For regression:
-                * Processes of the chain
-                * Validation results
-                * Performance metrics
-                * Residual analysis
-                * Influence analysis (if available)
-                * Scatter plot
-                * Residual plot
+        Returns
+        -------
+        list of dict
+            Each dictionary contains the reports of one processing chain.
 
-            For classification:
-                * Processes of the chain
-                * Validation results
-                * Residual analysis
-                * Influence analysis
-                * ROC curves
+            For regression pipelines, the reports include:
+
+            - Processes of the chain
+            - Validation results
+            - Performance metrics
+            - Residual analysis
+            - Influence analysis (if available)
+            - Scatter plot
+            - Residual plot
+
+            For classification pipelines, the reports include:
+
+            - Processes of the chain
+            - Validation results
+            - Performance metrics
+            - Residual analysis
+            - Influence analysis (if available)
+            - ROC curves
 
         Examples
         --------
-        For SpecPipe instance 'pipe' after running:
-        >>> chain_results = pipe.report_chains()
+        For ``SpecPipe`` instance ``pipe`` after running::
 
+            >>> chain_results = pipe.report_chains()
         """
         # Validate pipeline running completion
         if os.path.exists(unc_path(self.report_directory + "Modeling/sample_targets_stats.csv")):

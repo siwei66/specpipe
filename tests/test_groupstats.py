@@ -31,7 +31,7 @@ from sklearn.neighbors import KNeighborsRegressor  # type: ignore
 from specpipe.specio import RealNumber, silent
 from specpipe.example_data import create_test_spec_exp
 from specpipe.specexp import SpecExp
-from specpipe.specpipe import SpecPipe
+from specpipe.pipeline import SpecPipe
 from specpipe.roistats import roi_mean, roi_median, roi_std
 
 # Functions to test

@@ -43,54 +43,48 @@ def raster_rgb_preview(  # noqa: C901
     show_image: bool = True,
 ) -> None:
     """
-    Display raster image in RGB plot.
+    Display a raster image in RGB plot with optional ROI frames.
 
     Parameters
     ----------
     raster_path : str
         Raster image path.
-
-    rgb_band_index : tuple[int, int, int]
+    rgb_band_index : tuple of 3 ints
         RGB band index in tuple.
-
-    display_size : tuple[Union[int, float], Union[int, float]]
+    display_size : tuple of 2 numbers
         Size of RGB plot.
-
-    roi_coords : list[list[tuple[Union[int, float], Union[int, float]]]], optional
+    roi_coords : list of lists of tuples of 2 numbers or None, optional
         ROI vertex coordinate pairs in tuples in a list.
-
-    roi_color : Union[str, tuple[float, float, float]], optional
+    roi_color : str or tuple of 3 floats, optional
         ROI color in name string or RGB values.
-
     roi_linewidth : int, optional
         Line with of ROI polygon edges. The default is 3.
-
     normalize : bool, optional
-        Whether normalize values to range 0~255. The default is True.
-
-    output_path : Optional[str], optional
-        Output RGB image to the path, if None, no file output. The default is None.
-
+        Whether normalize RGB band values to the range of 0~255. The default is True.
+    output_path : str or None, optional
+        Save RGB preview image to the path, if None, no file output. The default is None.
     dpi : int, optional
-        Output RGB image DPI. The default is 150.
+        DPI of the RGB preview image. The default is 150.
 
     Examples
     --------
-    >>> raster_rgb_preview("image.tif", rgb_band_index=(192, 124, 64))
+    Generate RGB preview::
 
-    Preview and output preview image to file:
-    >>> raster_rgb_preview("image.tif", rgb_band_index=(192, 124, 64), output_path="/image_rgb.png")
+        >>> raster_rgb_preview("image.tif", rgb_band_index=(192, 124, 64))
 
-    Preview with ROI frames:
-    >>> raster_rgb_preview(
-        "image.tif",
-        rgb_band_index=(192, 124, 64),
-        roi_coords=[
-            [(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)],
-            [(30, 30), (30, 40), (40, 30), (30, 30)],
-        ]
-    )
+    Generate preview and save preview image to file::
 
+        >>> raster_rgb_preview("image.tif", rgb_band_index=(192, 124, 64), output_path="/image_rgb.png")
+
+    Preview with ROI frames::
+
+        >>> raster_rgb_preview(
+        ... "image.tif",
+        ... rgb_band_index=(192, 124, 64),
+        ... roi_coords=[
+        ...     [(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)],
+        ...     [(30, 30), (30, 40), (40, 30), (30, 30)],
+        ... ])
     """
     # Validate path
     if not os.path.exists(unc_path(raster_path)):

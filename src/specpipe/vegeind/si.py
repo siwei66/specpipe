@@ -24,8 +24,9 @@ def si(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute SIs (Salinity Indices) of 2D arraylike of 1D spectra data series.
+    Compute SIs (Salinity Indices) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
         Prog Earth Planet Sci 7, 1 (2020).
@@ -33,17 +34,21 @@ def si(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')
@@ -148,8 +153,9 @@ def si1(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute SI1 (Salinity Index 1) of 2D arraylike of 1D spectra data series.
+    Compute SI1 (Salinity Index 1) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
         Prog Earth Planet Sci 7, 1 (2020).
@@ -157,17 +163,21 @@ def si1(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     result = si(spec_array=spec_array, wavelength=wavelength, axis=axis)
     if axis == 0:
@@ -184,8 +194,9 @@ def si2(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute SI2 (Salinity Index 2) of 2D arraylike of 1D spectra data series.
+    Compute SI2 (Salinity Index 2) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
         Prog Earth Planet Sci 7, 1 (2020).
@@ -193,17 +204,21 @@ def si2(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     result = si(spec_array=spec_array, wavelength=wavelength, axis=axis)
     if axis == 0:
@@ -220,8 +235,9 @@ def si3(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute SI3 (Salinity Index 3) of 2D arraylike of 1D spectra data series.
+    Compute SI3 (Salinity Index 3) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
         Prog Earth Planet Sci 7, 1 (2020).
@@ -229,17 +245,21 @@ def si3(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     result = si(spec_array=spec_array, wavelength=wavelength, axis=axis)
     if axis == 0:
@@ -256,8 +276,9 @@ def si4(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute SI4 (Salinity Index 4) of 2D arraylike of 1D spectra data series.
+    Compute SI4 (Salinity Index 4) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
         Prog Earth Planet Sci 7, 1 (2020).
@@ -265,17 +286,21 @@ def si4(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     result = si(spec_array=spec_array, wavelength=wavelength, axis=axis)
     if axis == 0:
@@ -292,8 +317,9 @@ def si5(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute SI5 (Salinity Index 5) of 2D arraylike of 1D spectra data series.
+    Compute SI5 (Salinity Index 5) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
         Prog Earth Planet Sci 7, 1 (2020).
@@ -301,17 +327,21 @@ def si5(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     result = si(spec_array=spec_array, wavelength=wavelength, axis=axis)
     if axis == 0:
@@ -328,8 +358,9 @@ def ndsi(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute NDSI (Normalized Difference Salinity Index) of 2D arraylike of 1D spectra data series.
+    Compute NDSI (Normalized Difference Salinity Index) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
         Prog Earth Planet Sci 7, 1 (2020).
@@ -337,17 +368,21 @@ def ndsi(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     result = si(spec_array=spec_array, wavelength=wavelength, axis=axis)
     if axis == 0:
@@ -364,8 +399,9 @@ def vssi(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute VSSI (Vegetation Soil Salinity Index) of 2D arraylike of 1D spectra data series.
+    Compute VSSI (Vegetation Soil Salinity Index) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
         Prog Earth Planet Sci 7, 1 (2020).
@@ -373,17 +409,21 @@ def vssi(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     result = si(spec_array=spec_array, wavelength=wavelength, axis=axis)
     if axis == 0:

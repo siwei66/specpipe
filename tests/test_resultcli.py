@@ -28,7 +28,7 @@ from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor  # noqa:
 from specpipe.example_data import create_test_spec_exp  # noqa: E402
 from specpipe.roistats import Stats2d, roispec  # noqa: E402
 from specpipe.specio import silent  # noqa: E402
-from specpipe.specpipe import SpecPipe  # noqa: E402
+from specpipe.pipeline import SpecPipe  # noqa: E402
 
 # Test
 from specpipe.resultcli import group_stats_report, core_chain_report  # noqa: E402

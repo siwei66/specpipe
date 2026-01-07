@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Usage example for SpecPipe
+Basic usage example for SpecPipe - Mock data version, No data downloading needed
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """

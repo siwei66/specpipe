@@ -27,7 +27,7 @@ from sklearn.metrics import accuracy_score, r2_score  # noqa: E402
 
 # Local
 from .specio import simple_type_validator, arraylike_validator, unc_path  # noqa: E402
-from .specpipe_validator import _classifier_validator, _regressor_validator, _data_transformer_validator
+from .pipeline_validator import _classifier_validator, _regressor_validator, _data_transformer_validator
 from .groupstats import (
     regression_performance_marginal_stats,
     performance_metrics_summary,
@@ -53,46 +53,51 @@ def factorial_transformer_chains(  # noqa: C901
 
     Parameters
     ----------
-    step_transformers : tuple[Union[list[object], dict[str, object], None], ...]
+    step_transformers : tuple of (list of object, dict mapping str to object, or None)
         Data transformers of each step.
+
         Customize transformer name using dictionary input as {custom_name : transformer_model}.
 
-    estimators : Union[list[object], dict[str, object]]
+    estimators : list of object or dict mapping str to object
         Estimators for final step.
 
     is_regression : bool
         Set True if all estimators are regressors, set False if all estimators are classifiers.
-        Estimators cannot be a mix of regressors and classifiers.
+
+        Note: estimators cannot be a mix of regressors and classifiers.
 
     Returns
     -------
-    list[object]
+    list of object
         List of combined models.
 
     Examples
     --------
-    >>> from sklearn.feature_selection import SelectKBest, f_classif
-    >>> from sklearn.ensemble import RandomForestClassifier
-    >>> from sklearn.neighbors import KNeighborsClassifier
-    >>> selector5 = SelectKBest(f_classif, k=5)
-    >>> selector10 = SelectKBest(f_classif, k=10)
-    >>> rf = RandomForestClassifier(n_estimators=10)
-    >>> knn = KNeighborsClassifier(n_neighbors=3)
+    Prepare models::
 
-    Without specify labels for component models:
-    >>> models = factorial_transformer_chains(
-        [selector5, selector10],
-        estimators=[knn, rf],
-        is_regression=False
-    )
+        >>> from sklearn.feature_selection import SelectKBest, f_classif
+        >>> from sklearn.ensemble import RandomForestClassifier
+        >>> from sklearn.neighbors import KNeighborsClassifier
+        >>> selector5 = SelectKBest(f_classif, k=5)
+        >>> selector10 = SelectKBest(f_classif, k=10)
+        >>> rf = RandomForestClassifier(n_estimators=10)
+        >>> knn = KNeighborsClassifier(n_neighbors=3)
 
-    Specify labels for component models:
-    >>> models = factorial_transformer_chains(
-        {'feat5': selector5, 'feat10': selector10},
-        estimators={'KNN': knn, 'RF': rf},
-        is_regression=False
-    )
+    Without specify labels for component models::
 
+        >>> models = factorial_transformer_chains(
+        ...     [selector5, selector10],
+        ...     estimators=[knn, rf],
+        ...     is_regression=False
+        ... )
+
+    Specify labels for component models::
+
+        >>> models = factorial_transformer_chains(
+        ...     {'feat5': selector5, 'feat10': selector10},
+        ...     estimators={'KNN': knn, 'RF': rf},
+        ...     is_regression=False
+        ... )
     """
     # Validate given step_transformers
     if step_transformers is None:
@@ -160,7 +165,7 @@ def factorial_transformer_chains(  # noqa: C901
                     + "please explicitly set custom labels using dictionary input."
                 )
 
-    # Generate model label and model lists
+    # Generate model label and model list
     chain_label_list = [list(chain) for chain in itertools.product(*chain_label_options, estimator_label_options)]
     chain_model_list = [list(chain) for chain in itertools.product(*chain_model_options, estimator_model_options)]
 
@@ -207,48 +212,52 @@ def combine_transformer_classifier(  # noqa: C901
 ) -> object:
     """
     Combine data transformation models with a classifier into a unified estimator that preserves component names.
+
     This wrapper functions similarly to scikit-learn's Pipeline but compatible with any transformer and classifier that follows scikit-learn's method conventions.
 
-    Parameters:
-    -----------
-    data_transformer : Union[object, list[object]]
+    Parameters
+    ----------
+    data_transformer : object or list of object
         Data transformation model, any data transformation or feature selection model.
 
     classifier : object
         Classification model.
 
-    data_transformer_label : Union[str, list[str], None], optional
-        label(s) for the transformer(s). Defaults to model class names if not specified.
+    data_transformer_label : str or list of str or None, optional
+        Label(s) for the transformer(s). Defaults to model class names if not specified.
 
-    classifier_label: Optional[str]
-        label for the classifier. Defaults to model class name if not specified.
+    classifier_label: str or None
+        Label for the classifier. Defaults to model class name if not specified.
 
-    Returns:
-    --------
-    model
+    Returns
+    -------
+    object
         Combined classification model.
 
     Examples
     --------
-    >>> from sklearn.feature_selection import SelectKBest, f_classif
-    >>> from from sklearn.preprocessing import StandardScaler
-    >>> from sklearn.neighbors import KNeighborsClassifier
+    Prepare models::
 
-    >>> selector = SelectKBest(f_classif, k=5)
-    >>> scaler = StandardScaler()
-    >>> knn = KNeighborsClassifier(n_neighbors=3)
+        >>> from sklearn.feature_selection import SelectKBest, f_classif
+        >>> from from sklearn.preprocessing import StandardScaler
+        >>> from sklearn.neighbors import KNeighborsClassifier
 
-    Without specifying model labels:
-    >>> combined_model = combine_transformer_classifier([scaler, selector], knn)
+        >>> selector = SelectKBest(f_classif, k=5)
+        >>> scaler = StandardScaler()
+        >>> knn = KNeighborsClassifier(n_neighbors=3)
 
-    Specify model labels:
-    >>> combined_model = combine_transformer_classifier(
-        [scaler, selector],
-        knn,
-        data_transformer_label=['scaler', 'selector'],
-        classifier_label='knn'
-    )
+    Without specifying model labels::
 
+        >>> combined_model = combine_transformer_classifier([scaler, selector], knn)
+
+    Specify model labels::
+
+        >>> combined_model = combine_transformer_classifier(
+        ...     [scaler, selector],
+        ...     knn,
+        ...     data_transformer_label=['scaler', 'selector'],
+        ...     classifier_label='knn'
+        ... )
     """  # noqa: E501
     # Validate input models
     if isinstance(data_transformer, list):
@@ -320,42 +329,52 @@ def combine_transformer_regressor(  # noqa: C901
 ) -> object:
     """
     Combine data transformation models with a regressor into a unified estimator that preserves component names.
+
     This wrapper functions similarly to scikit-learn's Pipeline but compatible with any transformer and regressor that follows scikit-learn's method conventions.
 
-    Parameters:
-    -----------
-    data_transformer
-        Data transformation model, any data transformation or feature selection model.
+    Parameters
+    ----------
+    data_transformer : object or list of object
+        Data transformation model(s), any data transformation or feature selection model(s).
 
-    regressor
-        Regression model.
+    regressor : object
+        Classification model.
 
-    Returns:
-    --------
-    model
+    data_transformer_label : str or list of str or None, optional
+        Label(s) for the transformer(s). Defaults to model class names if not specified.
+
+    regressor_label: str or None
+        Label for the regressor. Defaults to model class name if not specified.
+
+    Returns
+    -------
+    object
         Combined regression model.
 
     Examples
     --------
-    >>> from sklearn.feature_selection import SelectKBest, f_regression
-    >>> from from sklearn.preprocessing import StandardScaler
-    >>> from sklearn.neighbors import KNeighborsRegressor
+    Prepare models::
 
-    >>> selector = SelectKBest(f_regression, k=5)
-    >>> scaler = StandardScaler()
-    >>> knn = KNeighborsRegressor(n_neighbors=3)
+        >>> from sklearn.feature_selection import SelectKBest, f_regression
+        >>> from from sklearn.preprocessing import StandardScaler
+        >>> from sklearn.neighbors import KNeighborsRegressor
 
-    Without specifying model labels:
-    >>> combined_model = combine_transformer_regressor([scaler, selector], knn)
+        >>> selector = SelectKBest(f_regression, k=5)
+        >>> scaler = StandardScaler()
+        >>> knn = KNeighborsRegressor(n_neighbors=3)
 
-    Specify model labels:
-    >>> combined_model = combine_transformer_regressor(
-        [scaler, selector],
-        knn,
-        data_transformer_label=['scaler', 'selector'],
-        classifier_label='knn'
-    )
+    Without specifying model labels::
 
+        >>> combined_model = combine_transformer_regressor([scaler, selector], knn)
+
+    Specify model labels::
+
+        >>> combined_model = combine_transformer_regressor(
+        ...     [scaler, selector],
+        ...     knn,
+        ...     data_transformer_label=['scaler', 'selector'],
+        ...     regressor_label='knn'
+        ... )
     """  # noqa: E501
     # Validate input models
     if isinstance(data_transformer, list):
@@ -421,33 +440,25 @@ def combine_transformer_regressor(  # noqa: C901
 class TransClassifier(BaseEstimator, ClassifierMixin):
     """
     Combine a chain of data transformation models with a classifier into a unified estimator.
-
     This wrapper functions similarly to scikit-learn's Pipeline but compatible with any transformer and classifier that follows scikit-learn's method conventions.
 
-
-    Attributes:
-    -----------
+    Attributes
+    ----------
     data_transformers : list
         List of data transformation models, any data transformation or feature selection model.
-
     classifier
         Classification model.
 
-
-    Methods:
-    --------
+    Methods
+    -------
     fit(X, y)
         Fit the transformer on X, then fit the classifier on transformed X.
-
     transform(X)
         Transform X using the fitted transformer.
-
     predict(X)
         Transform X using the fitted transformer, then predict using the fitted classifier.
-
     predict_proba(X)
         Predict the probability of X using the fitted transformer and classifier.
-
     score(X, y)
         Compute the accuracy score of the fitted models on the provided X and y.
     """  # noqa: E501
@@ -630,30 +641,23 @@ class TransClassifier(BaseEstimator, ClassifierMixin):
 class TransRegressor(BaseEstimator, RegressorMixin):
     """
     Combine a chain of data transformation models with a regressor into a unified estimator.
-
     This wrapper functions similarly to scikit-learn's Pipeline but compatible with any transformer and regressor that follows scikit-learn's method conventions.
 
-
-    Attributes:
-    -----------
+    Attributes
+    ----------
     data_transformers : list
         List of Data transformation models, any data transformation or feature selection model.
-
     regressor
         Regression model.
 
-
-    Methods:
-    --------
+    Methods
+    -------
     fit(X, y)
         Fit the transformer on X, then fit the regressor on transformed X.
-
     transform(X)
         Transform X using the fitted transformer.
-
     predict(X)
         Transform X using the fitted transformer, then predict using the fitted regressor.
-
     score(X, y)
         Compute the goodness of fit score of the fitted models on the provided X and y.
     """  # noqa: E501

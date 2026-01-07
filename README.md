@@ -8,15 +8,18 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/siwei66/specpipe/blob/master/LICENSE)
 [![PyPI version](https://img.shields.io/pypi/v/specpipe.svg)](https://pypi.org/project/specpipe/)
 
+
 ## A Python framework for automated batch implementation and method testing of universal hyperspectral modeling pipelines.
 
+<!-- start-doc -->
 SpecPipe streamlines the batch testing and optimization of hyperspectral analysis workflows. It provides a structured and extensible framework to apply and assess various image processing techniques (calibration, baseline correction, denoising, feature engineering, etc.) in combination with various machine learning models. The pipeline employs a comprehensive full-factorial design to evaluate all method combinations and generates standard reports on performance metrics, comparative statistical tests, residual analysis, influence anlaysis and visualizations.
 
-## Core features:
+## Core features
 - **Batch processing**: Automate numerous data processing and modeling workflows in a single batch operation.
 - **File-based**: A resumable, file-based processing pipeline with full-scale auditability and break tolerance.
 - **High-performance**: Optimized for hyperspectral images with minimal memory consumption and options of GPU acceleration and pipeline-level multiprocessing.
 - **Simple extensible integration**: Intuitive data management and straightforward integration for custom processing functions and Scikit-learn-style models.
+<!-- end-doc -->
 
 
 ## Table of Contents
@@ -71,7 +74,7 @@ Follow these steps to install the project:
     os.makedirs(report_dir)
     ```
 
-### 2. Configure your experiment data
+### 2. Data configuration
 
 #### 2.1 Create a spectral experiment instance
 
@@ -294,7 +297,7 @@ The instance stores and organizes the data loading configurations of an experime
     ```
 
 
-### 3. Design testing pipeline
+### 3. Design testing pipelines
 
 - SpecPipe follows a structured data processing workflow with these sequential data levels:
     ```text
@@ -483,7 +486,7 @@ Processes can be removed by various criteria, the example removes the function '
     ```
 
 
-### 4 Run pipeline
+### 4 Run pipelines
 
 - Check processing chains of the pipeline:
     ```python
@@ -680,7 +683,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ```
 
 
-#### 6.2 Copy and update the pipeline data manager to regression
+#### 6.2 Copy and update the previous pipelines to regression
 - Copy and update SpecExp and SpecPipe instances
     ```python
     import copy
@@ -853,7 +856,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     </div>
 
 
-### 7 Test feature engineering fittables
+### 7 Feature engineering fittable tests
 
 Feature engineering fittables (data transformers) are fitted during the model validation process and function as integrated parts of the model. To incorporate these transformers, use the model connector functions 'combine_transformer_classifier' or 'combine_transformer_regressor' (similar to sklearn.pipeline).
 

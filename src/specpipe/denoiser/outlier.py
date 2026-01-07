@@ -38,39 +38,62 @@ def replace_outlier(
 
     Parameters
     ----------
-    data : Union[np.ndarray, pd.DataFrame]
+    data : numpy.ndarray or pandas.DataFrame
         2D array or dataframe of 1D data.
     test_method : str
-        The method of outlier test, choose between:
-            'dixon' - Dixon's Q test,
-            'iqr' - interquartile range,
-            'modified_z' - Modified Z-score.
-        The default is 'iqr'.
+        The method of outlier test. See ``ArrayOutlier`` for details.
     to : str
-        The outlier replacement strategy. The outlier can be replaced by:
-        'nan' - the outlier is removed and not calculated.
-        'mean' - mean value of nonoutliers.
-        'median' - median of nonoutliers.
-        'neighbor' - the closest nonoutlier value of the outlier. If two were availble, it's the average of the two neighbor. This could be useful for sequence.
-        The default is 'neighbor'.
+        The outlier replacement strategy. See ``ArrayOutlier`` for details.
     axis : int
         Calculate along the axis. The default is 0.
     dixon_alpha : float
         Two-tail significance level for Dixon's Q test, the default is 0.05.
     iqr_multiplier : float
+        Multiplier applied to the interquartile range (IQR) to define the lower and upper bounds for outlier detection.
         The default is 1.5.
     modified_z_threshold : float
+        Threshold value used in modified z-score–based outlier detection.
+        Observations with an absolute modified z-score exceeding this value are classified as outliers.
         The default is 3.5.
     numtype : str
-        Numpy-supported numeric data type for test computation and output, default is 'float32'.
+        Numpy-supported numeric data type for test computation and output.
+        Default is ``"float32"``.
     generate_report : bool
-        Whether to generate reports of outlier tests. If True, the generation can be time-consuming for large datasets.
+        Whether to generate reports of outlier tests.
+        If True, the generation can be time-consuming for large datasets.
         The default is False.
 
     Returns
     -------
-    np.ndarray or tuple[np.ndarray, list]
+    numpy.ndarray or tuple of (numpy.ndarray, list)
         Data with outlier replaced or data with outlier replaced and outlier detection reports.
+
+    See Also
+    --------
+    ArrayOutlier
+    ArrayOutlier.replace
+
+    Examples
+    --------
+    Basic usage for outlier replacement using default settings::
+
+        >>> replace_outlier([[1, 2, 3, 99, 5, 6], [2, 2, 4, 4, 6, 6]])
+
+    Specify outlier detection method::
+
+        >>> replace_outlier([[1, 2, 3, 99, 5, 6], [2, 2, 4, 4, 6, 6]], test_method='dixon')
+
+    Customize outlier detection method::
+
+        >>> replace_outlier([[1, 2, 3, 99, 5, 6], [2, 2, 4, 4, 6, 6]], test_method='dixon', dixon_alpha=0.1)
+
+    Specify replacement strategy::
+
+        >>> replace_outlier([[1, 2, 3, 99, 5, 6], [2, 2, 4, 4, 6, 6]], to='median')
+
+    Retrieve report in addition to result of replacement::
+
+        >>> result, report = replace_outlier([[1, 2, 3, 99, 5, 6], [2, 2, 4, 4, 6, 6]], generate_report=True)
     """  # noqa: E501
     data = np.array(data)
     if not generate_report:
@@ -111,40 +134,57 @@ class ArrayOutlier:
     Attributes
     ----------
     test_method : str
-        The method of outlier test, choose between:
-            'dixon' - Dixon's Q test,
-            'iqr' - interquartile range,
-            'modified_z' - Modified Z-score.
-        The default is 'iqr'.
+        The method of outlier test. Available options:
+
+        - "dixon" - Dixon's Q test,
+        - "iqr" - interquartile range,
+        - "modified_z" - Modified Z-score.
+
+        The default is "iqr".
+
     to : str
         The outlier replacement strategy. The outlier can be replaced by:
-        'nan' - the outlier is removed and not calculated.
-        'mean' - mean value of nonoutliers.
-        'median' - median of nonoutliers.
-        'neighbor' - the closest nonoutlier value of the outlier. If two were availble, it's the average of the two neighbor. This could be useful for sequence.
-        The default is 'neighbor'.
+
+        - "nan" - the outlier is removed and not calculated.
+        - "mean" - mean value of nonoutliers.
+        - "median" - median of nonoutliers.
+        - "neighbor" - the closest nonoutlier value of the outlier. If two are availble, average of the two neighbors are used.
+
+        The default is "neighbor".
+
     axis : int
         Calculate along the axis. The default is 0.
+
     dixon_alpha : float
         Two-tail significance level for Dixon's Q test, the default is 0.05.
-    iqr_multiplier : float
-        Default is 1.5.
-    modified_z_threshold : float
-        Default is 3.5.
+
+    iqr_multiplier : float, optional
+        Multiplier applied to the interquartile range (IQR) to define the lower and upper bounds for outlier detection.
+
+        The default is 1.5.
+
+    modified_z_threshold : float, optional
+        Threshold value used in modified z-score–based outlier detection.
+        Observations with an absolute modified z-score exceeding this value are classified as outliers.
+
+        The default is 3.5.
+
     numtype : str
-        Numpy-supported numeric data type for test computation and output, default is 'float32'.
+        Numpy-supported numeric data type for test computation and output, default is "float32".
+
     generate_report : bool
         Whether to generate reports of outlier tests.
+
         The generation can be time-consuming for large datasets.
         Repeated calls to ArrayOutlier.replace() accumulate reports in the ArrayOutlier.report, which can lead to significant memory growth.
+
         The default is False.
-    report : list[list]
-        List of reports of each 'replace' exection if generate_report is True.
+
+    report : list or list
+        List of reports of each "replace" exection if generate_report is True.
 
     Methods
     -------
-    dixon_q_critical
-        Give the critical value according to the D. B. Rorabacher, "Statistical treatment for rejection of deviant values: critical values of Dixon’s 'Q' parameter and related subrange ratios at the 95% confidence level" Anal. Chem., vol. 63, no. 2, pp. 139–146, Jan. 1991, doi: 10.1021/ac00002a010.
     dixon_q
         Apply Dixon's Q test to get outlier and nonoutlier indices of 1D data series.
     iqr
@@ -153,6 +193,29 @@ class ArrayOutlier:
         Apply modified z score approach to get outlier and nonoutlier indices of 1D data series.
     replace
         Replace detected outliers.
+
+    Examples
+    --------
+    Use default settings::
+
+        >>> outlier = ArrayOutlier()
+
+    Specify outlier detection method::
+
+        >>> outlier = ArrayOutlier(test_method='dixon')
+
+    Customize outlier detection method::
+
+        >>> outlier = ArrayOutlier(test_method='dixon', dixon_alpha=0.1)
+
+    Specify replacement strategy::
+
+        >>> outlier = ArrayOutlier(to='median')
+
+    Retrieve report in addition to result of replacement::
+
+        >>> outlier = ArrayOutlier(generate_report=True)
+        >>> report = outlier.report
     """  # noqa: E501
 
     @simple_type_validator
@@ -196,9 +259,15 @@ class ArrayOutlier:
 
     # Dixon's Q Test critical values
     @simple_type_validator
-    def dixon_critical(self, sample_size: int, alpha: Optional[float] = None) -> float:
+    def _dixon_critical(self, sample_size: int, alpha: Optional[float] = None) -> float:
         """
         Calculate the critical value for Dixon's Q test.
+        The critical values are defined according to:
+            D. B. Rorabacher,
+            "Statistical treatment for rejection of deviant values: critical values of Dixon’s 'Q' parameter and related subrange ratios at the 95% confidence level"
+            Anal. Chem., vol. 63, no. 2, pp. 139–146,
+            Jan. 1991,
+            DOI: 10.1021/ac00002a010.
 
         Parameters
         ----------
@@ -218,7 +287,7 @@ class ArrayOutlier:
             If `sample_size` beyond range 3~30.
         ValueError
             If two-tail significance level `alpha` beyond range 0.005~0.1.
-        """
+        """  # noqa: E501
         n = sample_size
         if alpha is None:
             alpha = self.dixon_alpha
@@ -285,23 +354,29 @@ class ArrayOutlier:
 
         Parameters
         ----------
-        data_series : list or 1D numpy array
+        data_series : list or 1D array-like
             Series of data for outlier detection. Dixon's Q Test requires a sample size between 3~30.
 
         Returns
         -------
         A tuple of:
-            - outlier_indices : numpy array
+
+            outlier_indices : numpy.ndarray
                 Numpy arrays of outlier indices.
-            - nonoutlier_indices : numpy array
+            nonoutlier_indices : numpy.ndarray
                 Numpy arrays of non-outlier indices.
-            - test_report : Optional[list]
+            test_report : list or None
                 List of test report if generated.
 
         Raises
         ------
         ValueError
             If sample size beyond range 3~30.
+
+        Examples
+        --------
+        >>> outlier = ArrayOutlier()
+        >>> outlier_ind, non_outlier_ind, report = outlier.dixon([1, 2, 3, 99, 5, 6])
         """
         data_series = np.array(data_series).astype(self.numtype)
 
@@ -317,7 +392,7 @@ class ArrayOutlier:
         indices = np.arange(n)
 
         # Calculate the critical value
-        Q_critical = self.dixon_critical(n, alpha)  # noqa: N806
+        Q_critical = self._dixon_critical(n, alpha)  # noqa: N806
 
         # Sort the data and keep track of the original indices
         sorted_indices = np.argsort(data_series)
@@ -375,23 +450,29 @@ class ArrayOutlier:
 
         Parameters
         ----------
-        data_series : Union[list, Annotated[Any, arraylike_validator(ndim=1)]]
+        data_series : list or 1D array-like
             List or 1D array of a data series for outlier detection. The length must be at least 5.
 
         Returns
         -------
         A tuple of:
-            - outlier_indices : numpy array
+
+            outlier_indices : numpy.ndarray
                 Numpy arrays of outlier indices.
-            - nonoutlier_indices : numpy array
+            nonoutlier_indices : numpy.ndarray
                 Numpy arrays of non-outlier indices.
-            - test_report : Optional[list]
+            test_report : list or None
                 List of test report if generated.
 
         Raises
         ------
         ValueError
             If sample size < 5.
+
+        Examples
+        --------
+        >>> outlier = ArrayOutlier()
+        >>> outlier_ind, non_outlier_ind, report = outlier.iqr([1, 2, 3, 99, 5, 6])
         """
         generate_report = self.generate_report
         iqr_multiplier = self.iqr_multiplier
@@ -450,16 +531,18 @@ class ArrayOutlier:
         ----------
         data_series : 1D list or numpy array
             The data series to test for outliers. The lenth should be at least 12.
+
             Please be aware that the function does not check for data normality that is required by the approach.
 
         Returns
         -------
         A tuple of:
-            - outlier_indices : numpy array
+
+            outlier_indices : numpy.ndarray
                 Numpy arrays of outlier indices.
-            - nonoutlier_indices : numpy array
+            nonoutlier_indices : numpy.ndarray
                 Numpy arrays of non-outlier indices.
-            - test_report : Optional[list]
+            test_report : list or None
                 List of test report if generated.
 
         Raises
@@ -471,6 +554,11 @@ class ArrayOutlier:
         --------
         UserWarning
             If sample size >= 5 but < 12. Applicable but result may not be reliable due to normality identification.
+
+        Examples
+        --------
+        >>> outlier = ArrayOutlier()
+        >>> outlier_ind, non_outlier_ind, report = outlier.modified_z([1, 2, 3, 99, 5, 6])
         """
         generate_report = self.generate_report
         threshold = self.modified_z_threshold
@@ -532,12 +620,12 @@ class ArrayOutlier:
 
         Parameters
         ----------
-        data : Union[np.ndarray, pd.DataFrame]
+        data : numpy.ndarray or pandas.DataFrame
             2D array or dataframe of 1D data.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Data with outlier replaced.
 
         Raises
@@ -546,6 +634,11 @@ class ArrayOutlier:
             If input data is not 2D numpy array or pandas dataframe.
         ValueError
             Unknown absence of replace value in outlier replacement.
+
+        Examples
+        --------
+        >>> outlier = ArrayOutlier()
+        >>> outlier.replace([[1, 2, 3, 99, 5, 6], [2, 2, 4, 4, 6, 6]])
         """  # noqa: E501
         generate_report = self.generate_report
         test_method = self.test_method

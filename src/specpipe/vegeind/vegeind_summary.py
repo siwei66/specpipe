@@ -60,10 +60,10 @@ def vegeind_summary(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
-        Wavelengths for the spectra data.
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
+        Wavelengths in nanometer for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
     L : float or int
@@ -71,51 +71,59 @@ def vegeind_summary(
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
 
     See Also
     --------
-    Individual index functions in 'specpipe.vegeind':
+    ndvi: Normalized Difference Vegetation Index
+    sr: Simple ratio, simple ratio of R800 / R675
+    dvi: Difference Vegetation Index
+    evi: Enhanced Vegetation Index
+    gndvi: Green Normalized Difference Vegetation Index
+    cvi: Chlorophyll Vegetation Index
+    mcari: Modified Chlorophyll Absorption Reflectance Index
+    mtci: MERIS Terrestrial Chlorophyll Index
+    s2rep: Sentinel-2 Red Edge Position
+    tgi: Triangular Greenness Index
+    ndre: Normalized Difference Red Edge Index
+    lci: Leaf Chlorophyll Index
+    sr_nir_r: Simple Ratio NIR/Red
+    sr_nir_g: Simple Ratio NIR/Green
+    pssr: Pigment-specific Simple Ratio
+    pad: Derivative Pseudo-Absorption
+    padvi: Derivative Pseudo-Absorption Vegetation Indices
+    pri: Photochemical Reflectance Index
+    cci: Chlorophyll/Carotenoid Index
+    cri: Carotenoid Reflectance Indices
+    sipi: Structure Insensitive Pigment Index
+    wi: Water Index
+    nwi: Normalized Water Index
+    savis: Soil Adjusted Vegetation Indices
+    sasi1: Soil Adjusted Salinity Index 1
+    sasi2: Soil Adjusted Salinity Index 2
+    sasi3: Soil Adjusted Salinity Index 3
+    sasi4: Soil Adjusted Salinity Index 4
+    si: Salinity Indices
+    sr_salinity: Simple Ratio R750/R705
+    vog1: Vogelmann Red Edge Index
+    ari: Anthocyanin Reflectance Index
+    osavi: Optimized Soil Adjusted Salinity Index
+    msavi: Modified Soil Adjusted Salinity Index
+    swsi1: Salinity and Water Stress Index 1
+    swsi2: Salinity and Water Stress Index 2
+    swsi3: Salinity and Water Stress Index 3
 
-        ndvi: Normalized Difference Vegetation Index
-        sr: simple ratio, simple ratio of R800 / R675
-        dvi: Difference Vegetation Index
-        evi: Enhanced Vegetation Index
-        gndvi: Green Normalized Difference Vegetation Index
-        cvi: Chlorophyll Vegetation Index
-        mcari: Modified Chlorophyll Absorption Reflectance Index
-        mtci: MERIS Terrestrial Chlorophyll Index
-        s2rep: Sentinel-2 Red Edge Position
-        tgi: Triangular Greenness Index
-        ndre: Normalized Difference Red Edge Index
-        lci: Leaf Chlorophyll Index
-        sr_nir_r: Simple Ratio NIR/Red
-        sr_nir_g: Simple Ratio NIR/Green
-        pssr: Pigment-specific Simple Ratio
-        pad: Derivative Pseudo-Absorption
-        padvi: Derivative Pseudo-Absorption Vegetation Indices
-        pri: Photochemical Reflectance Index
-        cci: Chlorophyll/Carotenoid Index
-        cri: Carotenoid Reflectance Indices
-        sipi: Structure Insensitive Pigment Index
-        wi: Water Index
-        nwi: Normalized Water Index
-        savis: Soil Adjusted Vegetation Indices
-        sasi1: Soil Adjusted Salinity Index 1
-        sasi2: Soil Adjusted Salinity Index 2
-        sasi3: Soil Adjusted Salinity Index 3
-        sasi4: Soil Adjusted Salinity Index 4
-        si: Salinity Indices
-        sr_salinity: Simple Ratio R750/R705
-        vog1: Vogelmann Red Edge Index
-        ari: Anthocyanin Reflectance Index
-        osavi: Optimized Soil Adjusted Salinity Index
-        msavi: Modified Soil Adjusted Salinity Index
-        swsi1: Salinity and Water Stress Index 1
-        swsi2: Salinity and Water Stress Index 2
-        swsi3: Salinity and Water Stress Index 3
+    Examples
+    --------
+    Prepare demo spectral data::
 
+        >>> from specpipe.vegeind import create_vegeind_demo_data
+        >>> df_spec = create_vegeind_demo_data()
+
+    Summarize vegetation indices of the spectral data::
+
+        >>> vegeind_summary(df_spec, df_spec.columns)
     """
     vegeind_funcs = [
         # Classic

@@ -24,8 +24,9 @@ def s2rep(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute S2REP (Sentinel-2 Red Edge Position) of 2D arraylike of 1D spectra data series.
+    Compute S2REP (Sentinel-2 Red Edge Position) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Si Gao, Kai Yan, Jinxiu Liu, Jiabin Pu, Dongxiao Zou, Jianbo Qi, Xihan Mu, Guangjian Yan,
         Assessment of remote-sensed vegetation indices for estimating forest chlorophyll concentration,
         Ecological Indicators,
@@ -37,17 +38,21 @@ def s2rep(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')

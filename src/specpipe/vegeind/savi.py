@@ -25,8 +25,9 @@ def savi(
     L: Union[float, int] = 0.5,  # noqa: N803
 ) -> pd.DataFrame:
     """
-    Compute SAVI (Soil Adjusted Vegetation Index) of 2D arraylike of 1D spectra data series at given L.
+    Compute SAVI (Soil Adjusted Vegetation Index) of 2D array-like of 1D spectra data series at given L.
     The calculation is based on:
+
         A.R Huete,
         A soil-adjusted vegetation index (SAVI),
         Remote Sensing of Environment,
@@ -38,9 +39,9 @@ def savi(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
@@ -49,8 +50,12 @@ def savi(
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')
@@ -123,9 +128,10 @@ def savis(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute SAVIs (Soil Adjusted Vegetation Indices) of 2D arraylike of 1D spectra data series.
+    Compute SAVIs (Soil Adjusted Vegetation Indices) of 2D array-like of 1D spectra data series.
     This function applies a series of default L values, includes: 0, 0.25, 0.5, 0.75, 1 and 2.
     The calculation is based on:
+
         A.R Huete,
         A soil-adjusted vegetation index (SAVI),
         Remote Sensing of Environment,
@@ -137,17 +143,21 @@ def savis(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')

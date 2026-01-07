@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-SpecPipe - Process functions
+SpecPipe built-in spectral data processing functions
 """
 
 from .snv import snv

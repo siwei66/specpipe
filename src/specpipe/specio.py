@@ -647,7 +647,7 @@ def search_file(  # noqa: C901
     directory_path: str, search_pattern: str, end_with: str = "", exclude_list: Optional[list[str]] = None
 ) -> list[str]:
     """
-    Search and list files in a directory.
+    Search and list file paths in a directory.
 
     Parameters
     ----------
@@ -655,12 +655,13 @@ def search_file(  # noqa: C901
         Directory path to search.
 
     search_pattern : str
-        pattern to search. Wildcard "*"/"[]"/"?"/"[!]" are supported.
+        Pattern to search. Wildcards "*" / "[]" / "?" / "[!]" are supported.
 
     end_with : str
-        Filter file names ending with this pattern, extension is included. Default is end_with name extension when exists.
+        Filter file names ending with this pattern, extension is included.
+        Default is empty string, which uses name extension when exists.
 
-    exclude_list : list[str]
+    exclude_list : list of str
         Filter file names that contains any strings in the exclude_list.
 
     Returns
@@ -675,7 +676,6 @@ def search_file(  # noqa: C901
     >>> search_file("/some_dir", "abc[123].tif")
     >>> search_file("/some_dir", "abc*", end_with=".tif")
     >>> search_file("/some_dir", "abc*", end_with=".tif", exclude_list=["mask", "test"])
-
     """  # noqa: E501
     # Init exclude_list
     if exclude_list is None:
@@ -851,7 +851,7 @@ def names_filter(
 @validate_call
 def envi_roi_coords(roi_xml_path: str) -> list[dict[str, Any]]:
     """
-    Get vertex coordinates of Polygon ROIs from ENVI ROI xml file.
+    Get vertex coordinates of (multi-)polygon ROIs from ENVI ROI xml file.
 
     Parameters
     ----------
@@ -860,8 +860,9 @@ def envi_roi_coords(roi_xml_path: str) -> list[dict[str, Any]]:
 
     Returns
     -------
-    list[dict[str, Any]]
-        A list with dictionaries of ROI name, ROI geometry type and lists of vertex coordinate pairs in tuples.
+    list of dict
+        A list of ROI dictionaries.
+        Each ROI dictionary contains ROI name, ROI geometry type and lists of vertex coordinate pairs in tuples.
 
     Raises
     ------
@@ -871,7 +872,6 @@ def envi_roi_coords(roi_xml_path: str) -> list[dict[str, Any]]:
     Examples
     --------
     >>> coord_list = envi_roi_coords("/image_roi.xml")
-
     """
     # Read ENVI ROI xml file
     with open(unc_path(roi_xml_path), "r") as f:
@@ -921,17 +921,18 @@ def envi_roi_coords(roi_xml_path: str) -> list[dict[str, Any]]:
 @validate_call
 def shp_roi_coords(roi_shp_path: str) -> list[dict[str, Any]]:
     """
-    Get vertex coordinates of Polygon and MultiPolygon ROIs from shapefile.
+    Get vertex coordinates of (multi-)polygon ROIs from shapefile.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     shapefile_path : str
         Path to the input shapefile
 
-    Returns:
-    --------
-    list[dict[str, Any]]
-        A list with dictionaries of ROI name, ROI geometry type and lists of vertex coordinate pairs in tuples.
+    Returns
+    -------
+    list of dict
+        A list of ROI dictionaries.
+        Each ROI dictionary contains ROI name, ROI geometry type and lists of vertex coordinate pairs in tuples.
 
     Raises
     ------
@@ -941,7 +942,6 @@ def shp_roi_coords(roi_shp_path: str) -> list[dict[str, Any]]:
     Examples
     --------
     >>> coord_list = shp_roi_coords("/image_roi.shp")
-
     """
     # Read ROI shapefile as geodataframe
     gdf = gpd.read_file(roi_shp_path)
@@ -1163,7 +1163,7 @@ def df_from_csv(path: str, **kwargs) -> pd.DataFrame:  # type: ignore[no-untyped
 
 # ROI coords to ENVI ROI xml
 @simple_type_validator
-def roi_to_envi_xml(  # noqa: C901
+def roi_to_envi(  # noqa: C901
     file_path: str,
     name: str = "",
     coordinates: Optional[list[list[tuple[Union[int, float], Union[int, float]]]]] = None,
@@ -1174,46 +1174,130 @@ def roi_to_envi_xml(  # noqa: C901
     return_path: bool = True,
 ) -> Optional[str]:
     """
-    Write the vertex coordinate pairs of (multipart-)polygon Region of Interest (ROI) to ENVI xml ROI file.
+    Write one or more polygon Regions of Interest (ROIs) to an ENVI XML ROI file.
+
+    This function supports writing a single ROI via individual arguments or multiple ROIs via ``roi_list``.
+    When ``roi_list`` is provided, all single-ROI arguments are ignored.
 
     Parameters
     ----------
     file_path : str
-        File path.
+        Path to the output ENVI XML ROI file.
 
-    name : str
-        ROI name.
+    name : str, optional
+        Name of the ROI when writing a single ROI. Ignored if ``roi_list`` is provided.
 
-    coordinates : list[list[tuple[float,float]]]
-        List of vertex coordinate pair list.
+    coordinates : list of list of tuple of 2 (float or int), optional
+        Vertex coordinate pairs defining the ROI geometry when writing a single ROI.
 
-    crs : Union[str, CRS]
-        Coordinate system of ROI. The default is 'none'.
+        Structure::
 
-    color : Optional[tuple[int, int, int]], optional
-        List of color tuples of the ROIs in RGB values.
-        List of RGB color tuples for the ROIs.
-        Each color is specified as a tuple of three integers (R, G, B), where each value must be in the range 0 to 255.
-        The default value applies random colors.
+            [
+                [ (x1, y1), (x2, y2), ..., (xn, yn), (x1, y1) ],  # Polygon 1
+                [ (x1, y1), (x2, y2), ..., (xm, ym), (x1, y1) ],  # Polygon 2
+                ...
+            ]
+
+        Each inner list represents a polygon (for multipart geometries), and each tuple is a vertex coordinate.
+
+        Ignored if ``roi_list`` is provided.
+
+    crs : str or CRS, optional
+        Coordinate reference system of the ROI.
+
+        Use ``"none"`` for image-space coordinates (ENVI default).
+
+        Ignored if ``roi_list`` is provided.
+
+    color : tuple of int, optional
+        RGB color of the ROI specified as ``(R, G, B)``, where each value is in the range 0–255.
+
+        If ``None``, a random color is assigned. Default is None.
+
+        Ignored if ``roi_list`` is provided.
 
     roi_type : str, optional
         Type of ROI to write.
-        The default is 'polygon'.
-        Only 'polygon' type is supported in the current version, and this parameter has no effect.
-        The polygon geometry type includes polygons, rectangles and ellipses in ENVI, as they are all represented as polygons.
 
-    roi_list : Optional[list[dict[str, Any]]]
-        If multiple ROIs are to be written, provide the ROI parameters as a list of dictionaries. This will replace the individual arguments above.
-        The expected format for the list is:
-            [{'name' : name, 'crs': crs, 'color': color, 'type': roi_type, 'coordinates': coordinates}, ...]
-        The expected type of coordinates is:
-            list[list[tuple[Union[int, float], Union[int, float]]]]
-            (list of lists of polygon coordinate pairs in tuple)
+        Currently, only ``"polygon"`` is supported.
+        This parameter has no effect and is reserved for future extensions.
+
+        Ignored if ``roi_list`` is provided.
+
+    roi_list : list of dict, optional
+        List of ROI definitions for writing multiple ROIs.
+
+        Each dictionary must contain the following keys::
+
+            {
+                "name": str,
+                "crs": str or CRS,
+                "color": tuple of int or None,
+                "type": str,
+                "coordinates": list of list of tuple of float
+            }
+
+        The ``coordinates`` entry represents one or more polygons as lists of vertex coordinate pairs.
+
+    return_path : bool, optional
+        If ``True``, return the path to the generated ENVI XML ROI file.
 
     Returns
     -------
-    str
-        Path of generated ENVI xml ROI file.
+    str or None
+        Path of the generated ENVI XML ROI file if ``return_path`` is ``True``; otherwise, ``None``.
+
+    Notes
+    -----
+    In ENVI, polygons, rectangles, and ellipses are all represented internally as polygon geometries.
+    This function therefore writes all supported ROI types as polygons in the ENVI XML schema.
+
+    Examples
+    --------
+    For single ROI with one polygon::
+
+        >>> roi_to_envi(
+        ...     file_path="image_roi.xml",
+        ...     name="roi1",
+        ...     coordinates=[[(2.0, 2.0), (3.0, 2.0), (3.0, 3.0), (2.0, 3.0)]],
+        ...     crs="EPSG:4326",
+        ...     color=(255, 0, 0),
+        ... )
+
+    For single ROI with multiple polygons::
+
+        >>> roi_to_envi(
+        ...     file_path="image_roi.xml",
+        ...     name="roi1",
+        ...     coordinates=[
+        ...             [(2.0, 2.0), (3.0, 2.0), (3.0, 3.0), (2.0, 3.0)],
+        ...             [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (0.0, 0.0)],
+        ...         ],
+        ...     crs="EPSG:4326",
+        ...     color=(255, 0, 0)
+        ... )
+
+    For multiple ROis using ``roi_list``::
+
+        >>> roi_to_envi(
+        ...     file_path="image_roi.xml",
+        ...     roi_list=[
+        ...         {
+        ...             "name": "test_roi_1",
+        ...             "crs": "EPSG:4326",
+        ...             "color": (255, 0, 0),
+        ...             "type": "polygon",
+        ...             "coordinates": [[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]],
+        ...         },
+        ...         {
+        ...             "name": "test_roi_2",
+        ...             "crs": "EPSG:3857",
+        ...             "color": (0, 255, 0),
+        ...             "type": "polygon",
+        ...             "coordinates": [[(2.0, 2.0), (3.0, 2.0), (3.0, 3.0), (2.0, 3.0)]],
+        ...         },
+        ...     ]
+        ... )
     """  # noqa: E501
 
     # Initialize coordinate list
@@ -1338,40 +1422,108 @@ def roi_to_shp(  # noqa: C901
     return_path: bool = True,
 ) -> Optional[str]:
     """
-    Write the vertex coordinate pairs of (multipart-)polygon Region of Interest (ROI) to a shapefile.
+    Write one or more polygon Regions of Interest (ROIs) to a Shapefile.
+
+    This function supports writing a single ROI via individual arguments or multiple ROIs via ``roi_list``.
+    When ``roi_list`` is provided, all single-ROI arguments are ignored.
 
     Parameters
     ----------
     file_path : str
-        File path.
+        Path to the output ENVI XML ROI file.
 
-    crs : Union[str, CRS]
-        Coordinate system (CRS) of the ROIs.
-        Note: CRS must be provided. Non-georeferenced image may require additional alignment.
+    crs : str or CRS
+        Coordinate reference system of the ROI(s).
 
-    name : str
-        ROI name.
+        Note: CRS must be provided. Non-georeferenced image may require additional alignment in GIS softwares.
 
-    coordinates : list[list[tuple[float,float]]]
-        List of vertex coordinate pair list.
+    name : str, optional
+        Name of the ROI when writing a single ROI. Ignored if ``roi_list`` is provided.
+
+    coordinates : list of list of tuple of 2 (float or int), optional
+        Vertex coordinate pairs defining the ROI geometry when writing a single ROI.
+
+        Structure::
+
+            [
+                [ (x1, y1), (x2, y2), ..., (xn, yn), (x1, y1) ],  # Polygon 1
+                [ (x1, y1), (x2, y2), ..., (xm, ym), (x1, y1) ],  # Polygon 2
+                ...
+            ]
+
+        Each inner list represents a polygon (for multipart geometries), and each tuple is a vertex coordinate.
+
+        Ignored if ``roi_list`` is provided.
 
     roi_type : str, optional
         Type of ROI to write.
-        The default is 'polygon'.
-        Only 'polygon' type is supported in the current version, and this parameter has no effect.
 
-    roi_list : Optional[list[dict[str, Any]]]
-        If multiple ROIs are to be written, provide the ROI parameters as a list of dictionaries. This will replace the individual arguments above.
-        The expected format for the list is:
-            [{'name' : name, 'type': roi_type, 'coordinates': coordinates}, ...]
-        The expected type of coordinate list is:
-            list[list[tuple[Union[int, float], Union[int, float]]]]
-            (list of lists of polygon coordinate pairs in tuple)
+        Currently, only ``"polygon"`` is supported.
+        This parameter has no effect and is reserved for future extensions.
+
+        Ignored if ``roi_list`` is provided.
+
+    roi_list : list of dict, optional
+        List of ROI definitions for writing multiple ROIs.
+
+        Each dictionary must contain the following keys::
+
+            {
+                "name": str,
+                "type": str,
+                "coordinates": list of list of tuple of float
+            }
+
+        The ``coordinates`` entry represents one or more polygons as lists of vertex coordinate pairs.
+
+    return_path : bool, optional
+        If ``True``, return the path to the generated ENVI XML ROI file.
 
     Returns
     -------
-    str
-        Path of generated ROI shapefile.
+    str or None
+        Path of the generated Shapefile if ``return_path`` is ``True``; otherwise, ``None``.
+
+    Examples
+    --------
+    For single ROI with one polygon::
+
+        >>> roi_to_shp(
+        ...     file_path="image_roi.shp",
+        ...     crs="EPSG:4326",
+        ...     name="roi1",
+        ...     coordinates=[[(2.0, 2.0), (3.0, 2.0), (3.0, 3.0), (2.0, 3.0)]]
+        ... )
+
+    For single ROI with multiple polygons::
+
+        >>> roi_to_shp(
+        ...     file_path="image_roi.shp",
+        ...     crs="EPSG:4326",
+        ...     name="roi1",
+        ...     coordinates=[
+        ...             [(2.0, 2.0), (3.0, 2.0), (3.0, 3.0), (2.0, 3.0)],
+        ...             [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (0.0, 0.0)],
+        ...         ]
+        ... )
+
+    For multiple ROis using ``roi_list``::
+
+        >>> roi_to_shp(
+        ...     file_path="image_roi.shp",
+        ...     roi_list=[
+        ...         {
+        ...             "name": "test_roi_1",
+        ...             "type": "polygon",
+        ...             "coordinates": [[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]],
+        ...         },
+        ...         {
+        ...             "name": "test_roi_2",
+        ...             "type": "polygon",
+        ...             "coordinates": [[(2.0, 2.0), (3.0, 2.0), (3.0, 3.0), (2.0, 3.0)]],
+        ...         },
+        ...     ]
+        ... )
     """  # noqa: E501
 
     # Initialize coordinate list

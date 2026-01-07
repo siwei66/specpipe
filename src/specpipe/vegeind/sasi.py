@@ -28,8 +28,9 @@ def _sasi(  # noqa: C901
     index_name: str = 'SAVI',
 ) -> pd.DataFrame:
     """
-    Helper to compute arbitrary SASI (Soil Adjusted Salinity Index) of 2D arraylike of 1D spectra data series.
+    Helper to compute arbitrary SASI (Soil Adjusted Salinity Index) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Zhang, Ting-Ting, et al.
         Using hyperspectral vegetation indices as a proxy to monitor soil salinity.
         Ecological Indicators 11.6 (2011): 1552-1562.
@@ -37,23 +38,27 @@ def _sasi(  # noqa: C901
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
     L : float or int
         Soil influence adjustment parameter. The default is 0.5.
-    bands_long : tuple[Union[float, int], Union[float, int]]
+    bands_long : tuple of (float or int, float or int)
         Range of longer band item. The default is SAVI's NIR range.
-    bands_short : tuple[Union[float, int], Union[float, int]]
+    bands_short : tuple of (float or int, float or int)
         Range of shorter band item. The default is SAVI's red range.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')
@@ -120,8 +125,9 @@ def sasi1(
     L: Union[float, int] = 0.5,  # noqa: N803
 ) -> pd.DataFrame:
     """
-    Compute SASI1 (Soil Adjusted Salinity Index 1) of 2D arraylike of 1D spectra data series.
+    Compute SASI1 (Soil Adjusted Salinity Index 1) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Zhang, Ting-Ting, et al.
         Using hyperspectral vegetation indices as a proxy to monitor soil salinity.
         Ecological Indicators 11.6 (2011): 1552-1562.
@@ -129,9 +135,9 @@ def sasi1(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
@@ -140,8 +146,12 @@ def sasi1(
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     index_name = "SASI1_L" + str(L).replace('.', 'd')
     result = _sasi(
@@ -164,8 +174,9 @@ def sasi2(
     L: Union[float, int] = 0.5,  # noqa: N803
 ) -> pd.DataFrame:
     """
-    Compute SASI2 (Soil Adjusted Salinity Index 2) of 2D arraylike of 1D spectra data series.
+    Compute SASI2 (Soil Adjusted Salinity Index 2) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Zhang, Ting-Ting, et al.
         Using hyperspectral vegetation indices as a proxy to monitor soil salinity.
         Ecological Indicators 11.6 (2011): 1552-1562.
@@ -173,9 +184,9 @@ def sasi2(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
@@ -184,8 +195,12 @@ def sasi2(
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     index_name = "SASI2_L" + str(L).replace('.', 'd')
     result = _sasi(
@@ -208,8 +223,9 @@ def sasi3(
     L: Union[float, int] = 0.5,  # noqa: N803
 ) -> pd.DataFrame:
     """
-    Compute SASI3 (Soil Adjusted Salinity Index 3) of 2D arraylike of 1D spectra data series.
+    Compute SASI3 (Soil Adjusted Salinity Index 3) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Zhang, Ting-Ting, et al.
         Using hyperspectral vegetation indices as a proxy to monitor soil salinity.
         Ecological Indicators 11.6 (2011): 1552-1562.
@@ -217,9 +233,9 @@ def sasi3(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
@@ -228,8 +244,12 @@ def sasi3(
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     index_name = "SASI3_L" + str(L).replace('.', 'd')
     result = _sasi(
@@ -252,8 +272,9 @@ def sasi4(
     L: Union[float, int] = 0.5,  # noqa: N803
 ) -> pd.DataFrame:
     """
-    Compute SASI4 (Soil Adjusted Salinity Index 4) of 2D arraylike of 1D spectra data series.
+    Compute SASI4 (Soil Adjusted Salinity Index 4) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Zhang, Ting-Ting, et al.
         Using hyperspectral vegetation indices as a proxy to monitor soil salinity.
         Ecological Indicators 11.6 (2011): 1552-1562.
@@ -261,9 +282,9 @@ def sasi4(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
@@ -272,8 +293,12 @@ def sasi4(
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     index_name = "SASI4_L" + str(L).replace('.', 'd')
     result = _sasi(

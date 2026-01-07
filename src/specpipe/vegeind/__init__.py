@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-SpecPipe - Vegetation index module
+SpecPipe vegetation spectral index submodule
 """
-from .demo_data import create_vegeind_demo_data
+from .demo_data import create_specind_demo_data
 from .vegeind_summary import vegeind_summary
 from .ndvi import ndvi
 from .sr import sr
@@ -40,7 +40,6 @@ __all__ = [
     # Summary
     "vegeind_summary",
     # Classic
-    "create_vegeind_demo_data",
     "ndvi",
     "sr",
     "dvi",
@@ -102,4 +101,5 @@ __all__ = [
     "swsi1",
     "swsi2",
     "swsi3",
+    "create_specind_demo_data",
 ]

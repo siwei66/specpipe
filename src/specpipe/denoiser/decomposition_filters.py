@@ -18,6 +18,24 @@ from ..specio import simple_type_validator, arraylike_validator
 
 
 class FourierFilter:
+    """
+    Fourier filter to 2D array-like of 1D series data.
+
+    Attributes
+    ----------
+    sampling_rate : float, optional
+        Sampling rate. The default uses the number of samples.
+    cutoff : float, optional
+        Percentage frequency cutoffs, must be a number between 0 and 1. The default is 0.1.
+    axis : int, optional
+        Axis of 1D signal. If 0, each row of 2D array represents an 1D signal.
+        The default is 0.
+
+    Methods
+    -------
+    apply
+        Apply Fourier filter to 2D array-like of 1D series data.
+    """
 
     @simple_type_validator
     def __init__(
@@ -26,28 +44,6 @@ class FourierFilter:
         cutoff: float = 0.5,
         axis: int = 0,
     ) -> None:
-        """
-        Fourier filter to 2D arraylike of 1D series data.
-
-
-        Attributes
-        ----------
-        sampling_rate : float, optional
-            Sampling rate. The default uses the number of samples.
-
-        cutoff : float, optional
-            Percentage frequency cutoffs, must be a number between 0 and 1. The default is 0.1.
-
-        axis : int, optional
-            Axis of 1D signal. If 0, each row of 2D array represents an 1D signal.
-            The default is 0.
-
-
-        Methods
-        -------
-        apply
-            Apply Fourier filter to 2D arraylike of 1D series data.
-        """
         self.sampling_rate = sampling_rate
         if (axis != 0) & (axis != 1):
             raise ValueError(f'axis must be 0 or 1, got: {axis}')
@@ -62,17 +58,31 @@ class FourierFilter:
         data_array: Union[Annotated[Any, arraylike_validator(ndim=2)], Annotated[Any, arraylike_validator(ndim=1)]],
     ) -> np.ndarray:
         """
-        Apply Fourier filter to 2D arraylike of 1D series data.
+        Apply Fourier filter to 2D array-like of 1D series data.
 
         Parameters
         ----------
-        data_array : 1D or 2D arraylike
+        data_array : 1D array-like or 2D array-like
             1D data array or 2D data array of 1D series data.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Array of filtered signals.
+
+        Examples
+        --------
+        >>> ff = FourierFilter()
+        >>> ff.apply([1, 2, 3, 4, 5, 6, 77, 88, 9, 10])
+        >>> ff.apply([[1, 2, 3, 4, 5, 6, 77, 88, 9, 10], [1, 22, 33, 4, 5, 6, 7, 8, 9, 10]])
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for ROI pixel spectrum processing::
+
+            >>> pipe.add_process(6, 6, 0, FourierFilter().apply)
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for the processing of 1D sample data::
+
+            >>> pipe.add_process(7, 7, 0, FourierFilter().apply)
         """
         axis = self.axis
         sampling_rate = self.sampling_rate
@@ -126,6 +136,49 @@ class FourierFilter:
 
 
 class WaveletFilter:
+    """
+    Wavelet filter for 2D array-like of 1D series data.
+
+    This class provides wavelet denoising functionality using PyWavelets as the underlying implementation.
+
+    Attributes
+    ----------
+    wavelet : str, optional
+        Wavelet form. The default is "haar".
+
+        See ``PyWavelets`` documentation for available options.
+
+    cutoff : float
+        Percentage frequency cutoffs, must be a number between 0 and 1.
+
+        The default is 0.1.
+
+    threshold_mode : str
+        Thresholding modes for wavelet coefficient processing.
+
+        The default is "soft".
+
+        See ``PyWavelets`` documentation for available options.
+
+    extension_mode : str
+        Signal extension mode. The default is "symmetric".
+
+        See ``PyWavelets`` documentation for available options.
+
+    axis : int, optional
+        Axis of 1D signal. If 0, each row of 2D array represents an 1D signal.
+
+        The default is 0.
+
+    Methods
+    -------
+    apply
+        Apply wavelet filter to 2D array-like of 1D series data.
+
+    See Also
+    --------
+    PyWavelets
+    """
 
     @simple_type_validator
     def __init__(
@@ -136,38 +189,6 @@ class WaveletFilter:
         extension_mode: str = 'symmetric',
         axis: int = 0,
     ) -> None:
-        """
-        Wavelet filter for 2D arraylike of 1D series data.
-        This class provides wavelet denoising functionality using PyWavelets as the underlying implementation.
-
-
-        Attributes
-        ----------
-        wavelet : str, optional
-            Wavelet form. The default is 'haar'.
-            Refer to 'PyWavelets' documentation for supported values.
-
-        cutoff : float
-            Percentage frequency cutoffs, must be a number between 0 and 1. The default is 0.1.
-
-        threshold_mode : str
-            Thresholding modes for wavelet coefficient processing. The default is 'soft'.
-            Refer to 'PyWavelets' documentation for supported values.
-
-        extension_mode : str
-            Signal extension mode. The default is 'symmetric'.
-            Refer to 'PyWavelets' documentation for supported values.
-
-        axis : int, optional
-            Axis of 1D signal. If 0, each row of 2D array represents an 1D signal.
-            The default is 0.
-
-
-        Methods
-        -------
-        apply
-            Apply wavelet filter to 2D arraylike of 1D series data.
-        """
         self.wavelet = wavelet
         self.cutoff = cutoff
         self.threshold_mode = threshold_mode
@@ -231,17 +252,31 @@ class WaveletFilter:
         data_array: Union[Annotated[Any, arraylike_validator(ndim=2)], Annotated[Any, arraylike_validator(ndim=1)]],
     ) -> np.ndarray:
         """
-        Apply Fourier filter to 2D arraylike of 1D series data.
+        Apply Fourier filter to 2D array-like of 1D series data.
 
         Parameters
         ----------
-        data_array : 1D or 2D arraylike
+        data_array : 1D array-like or 2D array-like
             1D data array or 2D data array of 1D series data.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Array of filtered signals.
+
+        Examples
+        --------
+        >>> wf = WaveletFilter()
+        >>> wf.apply([1, 2, 3, 4, 5, 6, 77, 88, 9, 10])
+        >>> wf.apply([[1, 2, 3, 4, 5, 6, 77, 88, 9, 10], [1, 22, 33, 4, 5, 6, 7, 8, 9, 10]])
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for ROI pixel spectrum processing::
+
+            >>> pipe.add_process(6, 6, 0, WaveletFilter().apply)
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for the processing of 1D sample data::
+
+            >>> pipe.add_process(7, 7, 0, WaveletFilter().apply)
         """
         wavelet = self.wavelet
         cutoff = self.cutoff

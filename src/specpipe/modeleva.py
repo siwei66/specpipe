@@ -134,11 +134,11 @@ class ModelEva:
 
     validation_method : str
         Validation method, Choose between:
-        * "loo" :
+        * "loo"
             Leave-one-out cross-validation.
-        * "k-fold" (e.g. "5-fold") :
+        * "k-fold" (e.g. "5-fold")
             K-fold cross validation, k is the number of folds.
-        * "m-n-split" (e.g. "70-30-split") :
+        * "m-n-split" (e.g. "70-30-split")
             Train-test split. m% training, n% testing (only test set used for evaluation).
 
     report_directory : str
@@ -1634,11 +1634,11 @@ class ModelEva:
         This method outputs the evaluation reports to files in the reporting directory.
 
         The evaluation report includes:
-        * model validation results
-        * performance metrics
-        * residual analysis report
-        * case analysis of residuals & influence
-        * Response Operating Characteristics plot
+            * model validation results
+            * performance metrics
+            * residual analysis report
+            * case analysis of residuals & influence
+            * Response Operating Characteristics plot
 
         Parameters
         ----------
@@ -1646,25 +1646,25 @@ class ModelEva:
             Configuration of data split options in dictionary. The default is 'default', using default settings.
 
             The parameters of data split include:
-            * random_state : Optional[int], optional
-                Random state for data splitting and shuffling. If None, random_state is not fixed. The default is None.
-            * validation_method : Optional[str], optional
-                Model validation method, default is using 'ModelEva.validation_method', see 'ModelEva' for details.
+                * random_state : Optional[int], optional
+                    Random state for data splitting and shuffling. If None, random_state is not fixed. The default is None.
+                * validation_method : Optional[str], optional
+                    Model validation method, default is using 'ModelEva.validation_method', see 'ModelEva' for details.
 
         validation_config : Union[str,dict], optional
             Configuration of validation options. The default is 'default', using default settings.
 
             The parameters of validation include:
-            * unseen_threshold : Optional[float]
-                For classification models trained on data with missing classes, a sample is assigned to a unknown class if its highest predicted probability among the known classes is below the unseen_threshold.
-            * use_original_shape : bool
-                Whether the sample data is reshaped to its original shape.
-                If False, the flattened data is used. The default is False.
-            * save_fold_model: bool
-                Whether to save model of each fold. The default is True.
-            * save_fold_data: bool
-                Whether to save training and validation data of each fold. The default is True.
-                Saving fold data and fold models could consuming significant storage when applied to large data with large sample size with large fold numbers.
+                * unseen_threshold : Optional[float]
+                   For classification models trained on data with missing classes, a sample is assigned to a unknown class if its highest predicted probability among the known classes is below the unseen_threshold.
+                * use_original_shape : bool
+                    Whether the sample data is reshaped to its original shape.
+                    If False, the flattened data is used. The default is False.
+                * save_fold_model: bool
+                    Whether to save model of each fold. The default is True.
+                * save_fold_data: bool
+                    Whether to save training and validation data of each fold. The default is True.
+                    Saving fold data and fold models could consuming significant storage when applied to large data with large sample size with large fold numbers.
 
         metrics_config : Union[str,dict,None], optional
             Configuration of metrics options. The default is 'default', using default settings.
@@ -1675,35 +1675,35 @@ class ModelEva:
             If None, the ROC curve plotting is skipped.
 
             The parameters of scatter plot and its default values are listed as follows:
-            * plot_title : str = 'ROC Curve',
-            * title_size : Union[int,float] = 26,
-            * title_pad : Union[int,float,None] = None,
-            * figure_size : tuple[Union[int,float],Union[int,float]] = (8, 8),
-            * plot_margin : tuple[float,float,float,float] = (0.15, 0.95, 0.9, 0.13), # (left,right,top,bottom) Margin
-            * plot_line_with : Union[int,float] = 3,
-            * plot_line_alpha : float = 0.8,
-            * diagnoline_width : Union[int,float] = 3,
-            * x_axis_limit : Optional[tuple[Union[int,float],Union[int,float]]] = None,
-            * x_axis_label : str = 'False Positive Rate',
-            * x_axis_label_size : Union[int,float] = 26,
-            * x_tick_size : Union[int,float] = 24,
-            * x_tick_number : int = 6,
-            * y_axis_limit : Optional[tuple[Union[int,float],Union[int,float]]] = None,
-            * y_axis_label : str = 'True Positive Rate',
-            * y_axis_label_size : Union[int,float] = 26,
-            * y_tick_size : Union[int,float] = 24,
-            * y_tick_number : int = 6,
-            * axis_line_size_left : Union[int,float,None] = 1.5,
-            * axis_line_size_right : Union[int,float,None] = 1.5,
-            * axis_line_size_top : Union[int,float,None] = 1.5,
-            * axis_line_size_bottom : Union[int,float,None] = 1.5,
-            * legend : bool = True,
-            * legend_location : str = 'lower right',
-            * legend_fontsize : Union[int,float] = 20,
-            * legend_title : str = '',
-            * legend_title_fontsize : Union[int,float] = 24,
-            * background_grid : bool = False,
-            * show_plot : bool = False
+                * plot_title : str = 'ROC Curve',
+                * title_size : Union[int,float] = 26,
+                * title_pad : Union[int,float,None] = None,
+                * figure_size : tuple[Union[int,float],Union[int,float]] = (8, 8),
+                * plot_margin : tuple[float,float,float,float] = (0.15, 0.95, 0.9, 0.13), # (left,right,top,bottom) Margin
+                * plot_line_with : Union[int,float] = 3,
+                * plot_line_alpha : float = 0.8,
+                * diagnoline_width : Union[int,float] = 3,
+                * x_axis_limit : Optional[tuple[Union[int,float],Union[int,float]]] = None,
+                * x_axis_label : str = 'False Positive Rate',
+                * x_axis_label_size : Union[int,float] = 26,
+                * x_tick_size : Union[int,float] = 24,
+                * x_tick_number : int = 6,
+                * y_axis_limit : Optional[tuple[Union[int,float],Union[int,float]]] = None,
+                * y_axis_label : str = 'True Positive Rate',
+                * y_axis_label_size : Union[int,float] = 26,
+                * y_tick_size : Union[int,float] = 24,
+                * y_tick_number : int = 6,
+                * axis_line_size_left : Union[int,float,None] = 1.5,
+                * axis_line_size_right : Union[int,float,None] = 1.5,
+                * axis_line_size_top : Union[int,float,None] = 1.5,
+                * axis_line_size_bottom : Union[int,float,None] = 1.5,
+                * legend : bool = True,
+                * legend_location : str = 'lower right',
+                * legend_fontsize : Union[int,float] = 20,
+                * legend_title : str = "",
+                * legend_title_fontsize : Union[int,float] = 24,
+                * background_grid : bool = False,
+                * show_plot : bool = False
             If the default value of above plotting parameter is None, it refers to default relative values.
 
         residual_config : Union[str,dict[str,Any],None]
@@ -1718,10 +1718,10 @@ class ModelEva:
             Please note this computation is highly time-consuming for large sample size. To save time, use a simple validation method or set this to None.
 
             The parameters of validation include:
-            * validation_method : bool, optional
+                * validation_method : bool, optional
                 Independent validation_method for leave-one-out analysis of data point influence.
                 Default is using model validation method if it is train-test split, and "2-fold" if the model validation method is "k-fold" or "loo".
-            * random_state : None, optional
+                * random_state : None, optional
                 random state for data splitting. If None, the random state is not fixed. The default is None.
         """  # noqa: E501
 
@@ -2558,25 +2558,25 @@ class ModelEva:
             Configuration of data split options in dictionary. The default is 'default', using default settings.
 
             The parameters of data split include:
-            * random_state : Optional[int], optional
-                Random state for data splitting and shuffling. If None, random_state is not fixed. The default is None.
-            * validation_method : Optional[str], optional
-                Model validation method, default is using 'ModelEva.validation_method', see 'ModelEva' for details.
+                * random_state : Optional[int], optional
+                    Random state for data splitting and shuffling. If None, random_state is not fixed. The default is None.
+                * validation_method : Optional[str], optional
+                    Model validation method, default is using 'ModelEva.validation_method', see 'ModelEva' for details.
 
         validation_config : Union[str,dict], optional
             Configuration of validation options. The default is 'default', using default settings.
 
             The parameters of validation include:
-            * unseen_threshold : Optional[float]
-                For classification models trained on data with missing classes, a sample is assigned to a unknown class if its highest predicted probability among the known classes is below the unseen_threshold.
-            * use_original_shape : bool
-                Whether the sample data is reshaped to its original shape.
-                If False, the flattened data is used. The default is False.
-            * save_fold_model: bool
-                Whether to save model of each fold. The default is True.
-            * save_fold_data: bool
-                Whether to save training and validation data of each fold. The default is True.
-                Saving fold data and fold models could consuming significant storage when applied to large data with large sample size with large fold numbers.
+                * unseen_threshold : Optional[float]
+                    For classification models trained on data with missing classes, a sample is assigned to a unknown class if its highest predicted probability among the known classes is below the unseen_threshold.
+                * use_original_shape : bool
+                    Whether the sample data is reshaped to its original shape.
+                    If False, the flattened data is used. The default is False.
+                * save_fold_model: bool
+                    Whether to save model of each fold. The default is True.
+                * save_fold_data: bool
+                    Whether to save training and validation data of each fold. The default is True.
+                    Saving fold data and fold models could consuming significant storage when applied to large data with large sample size with large fold numbers.
 
         metrics_config : Union[str,dict,None], optional
             Configuration of metrics options. The default is 'default', using default settings.
@@ -2585,35 +2585,34 @@ class ModelEva:
         scatter_plot_config : Union[str,dict,None], optional
             Configuration of scatter plot. The default is 'default', using default settings.
             If None, the ROC curve plotting is skipped.
-
             The parameters of scatter_plot_config and its default values are listed as follows:
-            * plot_title : str = '',
-            * title_size : Union[int,float] = 26,
-            * title_pad : Union[int,float,None] = None,
-            * figure_size : tuple[Union[int,float],Union[int,float]] = (8, 8),
-            * plot_margin : tuple[float,float,float,float] = (0.2, 0.95, 0.95, 0.15), # (left,right,top,bottom) Margin
-            * plot_line_with : Union[int,float] = 3,
-            * point_size : Union[int,float] = 120,
-            * point_color : str = 'firebrick',
-            * point_alpha : float = 0.7,
-            * x_axis_limit : Optional[tuple[Union[int,float],Union[int,float]]] = None,
-            * x_axis_label : str = 'Predicted target values',
-            * x_axis_label_size : Union[int,float] = 26,
-            * x_tick_values : Optional[list[Union[int,float]]] = None,
-            * x_tick_size : Union[int,float] = 24,
-            * x_tick_number : int = 5,
-            * y_axis_limit : Optional[tuple[Union[int,float],Union[int,float]]] = None,
-            * y_axis_label : str = 'Residuals',
-            * y_axis_label_size : Union[int,float] = 26,
-            * y_tick_values : Optional[list[Union[int,float]]] = None,
-            * y_tick_size : Union[int,float] = 24,
-            * y_tick_number : int = 5,
-            * axis_line_size_left : Union[int,float,None] = 1.5,
-            * axis_line_size_right : Union[int,float,None] = 1.5,
-            * axis_line_size_top : Union[int,float,None] = 1.5,
-            * axis_line_size_bottom : Union[int,float,None] = 1.5,
-            * background_grid : bool = False,
-            * show_plot : bool = False
+                * plot_title : str = "",
+                * title_size : Union[int,float] = 26,
+                * title_pad : Union[int,float,None] = None,
+                * figure_size : tuple[Union[int,float],Union[int,float]] = (8, 8),
+                * plot_margin : tuple[float,float,float,float] = (0.2, 0.95, 0.95, 0.15), # (left,right,top,bottom) Margin
+                * plot_line_with : Union[int,float] = 3,
+                * point_size : Union[int,float] = 120,
+                * point_color : str = 'firebrick',
+                * point_alpha : float = 0.7,
+                * x_axis_limit : Optional[tuple[Union[int,float],Union[int,float]]] = None,
+                * x_axis_label : str = 'Predicted target values',
+                * x_axis_label_size : Union[int,float] = 26,
+                * x_tick_values : Optional[list[Union[int,float]]] = None,
+                * x_tick_size : Union[int,float] = 24,
+                * x_tick_number : int = 5,
+                * y_axis_limit : Optional[tuple[Union[int,float],Union[int,float]]] = None,
+                * y_axis_label : str = 'Residuals',
+                * y_axis_label_size : Union[int,float] = 26,
+                * y_tick_values : Optional[list[Union[int,float]]] = None,
+                * y_tick_size : Union[int,float] = 24,
+                * y_tick_number : int = 5,
+                * axis_line_size_left : Union[int,float,None] = 1.5,
+                * axis_line_size_right : Union[int,float,None] = 1.5,
+                * axis_line_size_top : Union[int,float,None] = 1.5,
+                * axis_line_size_bottom : Union[int,float,None] = 1.5,
+                * background_grid : bool = False,
+                * show_plot : bool = False
             If the default value of above plotting parameter is None, it refers to default relative values.
 
         residual_config : Union[str,dict[str,Any],None]
@@ -2632,11 +2631,11 @@ class ModelEva:
             Please note this computation is highly time-consuming for large sample size. To save time, use a simple validation method or set this to None.
 
             The parameters of validation include:
-            * validation_method : bool, optional
-                Independent validation_method for leave-one-out analysis of data point influence.
-                Default is using model validation method if it is train-test split, and "2-fold" if the model validation method is "k-fold" or "loo".
-            * random_state : None, optional
-                random state for data splitting. If None, the random state is not fixed. The default is None.
+                * validation_method : bool, optional
+                    Independent validation_method for leave-one-out analysis of data point influence.
+                    Default is using model validation method if it is train-test split, and "2-fold" if the model validation method is "k-fold" or "loo".
+                * random_state : None, optional
+                    random state for data splitting. If None, the random state is not fixed. The default is None.
         """  # noqa: E501
 
         # Data split

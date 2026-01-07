@@ -24,8 +24,9 @@ def cri(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute CRI (Carotenoid Reflectance Index) and RNIR/R510 of 2D arraylike of 1D spectra data series.
+    Compute CRI (Carotenoid Reflectance Index) and RNIR/R510 of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Gitelson, A.A.; Zur, Y.; Chivkunova, O.B.; Merzlyak, M.N.
         Assessing Carotenoid Content in Plant Leaves with Reflectance Spectroscopy.
         Photochem. Photobiol. 2007, 75, 272–281,
@@ -33,17 +34,21 @@ def cri(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')
@@ -119,8 +124,9 @@ def rnir_to_r510(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute RNIR / R510 (Simple Ratio RNIR / R510) of 2D arraylike of 1D spectra data series.
+    Compute RNIR / R510 (Simple Ratio RNIR / R510) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Gitelson, A.A.; Zur, Y.; Chivkunova, O.B.; Merzlyak, M.N.
         Assessing Carotenoid Content in Plant Leaves with Reflectance Spectroscopy.
         Photochem. Photobiol. 2007, 75, 272–281,
@@ -128,17 +134,21 @@ def rnir_to_r510(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     if axis == 0:
         result = cri(spec_array, wavelength=wavelength, axis=axis).loc[:, ['RNIR_to_R510']]
@@ -154,8 +164,9 @@ def cri550(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute CRI550 (Carotenoid Reflectance Index 550) of 2D arraylike of 1D spectra data series.
+    Compute CRI550 (Carotenoid Reflectance Index 550) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Gitelson, A.A.; Zur, Y.; Chivkunova, O.B.; Merzlyak, M.N.
         Assessing Carotenoid Content in Plant Leaves with Reflectance Spectroscopy.
         Photochem. Photobiol. 2007, 75, 272–281,
@@ -163,17 +174,21 @@ def cri550(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     if axis == 0:
         result = cri(spec_array, wavelength=wavelength, axis=axis).loc[:, ['CRI550']]
@@ -189,8 +204,9 @@ def cri700(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute CRI700 (Carotenoid Reflectance Index 700) of 2D arraylike of 1D spectra data series.
+    Compute CRI700 (Carotenoid Reflectance Index 700) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         Gitelson, A.A.; Zur, Y.; Chivkunova, O.B.; Merzlyak, M.N.
         Assessing Carotenoid Content in Plant Leaves with Reflectance Spectroscopy.
         Photochem. Photobiol. 2007, 75, 272–281,
@@ -198,17 +214,21 @@ def cri700(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """
     if axis == 0:
         result = cri(spec_array, wavelength=wavelength, axis=axis).loc[:, ['CRI700']]

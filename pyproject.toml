@@ -69,6 +69,13 @@ test = [
     "pytest>=8.4.1",
     "pytest-cov>=7.0.0"
 ]
+docs = [
+    "sphinx>=7.4.7",
+    "pydata-sphinx-theme>=0.16.1,<0.17",
+    "numpydoc>=1.9.0",
+    "sphinx-autodoc-typehints>=2.3.0,<2.4.0",
+    "myst-parser>=3.0.1,<3.1.0"
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -88,6 +95,23 @@ warn_return_any = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 ignore_missing_imports = true
+exclude = [
+    "^\\.eggs/",
+    "^\\.git/",
+    "^\\.hg/",
+    "^__pycache__/",
+    "^\\.mypy_cache/",
+    "^\\.tox/",
+    "^\\.venv/",
+    "^_build/",
+    "^buck-out/",
+    "^build/",
+    "^dist/",
+    "^demo/",
+    "^demo_script\\.py$",
+    "^docs/",
+    "^venv/",
+]
 
 [tool.black]
 line-length = 120
@@ -109,6 +133,8 @@ exclude = '''
   | dist
   | demo
   | demo_script.py
+  | docs
+  | venv
 )/
 '''
 
@@ -128,7 +154,9 @@ extend-exclude = [
     "local_tests",
     "demo",
     "example_code.py",
-    "demo_script.py"
+    "demo_script.py",
+    "docs",
+    "venv",
 ]
 [tool.ruff.lint]
 select = [

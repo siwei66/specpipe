@@ -24,7 +24,6 @@ class MovingAvg(RollWindow):
     Apply moving average data smoothing to 2-dimensional array of 1-dimensional data series.
     The averaging calculation is applied to the rolling window.
 
-
     Attributes
     ----------
     window_size : int
@@ -34,53 +33,77 @@ class MovingAvg(RollWindow):
         Window is rolling along the assigned axis. The default is 1.
 
     mode : str, optional
-        Rolling mode for kernel application.
-        'center' - window is created centered on current data point, better applicable to static data series.
-        'end' - for time series, window is created end with current data point, better applicable to time series.
-        'knn' - k-nearst neighbor mode, k is the window size.
-                For 'knn', the window is constructed with available data centered on current data point, except the edge windows.
-                For the edge windows, the window is constructed on the k nearst neighbor values.
-        The default is 'center'.
+        Rolling mode for kernel application. Available options:
+
+        - "center" - window is created centered on current data point, better applicable to static data series.
+        - "end" - for time series, window is created end with current data point, better applicable to time series.
+        - "knn" - k-nearst neighbor mode, k is the window size.
+
+        For "knn", the window is constructed with available data centered on current data point, except the edge windows.
+        The edge windows are constructed on the k nearst neighbor values.
+
+        The default is "center".
 
     padding : str, optional
-        Padding approach for the output, choose between:
-            'none' - No padding applied, the resulting data series will be window_size - 1 smaller than the original data series.
-            'nan' - Missing values are set to numpy nan after applying the function.
-            'ext_edge' - Edge value of the first and last window are applied to pad before applying the smoothing function.
-            'constant_edge' - Missing values are filled with edge value after applying function.
-            'extrapolation' - Missing values are linearly extrapolated from edge values with length of window_size/2 (center mode), window_size-1 (end mode) after function application.
-        The default is 'extrapolation'.
+        Padding approach for the output. Available options:
 
-    numtype : Union[str, type], optional
+        - "none" - No padding applied, the resulting data series will be window_size - 1 smaller than the original data series.
+        - "nan" - Missing values are set to numpy nan after applying the function.
+        - "ext_edge" - Edge value of the first and last window are applied to pad before applying the smoothing function.
+        - "constant_edge" - Missing values are filled with edge value after applying function.
+        - "extrapolation" - Missing values are linearly extrapolated from edge values with length of window_size/2 (center mode), window_size-1 (end mode) after function application.
+
+        The default is "extrapolation".
+
+    numtype : str or type, optional
         Number type of given data, supported number type of Numpy. Default is float32.
 
-    outlier_replacer : ArrayOutlier object, optional
+    outlier_replacer : ArrayOutlier instance or None, optional
         Outlier removing object with defined attributes. The default is None.
 
-    window_weights : 1D array, optional
+    window_weights : 1D array-like, optional
         Weights array for weighted average. The default is None.
 
     gaussian_sigma : float, optional
         Sigma for Gaussian kernel. By default it is calculated as (window size - 1) / 6.
 
     axis_double_definition_warning : bool, optional
-        If True, the duplicate definition warning will prompt when function has 'axis' argument. The default is True.
-        Set false for known application.
+        If True, the duplicate definition warning will prompt when function has "axis" argument.
 
+        The default is True. Set false for known application.
 
     Methods
     -------
     simple_moving_average
         Implemente simple moving average of input 2d data array.
-
     moving_median
         Implemente moving median of input 2d data array.
-
     weighted_moving_average
         Implemente weighted moving average of input 2d data array.
-
     gaussian_filter
         Implemente Gaussian smoothing of input 2d data array.
+
+    Examples
+    --------
+    Basic usage with ``window_size``::
+
+        >>> ma = MovingAvg(3)
+
+    Use different ``window_size``::
+
+        >>> ma = MovingAvg(4)
+
+    Pad with ``numpy.nan``::
+
+        >>> ma = MovingAvg(3, padding='nan')
+
+    Specify rolling mode::
+
+        >>> ma = MovingAvg(3, mode='knn')
+
+    Compute along a different axis::
+
+        >>> ma = MovingAvg(3, axis=0)
     """  # noqa: E501
 
     @simple_type_validator
@@ -123,7 +146,7 @@ class MovingAvg(RollWindow):
             else:
                 raise ValueError(
                     f"Invalid window_weights name: {window_weights}, \
-                                 window_weights must be 1D arraylike or 'gaussian'"
+                                 window_weights must be 1D array-like or 'gaussian'"
                 )
         else:
             window_weight_values = np.array(window_weights).astype(self.numtype)
@@ -142,18 +165,18 @@ class MovingAvg(RollWindow):
             raise ValueError("'outlier_replacer' must be an instance of class ArrayOutlier.")
 
     @simple_type_validator
-    def sma_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def _sma_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
         Simple moving average kernel.
 
         Parameters
         ----------
-        window_array : np.ndarray
+        window_array : numpy.ndarray
             1D window data in a 2D array.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Calculation results.
 
         Raises
@@ -177,36 +200,50 @@ class MovingAvg(RollWindow):
 
         Parameters
         ----------
-        data_array : np.ndarray
+        data_array : numpy.ndarray
             input data series in 2d data array.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Smoothing result.
+
+        Examples
+        --------
+        >>> ma = MovingAvg(5)
+        >>> ma.simple_moving_average([1, 2, 3, 4, 5, 6, 77, 88, 9, 10])
+        >>> ma.simple_moving_average([[1, 2, 3, 4, 5, 6, 77, 88, 9, 10], [1, 22, 33, 4, 5, 6, 7, 8, 9, 10]])
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for ROI pixel spectrum processing::
+
+            >>> pipe.add_process(6, 6, 0, MovingAvg(5).simple_moving_average)
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for the processing of 1D sample data::
+
+            >>> pipe.add_process(7, 7, 0, MovingAvg(5).simple_moving_average)
         """
         data_array = _to_2d_arr(data_array).astype(self.numtype)
         if self.outlier_replacer is None:
-            result = super().apply(data_array, self.sma_kernel)
+            result = super()._apply(data_array, self._sma_kernel)
         else:
-            result = super().chain_apply(
-                data_array=data_array, function_list=[self.outlier_replacer.replace, self.sma_kernel]
+            result = super()._chain_apply(
+                data_array=data_array, function_list=[self.outlier_replacer.replace, self._sma_kernel]
             )
         return _back_1d_arr(result)
 
     @simple_type_validator
-    def median_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def _median_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
         Moving median kernel.
 
         Parameters
         ----------
-        window_array : np.ndarray
+        window_array : numpy.ndarray
             1D window data in a 2D array.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Calculation results.
 
         Raises
@@ -232,36 +269,50 @@ class MovingAvg(RollWindow):
 
         Parameters
         ----------
-        data_array : np.ndarray.
+        data_array : numpy.ndarray.
             input data series in 2d data array.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Smoothing result.
+
+        Examples
+        --------
+        >>> ma = MovingAvg(5)
+        >>> ma.moving_median([1, 2, 3, 4, 5, 6, 77, 88, 9, 10])
+        >>> ma.moving_median([[1, 2, 3, 4, 5, 6, 77, 88, 9, 10], [1, 22, 33, 4, 5, 6, 7, 8, 9, 10]])
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for ROI pixel spectrum processing::
+
+            >>> pipe.add_process(6, 6, 0, MovingAvg(5).moving_median)
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for the processing of 1D sample data::
+
+            >>> pipe.add_process(7, 7, 0, MovingAvg(5).moving_median)
         """
         data_array = _to_2d_arr(data_array).astype(self.numtype)
         if self.outlier_replacer is None:
-            result = super().apply(data_array, self.median_kernel)
+            result = super()._apply(data_array, self._median_kernel)
         else:
-            result = super().chain_apply(
-                data_array=data_array, function_list=[self.outlier_replacer.replace, self.median_kernel]
+            result = super()._chain_apply(
+                data_array=data_array, function_list=[self.outlier_replacer.replace, self._median_kernel]
             )
         return _back_1d_arr(result)
 
     @simple_type_validator
-    def wma_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def _wma_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
         weighted moving average kernel.
 
         Parameters
         ----------
-        window_array : np.ndarray
+        window_array : numpy.ndarray
             1D window data in a 2D array.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Calculation results.
 
         Raises
@@ -299,13 +350,13 @@ class MovingAvg(RollWindow):
         return wavg
 
     @simple_type_validator
-    def gaussian_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def _gaussian_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
         Moving median kernel.
 
         Parameters
         ----------
-        window_array : np.ndarray
+        window_array : numpy.ndarray
             1D window data in a 2D array.
         gaussian_sigma : float
             sigma applied in gaussian kernel, if not given, the sigma will be (window size-1)/6 by default.
@@ -356,20 +407,34 @@ class MovingAvg(RollWindow):
 
         Parameters
         ----------
-        data_array : 1D or 2D arraylike
+        data_array : 1D array-like or 2D array-like
             1D data array or 2D data array of 1D series data.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Smoothing result.
+
+        Examples
+        --------
+        >>> ma = MovingAvg(5)
+        >>> ma.weighted_moving_average([1, 2, 3, 4, 5, 6, 77, 88, 9, 10])
+        >>> ma.weighted_moving_average([[1, 2, 3, 4, 5, 6, 77, 88, 9, 10], [1, 22, 33, 4, 5, 6, 7, 8, 9, 10]])
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for ROI pixel spectrum processing::
+
+            >>> pipe.add_process(6, 6, 0, MovingAvg(5).weighted_moving_average)
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for the processing of 1D sample data::
+
+            >>> pipe.add_process(7, 7, 0, MovingAvg(5).weighted_moving_average)
         """
         data_array = _to_2d_arr(data_array).astype(self.numtype)
         if self.outlier_replacer is None:
-            result = super().apply(data_array, self.wma_kernel)
+            result = super()._apply(data_array, self._wma_kernel)
         else:
-            result = super().chain_apply(
-                data_array=data_array, function_list=[self.outlier_replacer.replace, self.wma_kernel]
+            result = super()._chain_apply(
+                data_array=data_array, function_list=[self.outlier_replacer.replace, self._wma_kernel]
             )
 
         return _back_1d_arr(result)
@@ -384,19 +449,33 @@ class MovingAvg(RollWindow):
 
         Parameters
         ----------
-        data_array : 1D or 2D arraylike
+        data_array : 1D array-like or 2D array-like
             1D data array or 2D data array of 1D series data.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Smoothing result.
+
+        Examples
+        --------
+        >>> ma = MovingAvg(5)
+        >>> ma.gaussian_filter([1, 2, 3, 4, 5, 6, 77, 88, 9, 10])
+        >>> ma.gaussian_filter([[1, 2, 3, 4, 5, 6, 77, 88, 9, 10], [1, 22, 33, 4, 5, 6, 7, 8, 9, 10]])
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for ROI pixel spectrum processing::
+
+            >>> pipe.add_process(6, 6, 0, MovingAvg(5).gaussian_filter)
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for the processing of 1D sample data::
+
+            >>> pipe.add_process(7, 7, 0, MovingAvg(5).gaussian_filter)
         """
         data_array = _to_2d_arr(data_array).astype(self.numtype)
         if self.outlier_replacer is None:
-            result = super().apply(data_array, self.gaussian_kernel)
+            result = super()._apply(data_array, self._gaussian_kernel)
         else:
-            result = super().chain_apply(
-                data_array=data_array, function_list=[self.outlier_replacer.replace, self.gaussian_kernel]
+            result = super()._chain_apply(
+                data_array=data_array, function_list=[self.outlier_replacer.replace, self._gaussian_kernel]
             )
         return _back_1d_arr(result)

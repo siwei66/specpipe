@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 import sys
 
-from specpipe.vegeind.demo_data import create_vegeind_demo_data
+from specpipe.vegeind.demo_data import create_specind_demo_data
 
 from specpipe.vegeind.vegeind_summary import vegeind_summary
 
@@ -55,7 +55,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_ndvi() -> None:
         """Test NDVI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = ndvi(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -66,7 +66,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_evi() -> None:
         """Test EVI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = evi(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -77,7 +77,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_gndvi() -> None:
         """Test GNDVI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = gndvi(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -88,7 +88,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_dvi() -> None:
         """Test DVI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = dvi(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -99,7 +99,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_cvi() -> None:
         """Test CVI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = cvi(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -110,7 +110,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_sr() -> None:
         """Test SR functions"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = sr(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -121,7 +121,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_mcari() -> None:
         """Test MCARI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = mcari(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -132,7 +132,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_mtci() -> None:
         """Test MTCI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = mtci(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -143,7 +143,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_s2rep() -> None:
         """Test S2REP function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = s2rep(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -154,7 +154,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_tgi() -> None:
         """Test TGI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = tgi(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -165,7 +165,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_ndre() -> None:
         """Test NDRE function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = ndre(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -176,7 +176,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_lci() -> None:
         """Test LCI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = lci(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -187,7 +187,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_sr_nir_r() -> None:
         """Test SR NIR/Red function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = sr_nir_r(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -198,7 +198,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_sr_nir_g() -> None:
         """Test SR NIR/Green function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = sr_nir_g(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -209,7 +209,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_pssr() -> None:
         """Test PSSR functions"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = pssr(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 2)
@@ -233,7 +233,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_pad() -> None:
         """Test PAD functions"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         padv1 = pad(specdata, order=1)
         assert isinstance(padv1, np.ndarray)
         assert padv1.shape == specdata.shape
@@ -266,7 +266,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_pri() -> None:
         """Test PRI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = pri(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -277,7 +277,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_cci() -> None:
         """Test CCI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = cci(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -288,7 +288,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_cri() -> None:
         """Test CRI functions"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = cri(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 3)
@@ -317,7 +317,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_sipi() -> None:
         """Test SIPI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = sipi(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -328,7 +328,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_wi() -> None:
         """Test WI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = wi(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 1)
@@ -339,7 +339,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_nwi() -> None:
         """Test NWI functions"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         vidata = nwi(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
         assert vidata.shape == (20, 4)
@@ -374,7 +374,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_savi() -> None:
         """Test SAVI functions"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         # Test SAVI with different L
         vidata = savi(specdata, wavelength=specdata.columns, L=0.75)
         assert isinstance(vidata, pd.DataFrame)
@@ -399,7 +399,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_sasi() -> None:
         """Test SASI functions"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         # Test SASI with different L
         vidata = sasi1(specdata, wavelength=specdata.columns, L=0.5)
         assert isinstance(vidata, pd.DataFrame)
@@ -436,7 +436,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_si() -> None:
         """Test SI functions"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         # Test SI
         vidata = si(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
@@ -491,7 +491,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_sr_sal() -> None:
         """Test SR_salinity function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         # Test basic
         vidata = sr_salinity(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
@@ -503,7 +503,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_vog1() -> None:
         """Test VOG1 function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         # Test basic
         vidata = vog1(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
@@ -515,7 +515,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_ari() -> None:
         """Test ARI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         # Test basic
         vidata = ari(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
@@ -527,7 +527,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_osavi() -> None:
         """Test OSAVI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         # Test basic
         vidata = osavi(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
@@ -539,7 +539,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_msavi() -> None:
         """Test MSAVI function"""
-        specdata = create_vegeind_demo_data(seed=66)
+        specdata = create_specind_demo_data(seed=66)
         # Test basic
         vidata = msavi(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
@@ -551,7 +551,7 @@ class TestVegetationIndex:
     @staticmethod
     def test_swsi() -> None:
         """Test SWSI functions"""
-        specdata = create_vegeind_demo_data(nband=12000, seed=66)
+        specdata = create_specind_demo_data(nband=3000, wavelength_range=(350, 15050), seed=66)
         # Test basic
         vidata = swsi1(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
@@ -576,7 +576,7 @@ class TestVegetationIndex:
     def test_vegeind_summary() -> None:
         """Test vegeind_summary functionality"""
         # Test full band range coveragy
-        specdata = create_vegeind_demo_data(nband=12000, seed=66)
+        specdata = create_specind_demo_data(nband=3000, wavelength_range=(350, 15050), seed=66)
         # Test basic
         vidata = vegeind_summary(specdata, wavelength=specdata.columns)
         assert isinstance(vidata, pd.DataFrame)
@@ -584,7 +584,7 @@ class TestVegetationIndex:
         assert not vidata.isna().any().any()
         assert not (vidata == 0).any().any()
         # Test partial band range coverage making some index not work
-        specdata1 = create_vegeind_demo_data(nband=462, seed=66)
+        specdata1 = create_specind_demo_data(nband=462, seed=66)
         # Test basic
         vidata1 = vegeind_summary(specdata1, wavelength=specdata1.columns)
         assert isinstance(vidata1, pd.DataFrame)

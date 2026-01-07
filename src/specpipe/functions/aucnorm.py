@@ -20,24 +20,48 @@ def aucnorm(data: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
     AUC (Area Under Curve) normalization function.
 
     For image pixel spectrum correction in SpecPipe pipelines:
+
         Set process input data level: 2 / 'pixel_specs_array'
+
         Set process output data level: 2 / 'pixel_specs_array'
+
     For ROI spectrum normalization:
+
         Set process input data level: 6 / 'roispecs'
+
         Set process output data level: 6 / 'roispecs'
+
     For sample spectrum normalization:
+
         Set process input data level: 7 / 'spec1d'
+
         Set process output data level: 7 / 'spec1d'
 
     Parameters
     ----------
-    data : Annotated[Any, arraylike_validator(ndim, optional
-        2D arraylike spectral data to process.
+    data : 2D array-like (n_samples, n_bands)
+        Two-dimensional array-like spectral data to be processed.
 
     Returns
     -------
-    np.ndarray
+    numpy.ndarray
         AUC normalization transformed spectral data.
+
+    Examples
+    --------
+    >>> aucnorm([[1, 2, 3, 4, 5, 6], [2, 2, 4, 4, 6, 6]])
+
+    Incorporation into pipeline for image processing, for SpecPipe instance ``pipe``:
+
+        >>> pipe.add_process(2, 2, 0, aucnorm)
+
+    Incorporation into pipeline for ROI spectra processing, for SpecPipe instance ``pipe``:
+
+        >>> pipe.add_process(6, 6, 0, aucnorm)
+
+    Incorporation into pipeline for 1D spectra processing, for SpecPipe instance ``pipe``:
+
+        >>> pipe.add_process(7, 7, 0, aucnorm)
     """
     import numpy as np  # noqa: W291
 

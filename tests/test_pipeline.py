@@ -46,7 +46,7 @@ from specpipe.specexp import SpecExp  # noqa: E402
 from specpipe.specio import silent, lsdir_robust  # noqa: E402
 
 # Functions to test
-from specpipe.specpipe import SpecPipe  # noqa: E402
+from specpipe.pipeline import SpecPipe  # noqa: E402
 
 # Confirm proper LOKY_MAX_CPU_COUNT
 loky_max_cpu_count = str(cpu_count())
@@ -57,6 +57,7 @@ try:
     HAS_CUDA = torch.cuda.is_available()
 except ImportError:
     HAS_CUDA = False
+
 
 # %% Test process methods
 
@@ -162,535 +163,552 @@ def create_test_spec_pipe(dir_path: str, sample_n: int = 10, n_bands: int = 8, i
 class TestSpecPipe(unittest.TestCase):
     """Test class for SpecPipe functionality."""
 
+    test_dir = ""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.test_dir = tempfile.mkdtemp()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if os.path.exists(cls.test_dir):
+            shutil.rmtree(cls.test_dir)
+
+    @classmethod
+    def _init_test_dir(cls) -> None:
+        if os.path.exists(cls.test_dir):
+            shutil.rmtree(cls.test_dir)
+            os.makedirs(cls.test_dir)
+        else:
+            os.makedirs(cls.test_dir)
+
     @staticmethod
     @silent
     def test_initialization_image_exp() -> None:
         """Test SpecPipe instance initialization with spectral imaging experiment"""
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Error test: No group
-            test_exp = SpecExp(test_dir)
-            with pytest.raises(ValueError, match="No group is found"):
-                SpecPipe(test_exp)
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
-            # Add group - no img
-            test_exp.add_groups(["test_group"])
-            with pytest.raises(ValueError, match="Neither image path nor standalone spectrum is found"):
-                SpecPipe(test_exp)
+        # Error test: No group
+        test_exp = SpecExp(test_dir)
+        with pytest.raises(ValueError, match="No group is found"):
+            SpecPipe(test_exp)
 
-            # Add img - no ROI
-            img_path = test_dir + "/test_img.tif"
-            create_test_raster(raster_path=img_path, width=50, height=50, bands=4)
-            test_exp.add_images_by_name(image_name=["test_img.tif"], image_directory=test_dir, group="test_group")
-            with pytest.raises(ValueError, match="Neither sample ROI nor standalone spectrum is found"):
-                SpecPipe(test_exp)
+        # Add group - no img
+        test_exp.add_groups(["test_group"])
+        with pytest.raises(ValueError, match="Neither image path nor standalone spectrum is found"):
+            SpecPipe(test_exp)
 
-            # Add ROI - no targets
-            roi_path = test_dir + "/test_roi.xml"
-            create_test_roi_xml(roi_path, roi_count=10)
-            test_exp.add_rois_by_file(group="test_group", path=[roi_path], image_name="test_img.tif")
-            with pytest.raises(ValueError, match="No sample target value is found"):
-                SpecPipe(test_exp)
+        # Add img - no ROI
+        img_path = test_dir + "/test_img.tif"
+        create_test_raster(raster_path=img_path, width=50, height=50, bands=4)
+        test_exp.add_images_by_name(image_name=["test_img.tif"], image_directory=test_dir, group="test_group")
+        with pytest.raises(ValueError, match="Neither sample ROI nor standalone spectrum is found"):
+            SpecPipe(test_exp)
 
-            # Add targets - valid img spec exp
-            # Sample labels
-            dflb = test_exp.ls_sample_labels()
-            dflb.iloc[:, 1] = [f"sample_{str(i + 1)}" for i in range(len(dflb))]
-            test_exp.sample_labels = dflb
-            # Target values
-            dft = test_exp.ls_sample_targets()
-            dft["Target_value"] = list(np.random.rand(len(dft)))
-            test_exp.sample_targets = dft
-            # Create spec pipe
-            pipe_img_spec = SpecPipe(test_exp)
-            assert type(pipe_img_spec.spec_exp) is SpecExp
-            assert pipe_img_spec.sample_targets == test_exp.sample_targets
-            assert pipe_img_spec.report_directory == test_exp.report_directory
-            assert type(pipe_img_spec.create_time) is str
-            assert len(pipe_img_spec.create_time) > 0
+        # Add ROI - no targets
+        roi_path = test_dir + "/test_roi.xml"
+        create_test_roi_xml(roi_path, roi_count=10)
+        test_exp.add_rois_by_file(group="test_group", path=[roi_path], image_name="test_img.tif")
+        with pytest.raises(ValueError, match="No sample target value is found"):
+            SpecPipe(test_exp)
 
-            # Error test: Add blank group - incomplete single group without img
-            test_exp.add_groups(["test_group2"])
-            with pytest.raises(
-                ValueError,
-                match="Neither image nor standalone spectrum is found in group: 'test_group2'",
-            ):
-                SpecPipe(test_exp)
+        # Add targets - valid img spec exp
+        # Sample labels
+        dflb = test_exp.ls_sample_labels()
+        dflb.iloc[:, 1] = [f"sample_{str(i + 1)}" for i in range(len(dflb))]
+        test_exp.sample_labels = dflb
+        # Target values
+        dft = test_exp.ls_sample_targets()
+        dft["Target_value"] = list(np.random.rand(len(dft)))
+        test_exp.sample_targets = dft
+        # Create spec pipe
+        pipe_img_spec = SpecPipe(test_exp)
+        assert type(pipe_img_spec.spec_exp) is SpecExp
+        assert pipe_img_spec._sample_targets == test_exp.sample_targets
+        assert pipe_img_spec.report_directory == test_exp.report_directory
+        assert type(pipe_img_spec.create_time) is str
+        assert len(pipe_img_spec.create_time) > 0
 
-            # Add img - incomplete single group without ROI
-            test_exp.add_images_by_name(image_name=["test_img.tif"], image_directory=test_dir, group="test_group2")
-            with pytest.raises(
-                ValueError,
-                match="Neither image sample ROI nor standalone spectrum is found in group: 'test_group2'",
-            ):
-                SpecPipe(test_exp)
+        # Error test: Add blank group - incomplete single group without img
+        test_exp.add_groups(["test_group2"])
+        with pytest.raises(
+            ValueError,
+            match="Neither image nor standalone spectrum is found in group: 'test_group2'",
+        ):
+            SpecPipe(test_exp)
 
-            # Add standalone spec - hybrid exp error
-            test_exp.add_standalone_specs(group="test_group", spec_data=[[1, 2, 3, 4], [5, 6, 7, 8]])
-            with pytest.raises(
-                ValueError,
-                match="Hybrid samples",
-            ):
-                SpecPipe(test_exp)
-            with pytest.raises(
-                ValueError,
-                match="not allowed",
-            ):
-                SpecPipe(test_exp)
+        # Add img - incomplete single group without ROI
+        test_exp.add_images_by_name(image_name=["test_img.tif"], image_directory=test_dir, group="test_group2")
+        with pytest.raises(
+            ValueError,
+            match="Neither image sample ROI nor standalone spectrum is found in group: 'test_group2'",
+        ):
+            SpecPipe(test_exp)
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+        # Add standalone spec - hybrid exp error
+        test_exp.add_standalone_specs(group="test_group", spec_data=[[1, 2, 3, 4], [5, 6, 7, 8]])
+        with pytest.raises(
+            ValueError,
+            match="Hybrid samples",
+        ):
+            SpecPipe(test_exp)
+        with pytest.raises(
+            ValueError,
+            match="not allowed",
+        ):
+            SpecPipe(test_exp)
 
     @staticmethod
     @silent
     def test_initialization_standalone_spec_exp() -> None:
         """Test SpecPipe instance initialization with standalone spectra experiment"""
-        with tempfile.TemporaryDirectory() as test_dir:
-            test_exp = SpecExp(test_dir)
-            test_exp.add_groups(["test_group"])
-            test_exp.add_standalone_specs(group="test_group", spec_data=[[1, 2, 3, 4], [5, 6, 7, 8]])
-            test_exp.add_groups(["test_group2"])
-            with pytest.raises(ValueError, match="No spectrum is found in group: 'test_group2'"):
-                SpecPipe(test_exp)
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
-            ## Correct 1d spec exp
-            test_exp.rm_group("test_group2")
-            # Sample labels
-            dflb = test_exp.ls_sample_labels()
-            dflb.iloc[:, 1] = ["sample1", "sample2"]
-            test_exp.sample_labels = dflb
-            # Target values
-            dft = test_exp.ls_sample_targets()
-            dft["Target_value"] = list(np.random.rand(2))
-            test_exp.sample_targets = dft
-            # Create pipe
-            pipe_standalone_spec = SpecPipe(test_exp)
-            assert type(pipe_standalone_spec.spec_exp) is SpecExp
-            assert pipe_standalone_spec.sample_targets == test_exp.sample_targets
-            assert pipe_standalone_spec.report_directory == test_exp.report_directory
-            assert type(pipe_standalone_spec.create_time) is str
-            assert len(pipe_standalone_spec.create_time) > 0
+        test_exp = SpecExp(test_dir)
+        test_exp.add_groups(["test_group"])
+        test_exp.add_standalone_specs(group="test_group", spec_data=[[1, 2, 3, 4], [5, 6, 7, 8]])
+        test_exp.add_groups(["test_group2"])
+        with pytest.raises(ValueError, match="No spectrum is found in group: 'test_group2'"):
+            SpecPipe(test_exp)
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+        ## Correct 1d spec exp
+        test_exp.rm_group("test_group2")
+        # Sample labels
+        dflb = test_exp.ls_sample_labels()
+        dflb.iloc[:, 1] = ["sample1", "sample2"]
+        test_exp.sample_labels = dflb
+        # Target values
+        dft = test_exp.ls_sample_targets()
+        dft["Target_value"] = list(np.random.rand(2))
+        test_exp.sample_targets = dft
+        # Create pipe
+        pipe_standalone_spec = SpecPipe(test_exp)
+        assert type(pipe_standalone_spec.spec_exp) is SpecExp
+        assert pipe_standalone_spec._sample_targets == test_exp.sample_targets
+        assert pipe_standalone_spec.report_directory == test_exp.report_directory
+        assert type(pipe_standalone_spec.create_time) is str
+        assert len(pipe_standalone_spec.create_time) > 0
 
     @staticmethod
     @silent
     def test_add_process() -> None:
         """Test adding process to processing pipeline"""
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create test spec exp
-            test_exp = create_test_spec_exp(test_dir)
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
-            pipe = SpecPipe(test_exp)
-            assert len(pipe.process) == 0
-            pipe.add_process(0, 0, 0, original_img)
-            assert len(pipe.process) == 1
-            pipe.add_process(1, 1, 0, snv)
-            # Correct process updating
-            assert len(pipe.process) == 2
-            for proc in pipe.process:
-                assert len(proc) == 8
-            # Correct chain updating
-            assert pipe.process_steps == [["0_0_%#1"], ["1_0_%#1"]]
-            # Correct chains updating
-            assert pipe.process_chains == [("0_0_%#1", "1_0_%#1")]
+        # Create test spec exp
+        test_exp = create_test_spec_exp(test_dir)
 
-            # Parallel test processes
-            pipe.add_process(1, 1, 0, snv)
-            # Correct process updating
-            assert len(pipe.process) == 3
-            for proc in pipe.process:
-                assert len(proc) == 8
-            # Correct chain updating
-            assert pipe.process_steps == [["0_0_%#1"], ["1_0_%#1", "1_0_%#2"]]
-            # Correct chains updating
-            assert pipe.process_chains == [("0_0_%#1", "1_0_%#1"), ("0_0_%#1", "1_0_%#2")]
+        pipe = SpecPipe(test_exp)
+        assert len(pipe.process) == 0
+        pipe.add_process(0, 0, 0, original_img)
+        assert len(pipe.process) == 1
+        pipe.add_process(1, 1, 0, snv)
+        # Correct process updating
+        assert len(pipe.process) == 2
+        for proc in pipe.process:
+            assert len(proc) == 8
+        # Correct chain updating
+        assert pipe.process_steps == [["0_0_%#1"], ["1_0_%#1"]]
+        # Correct chains updating
+        assert pipe.process_chains == [("0_0_%#1", "1_0_%#1")]
 
-            # Sequential test processes
-            pipe = SpecPipe(test_exp)
-            pipe.add_process(1, 1, 0, snv)
-            pipe.add_process(1, 1, 1, snv)
-            pipe.add_process(1, 1, 2, snv)
-            assert len(pipe.process) == 3
-            assert pipe.process_steps == [["1_0_%#1"], ["1_1_%#1"], ["1_2_%#1"]]
-            assert pipe.process_chains == [("1_0_%#1", "1_1_%#1", "1_2_%#1")]
+        # Parallel test processes
+        pipe.add_process(1, 1, 0, snv)
+        # Correct process updating
+        assert len(pipe.process) == 3
+        for proc in pipe.process:
+            assert len(proc) == 8
+        # Correct chain updating
+        assert pipe.process_steps == [["0_0_%#1"], ["1_0_%#1", "1_0_%#2"]]
+        # Correct chains updating
+        assert pipe.process_chains == [("0_0_%#1", "1_0_%#1"), ("0_0_%#1", "1_0_%#2")]
 
-            # Method of other data levels
-            pipe.add_process(2, 2, 0, arr_snv)
-            assert len(pipe.process) == 4
-            if HAS_CUDA:
-                pipe.add_process(3, 3, 0, tensor_snv)
-                assert len(pipe.process) == 5
-                pipe.add_process(4, 4, 0, hypert_snv)
-                assert len(pipe.process) == 6
-                pipe.add_process(5, 6, 0, roispec)
-                assert len(pipe.process) == 7
-                pipe.add_process(6, 7, 0, Stats2d().median)
-                assert len(pipe.process) == 8
-            else:
-                pipe.add_process(5, 6, 0, roispec)
-                assert len(pipe.process) == 5
-                pipe.add_process(6, 7, 0, Stats2d().median)
-                assert len(pipe.process) == 6
+        # Sequential test processes
+        pipe = SpecPipe(test_exp)
+        pipe.add_process(1, 1, 0, snv)
+        pipe.add_process(1, 1, 1, snv)
+        pipe.add_process(1, 1, 2, snv)
+        assert len(pipe.process) == 3
+        assert pipe.process_steps == [["1_0_%#1"], ["1_1_%#1"], ["1_2_%#1"]]
+        assert pipe.process_chains == [("1_0_%#1", "1_1_%#1", "1_2_%#1")]
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+        # Method of other data levels
+        pipe.add_process(2, 2, 0, arr_snv)
+        assert len(pipe.process) == 4
+        if HAS_CUDA:
+            pipe.add_process(3, 3, 0, tensor_snv)
+            assert len(pipe.process) == 5
+            pipe.add_process(4, 4, 0, hypert_snv)
+            assert len(pipe.process) == 6
+            pipe.add_process(5, 6, 0, roispec)
+            assert len(pipe.process) == 7
+            pipe.add_process(6, 7, 0, Stats2d().median)
+            assert len(pipe.process) == 8
+        else:
+            pipe.add_process(5, 6, 0, roispec)
+            assert len(pipe.process) == 5
+            pipe.add_process(6, 7, 0, Stats2d().median)
+            assert len(pipe.process) == 6
 
     @staticmethod
     @silent
     def test_add_process_validation() -> None:
         """Test data validation in SpecPipe.add_process"""
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create spec pipe
-            test_exp = create_test_spec_exp(test_dir)
-            pipe = SpecPipe(test_exp)
+        # Create spec pipe
+        test_exp = create_test_spec_exp(test_dir)
+        pipe = SpecPipe(test_exp)
 
-            # Heterogenous data levels at same sequence
-            pipe.add_process(0, 0, 0, original_img)
-            with pytest.raises(ValueError, match="must have identical output data levels"):
-                pipe.add_process(0, 7, 0, img_const)
+        # Heterogenous data levels at same sequence
+        pipe.add_process(0, 0, 0, original_img)
+        with pytest.raises(ValueError, match="must have identical output data levels"):
+            pipe.add_process(0, 7, 0, img_const)
 
-            # Invalid methods
-            with pytest.raises(ValueError, match="Method testing fails"):
-                pipe.add_process(0, 7, 1, "Invalid process")
-            with pytest.raises(ValueError, match="Method testing fails"):
-                pipe.add_process(0, 7, 1, print)
+        # Invalid combination of input and output data levels
+        with pytest.raises(ValueError, match="Output_data_level cannot precede the input_data_level"):
+            pipe.add_process(7, 0, 0, Stats2d().mean)
 
-            # Invalid previous and subsequent data levels
+        # Invalid previous and subsequent data levels
+        with pytest.raises(ValueError, match="inconsistent with the output data level"):
             pipe.add_process(6, 7, 0, Stats2d().mean)
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+        # Invalid methods
+        with pytest.raises(ValueError, match="Method testing fails"):
+            pipe.add_process(0, 7, 1, "Invalid process")
+        with pytest.raises(ValueError, match="Method testing fails"):
+            pipe.add_process(0, 7, 1, print)
 
     @staticmethod
     @silent
     def test_ls_process() -> None:
         """Test listing added processes in the pipeline"""
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create test spec exp
-            test_exp = create_test_spec_exp(test_dir)
-            pipe = SpecPipe(test_exp)
-            pipe.add_process(0, 0, 0, original_img)
-            pipe.add_process(0, 0, 0, original_img)
-            pipe.add_process(0, 0, 1, original_img)
-            pipe.add_process(1, 1, 0, snv)
-            pipe.add_process(2, 2, 0, arr_snv)
-            pipe.add_process(2, 2, 0, arr_snv)
-            pipe.add_process(2, 2, 0, arr_snv)
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
-            # List all
-            procs = pipe.ls_process(print_result=False, return_result=True)
-            assert procs.shape == (7, 8)
+        # Create test spec exp
+        test_exp = create_test_spec_exp(test_dir)
+        pipe = SpecPipe(test_exp)
+        pipe.add_process(0, 0, 0, original_img)
+        pipe.add_process(0, 0, 0, original_img)
+        pipe.add_process(0, 0, 1, original_img)
+        pipe.add_process(1, 1, 0, snv)
+        pipe.add_process(2, 2, 0, arr_snv)
+        pipe.add_process(2, 2, 0, arr_snv)
+        pipe.add_process(2, 2, 0, arr_snv)
 
-            # Filter conditions
-            procs = pipe.ls_process(input_data_level=0, print_result=False, return_result=True)
-            assert procs.shape == (3, 8)
-            procs = pipe.ls_process(input_data_level=0, application_sequence=0, print_result=False, return_result=True)
-            assert procs.shape == (2, 8)
-            procs = pipe.ls_process(output_data_level=1, print_result=False, return_result=True)
-            assert procs.shape == (1, 8)
-            procs = pipe.ls_process(method="snv", print_result=False, return_result=True)
-            assert procs.shape == (1, 8)
-            # No match
-            procs = pipe.ls_process(input_data_level=0, output_data_level=1, print_result=False, return_result=True)
-            assert procs.shape == (0, 8)
+        # List all
+        procs = pipe.ls_process(print_result=False, return_result=True)
+        assert procs.shape == (7, 8)
 
-            # Not exact match
-            procs = pipe.ls_process(method="snv", exact_match=False, print_result=False, return_result=True)
-            assert procs.shape == (4, 8)
+        # Filter conditions
+        procs = pipe.ls_process(input_data_level=0, print_result=False, return_result=True)
+        assert procs.shape == (3, 8)
+        procs = pipe.ls_process(input_data_level=0, application_sequence=0, print_result=False, return_result=True)
+        assert procs.shape == (2, 8)
+        procs = pipe.ls_process(output_data_level=1, print_result=False, return_result=True)
+        assert procs.shape == (1, 8)
+        procs = pipe.ls_process(method="snv", print_result=False, return_result=True)
+        assert procs.shape == (1, 8)
+        # No match
+        procs = pipe.ls_process(input_data_level=0, output_data_level=1, print_result=False, return_result=True)
+        assert procs.shape == (0, 8)
 
-            # Not return result
-            procs = pipe.ls_process(method="snv", print_result=True, return_result=False)
-            assert procs is None
+        # Not exact match
+        procs = pipe.ls_process(method="snv", exact_match=False, print_result=False, return_result=True)
+        assert procs.shape == (4, 8)
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+        # Not return result
+        procs = pipe.ls_process(method="snv", print_result=True, return_result=False)
+        assert procs is None
 
     @staticmethod
     @silent
     def test_rm_process() -> None:
         """Test removing added process in the pipeline"""
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create test spec exp
-            test_exp = create_test_spec_exp(test_dir)
-            pipe = SpecPipe(test_exp)
-            pipe.add_process(0, 0, 0, original_img)
-            pipe.add_process(0, 0, 0, original_img)
-            pipe.add_process(0, 0, 1, original_img)
-            pipe.add_process(1, 1, 0, snv)
-            pipe.add_process(2, 2, 0, arr_snv)
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
-            assert len(pipe.process) == 5
-            assert len(pipe.process_steps) == 4
-            assert len(pipe.process_chains) == 2
-            for chain in pipe.process_chains:
-                assert len(chain) == 4
+        # Create test spec exp
+        test_exp = create_test_spec_exp(test_dir)
+        pipe = SpecPipe(test_exp)
+        pipe.add_process(0, 0, 0, original_img)
+        pipe.add_process(0, 0, 0, original_img)
+        pipe.add_process(0, 0, 1, original_img)
+        pipe.add_process(1, 1, 0, snv)
+        pipe.add_process(2, 2, 0, arr_snv)
 
-            # Remove procs
-            pipe.rm_process(method="snv")
-            assert len(pipe.process) == 4
-            assert len(pipe.process_steps) == 3
-            assert len(pipe.process_chains) == 2
-            for chain in pipe.process_chains:
-                assert len(chain) == 3
+        assert len(pipe.process) == 5
+        assert len(pipe.process_steps) == 4
+        assert len(pipe.process_chains) == 2
+        for chain in pipe.process_chains:
+            assert len(chain) == 4
 
-            pipe.rm_process(process_id=pipe.process_steps[0][0])
-            assert len(pipe.process) == 3
-            assert len(pipe.process_steps) == 3
-            assert len(pipe.process_chains) == 1
-            for chain in pipe.process_chains:
-                assert len(chain) == 3
+        # Remove procs
+        pipe.rm_process(method="snv")
+        assert len(pipe.process) == 4
+        assert len(pipe.process_steps) == 3
+        assert len(pipe.process_chains) == 2
+        for chain in pipe.process_chains:
+            assert len(chain) == 3
 
-            pipe.rm_process(input_data_level=2)
-            assert len(pipe.process) == 2
-            assert len(pipe.process_steps) == 2
-            assert len(pipe.process_chains) == 1
-            for chain in pipe.process_chains:
-                assert len(chain) == 2
+        pipe.rm_process(process_id=pipe.process_steps[0][0])
+        assert len(pipe.process) == 3
+        assert len(pipe.process_steps) == 3
+        assert len(pipe.process_chains) == 1
+        for chain in pipe.process_chains:
+            assert len(chain) == 3
 
-            pipe.rm_process(output_data_level=1)
-            assert len(pipe.process) == 2
-            assert len(pipe.process_steps) == 2
-            assert len(pipe.process_chains) == 1
-            for chain in pipe.process_chains:
-                assert len(chain) == 2
+        pipe.rm_process(input_data_level=2)
+        assert len(pipe.process) == 2
+        assert len(pipe.process_steps) == 2
+        assert len(pipe.process_chains) == 1
+        for chain in pipe.process_chains:
+            assert len(chain) == 2
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+        pipe.rm_process(output_data_level=1)
+        assert len(pipe.process) == 2
+        assert len(pipe.process_steps) == 2
+        assert len(pipe.process_chains) == 1
+        for chain in pipe.process_chains:
+            assert len(chain) == 2
 
     @staticmethod
     @silent
     def test_add_model() -> None:
         """Test adding model process to processing pipeline"""
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
+
         regressor = RandomForestRegressor(n_estimators=10)
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create test spec exp
-            test_exp = create_test_spec_exp(test_dir)
-            pipe = SpecPipe(test_exp)
 
-            # Add process
-            pipe.add_process(0, 0, 0, original_img)
-            pipe.add_process(5, 7, 0, roi_mean)
-            assert len(pipe.ls_process(return_result=True, print_result=False)) == 2
-            assert len(pipe.ls_process(output_data_level=8, return_result=True, print_result=False)) == 0
-            assert len(pipe.process_steps) == 2
-            assert len(pipe.process_chains) == 1
+        # Create test spec exp
+        test_exp = create_test_spec_exp(test_dir)
+        pipe = SpecPipe(test_exp)
 
-            # Add models
-            pipe.add_process(7, 8, 0, regressor)
-            assert len(pipe.ls_process(return_result=True, print_result=False)) == 3
-            assert len(pipe.ls_process(output_data_level=8, return_result=True, print_result=False)) == 1
-            assert len(pipe.process_steps) == 3
-            assert len(pipe.process_chains) == 1
-            pipe.add_process(7, 8, 0, regressor)
-            assert len(pipe.ls_process(return_result=True, print_result=False)) == 4
-            assert len(pipe.ls_process(output_data_level=8, return_result=True, print_result=False)) == 2
-            assert len(pipe.process_steps) == 3
-            assert len(pipe.process_chains) == 2
+        # Add process
+        pipe.add_process(0, 0, 0, original_img)
+        pipe.add_process(5, 7, 0, roi_mean)
+        assert len(pipe.ls_process(return_result=True, print_result=False)) == 2
+        assert len(pipe.ls_process(output_data_level=8, return_result=True, print_result=False)) == 0
+        assert len(pipe.process_steps) == 2
+        assert len(pipe.process_chains) == 1
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+        # Add models
+        pipe.add_process(7, 8, 0, regressor)
+        assert len(pipe.ls_process(return_result=True, print_result=False)) == 3
+        assert len(pipe.ls_process(output_data_level=8, return_result=True, print_result=False)) == 1
+        assert len(pipe.process_steps) == 3
+        assert len(pipe.process_chains) == 1
+        pipe.add_process(7, 8, 0, regressor)
+        assert len(pipe.ls_process(return_result=True, print_result=False)) == 4
+        assert len(pipe.ls_process(output_data_level=8, return_result=True, print_result=False)) == 2
+        assert len(pipe.process_steps) == 3
+        assert len(pipe.process_chains) == 2
 
     @staticmethod
     @silent
     def test_ls_model() -> None:
         """Test listing added models in the pipeline"""
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
+
         regressor = RandomForestRegressor(n_estimators=10)
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create test spec exp
-            test_exp = create_test_spec_exp(test_dir)
-            pipe = SpecPipe(test_exp)
 
-            # Add process
-            pipe.add_process(0, 0, 0, original_img)
-            pipe.add_process(5, 7, 0, roi_mean)
-            assert len(pipe.ls_model(return_result=True, print_result=False)) == 0
+        # Create test spec exp
+        test_exp = create_test_spec_exp(test_dir)
+        pipe = SpecPipe(test_exp)
 
-            # Add and list models
-            pipe.add_process(7, 8, 0, regressor)
-            assert len(pipe.ls_model(return_result=True, print_result=False)) == 1
-            pipe.add_process(7, 8, 0, regressor)
-            assert len(pipe.ls_model(return_result=True, print_result=False)) == 2
-            assert len(pipe.ls_model(model_id=pipe.process_chains[0][-1], return_result=True, print_result=False)) == 1
-            assert pipe.ls_model(return_result=False, print_result=True) is None
+        # Add process
+        pipe.add_process(0, 0, 0, original_img)
+        pipe.add_process(5, 7, 0, roi_mean)
+        assert len(pipe.ls_model(return_result=True, print_result=False)) == 0
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+        # Add and list models
+        pipe.add_process(7, 8, 0, regressor)
+        assert len(pipe.ls_model(return_result=True, print_result=False)) == 1
+        pipe.add_process(7, 8, 0, regressor)
+        assert len(pipe.ls_model(return_result=True, print_result=False)) == 2
+        assert len(pipe.ls_model(model_id=pipe.process_chains[0][-1], return_result=True, print_result=False)) == 1
+        assert pipe.ls_model(return_result=False, print_result=True) is None
 
     @staticmethod
     @silent
     def test_rm_model() -> None:
         """Test removing added models in the pipeline"""
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
+
         regressor_1 = KNeighborsRegressor(n_neighbors=3)
         regressor_2 = RandomForestRegressor(n_estimators=10)
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create test spec exp
-            test_exp = create_test_spec_exp(test_dir)
-            pipe = SpecPipe(test_exp)
-            pipe.add_process(0, 0, 0, original_img)
-            pipe.add_process(5, 7, 0, roi_mean)
 
-            # Add models
-            def add_models() -> None:
-                pipe.add_process(7, 8, 0, regressor_1)
-                pipe.add_process(7, 8, 0, regressor_1, model_label="test_regressor")
-                pipe.add_process(7, 8, 0, regressor_2)
+        # Create test spec exp
+        test_exp = create_test_spec_exp(test_dir)
+        pipe = SpecPipe(test_exp)
+        pipe.add_process(0, 0, 0, original_img)
+        pipe.add_process(5, 7, 0, roi_mean)
 
-            add_models()
-            assert len(pipe.ls_process(return_result=True, print_result=False)) == 5
-            assert len(pipe.ls_model(return_result=True, print_result=False)) == 3
-            assert len(pipe.process_steps) == 3
-            assert len(pipe.process_chains) == 3
+        # Add models
+        def add_models() -> None:
+            pipe.add_process(7, 8, 0, regressor_1)
+            pipe.add_process(7, 8, 0, regressor_1, model_label="test_regressor")
+            pipe.add_process(7, 8, 0, regressor_2)
 
-            # Remove model by method name
-            pipe.rm_model(model_method="RandomForestRegressor")
-            assert len(pipe.ls_process(return_result=True, print_result=False)) == 4
-            assert len(pipe.ls_model(return_result=True, print_result=False)) == 2
-            assert len(pipe.process_steps) == 3
-            assert len(pipe.process_chains) == 2
+        add_models()
+        assert len(pipe.ls_process(return_result=True, print_result=False)) == 5
+        assert len(pipe.ls_model(return_result=True, print_result=False)) == 3
+        assert len(pipe.process_steps) == 3
+        assert len(pipe.process_chains) == 3
 
-            # Remove all models
-            pipe.rm_model()
-            assert len(pipe.ls_process(return_result=True, print_result=False)) == 2
-            assert len(pipe.ls_model(return_result=True, print_result=False)) == 0
-            assert len(pipe.process_steps) == 2
-            assert len(pipe.process_chains) == 1
+        # Remove model by method name
+        pipe.rm_model(model_method="RandomForestRegressor")
+        assert len(pipe.ls_process(return_result=True, print_result=False)) == 4
+        assert len(pipe.ls_model(return_result=True, print_result=False)) == 2
+        assert len(pipe.process_steps) == 3
+        assert len(pipe.process_chains) == 2
 
-            # Remove model by custom label
-            add_models()
-            pipe.rm_model(model_label="test_regressor")
-            assert len(pipe.ls_process(return_result=True, print_result=False)) == 4
-            assert len(pipe.ls_model(return_result=True, print_result=False)) == 2
-            assert len(pipe.process_steps) == 3
-            assert len(pipe.process_chains) == 2
+        # Remove all models
+        pipe.rm_model()
+        assert len(pipe.ls_process(return_result=True, print_result=False)) == 2
+        assert len(pipe.ls_model(return_result=True, print_result=False)) == 0
+        assert len(pipe.process_steps) == 2
+        assert len(pipe.process_chains) == 1
 
-            # Remove model by id
-            pipe.rm_model(model_id=pipe.process_chains[0][-1])
-            assert len(pipe.ls_process(return_result=True, print_result=False)) == 3
-            assert len(pipe.ls_model(return_result=True, print_result=False)) == 1
-            assert len(pipe.process_steps) == 3
-            assert len(pipe.process_chains) == 1
+        # Remove model by custom label
+        add_models()
+        pipe.rm_model(model_label="test_regressor")
+        assert len(pipe.ls_process(return_result=True, print_result=False)) == 4
+        assert len(pipe.ls_model(return_result=True, print_result=False)) == 2
+        assert len(pipe.process_steps) == 3
+        assert len(pipe.process_chains) == 2
 
-            # Invalid removal
-            pipe.rm_model(model_id=pipe.process_chains[0][-1], model_label="non_existed")
-            assert len(pipe.ls_process(return_result=True, print_result=False)) == 3
-            assert len(pipe.ls_model(return_result=True, print_result=False)) == 1
-            assert len(pipe.process_steps) == 3
-            assert len(pipe.process_chains) == 1
+        # Remove model by id
+        pipe.rm_model(model_id=pipe.process_chains[0][-1])
+        assert len(pipe.ls_process(return_result=True, print_result=False)) == 3
+        assert len(pipe.ls_model(return_result=True, print_result=False)) == 1
+        assert len(pipe.process_steps) == 3
+        assert len(pipe.process_chains) == 1
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+        # Invalid removal
+        pipe.rm_model(model_id=pipe.process_chains[0][-1], model_label="non_existed")
+        assert len(pipe.ls_process(return_result=True, print_result=False)) == 3
+        assert len(pipe.ls_model(return_result=True, print_result=False)) == 1
+        assert len(pipe.process_steps) == 3
+        assert len(pipe.process_chains) == 1
 
     @staticmethod
     @silent
     def test_process_chains_to_df() -> None:
         """Test return dataframe of generated process chains."""
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
+
         regressor = RandomForestRegressor(n_estimators=10)
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create test spec exp
-            test_exp = create_test_spec_exp(test_dir)
-            pipe = SpecPipe(test_exp)
 
-            # Add process
-            pipe.add_process(0, 0, 0, original_img)
-            pipe.add_process(5, 7, 0, roi_mean)
-            pipe.add_process(7, 8, 0, regressor)
-            pipe.add_process(7, 8, 0, regressor)
+        # Create test spec exp
+        test_exp = create_test_spec_exp(test_dir)
+        pipe = SpecPipe(test_exp)
 
-            # Test procs to df
-            pcs_df = pipe.process_chains_to_df(print_label=False)
-            assert pcs_df.shape == (2, 3)
-            assert (pcs_df.to_numpy() == np.array(pipe.process_chains)).all()
-            assert np.all(pipe.process_chains_to_df(print_label=False) == pipe.process_chains_to_df(print_label=True))
+        # Add process
+        pipe.add_process(0, 0, 0, original_img)
+        pipe.add_process(5, 7, 0, roi_mean)
+        pipe.add_process(7, 8, 0, regressor)
+        pipe.add_process(7, 8, 0, regressor)
 
-            # Test return_label = True
-            pcs_dfs = pipe.process_chains_to_df(print_label=False, return_label=True)
-            assert isinstance(pcs_dfs, tuple)
-            assert np.all(pcs_dfs[0] == pcs_df)
-            assert pcs_dfs[0].shape == pcs_dfs[1].shape
-            pcs_dfs1 = pipe.process_chains_to_df(print_label=True, return_label=True)
-            assert np.all(pcs_dfs[0] == pcs_dfs1[0])
-            assert np.all(pcs_dfs[1] == pcs_dfs1[1])
+        # Test procs to df
+        pcs_df = pipe.process_chains_to_df(print_label=False)
+        assert pcs_df.shape == (2, 3)
+        assert (pcs_df.to_numpy() == np.array(pipe.process_chains)).all()
+        assert np.all(pipe.process_chains_to_df(print_label=False) == pipe.process_chains_to_df(print_label=True))
 
-            # ls_custom_chains and ls_chains
-            df_chains = pipe.ls_chains(print_label=False)
-            assert df_chains.shape[0] == 2
-            assert (df_chains.to_numpy() == pipe.ls_process_chains(print_label=False).to_numpy()).all()
-            df_custom_chains = pipe.ls_custom_chains(print_label=False)
-            assert df_custom_chains is None
-            pcs_dfs2 = pcs_dfs[0].iloc[:-1, :]
-            pipe.custom_chains_from_df(pcs_dfs2)
-            assert pipe.ls_custom_chains(print_label=False).shape[0] == 1
-            assert (pipe.ls_chains().to_numpy() == pipe.ls_custom_chains().to_numpy()).all()
+        # Test return_label = True
+        pcs_dfs = pipe.process_chains_to_df(print_label=False, return_label=True)
+        assert isinstance(pcs_dfs, tuple)
+        assert np.all(pcs_dfs[0] == pcs_df)
+        assert pcs_dfs[0].shape == pcs_dfs[1].shape
+        pcs_dfs1 = pipe.process_chains_to_df(print_label=True, return_label=True)
+        assert np.all(pcs_dfs[0] == pcs_dfs1[0])
+        assert np.all(pcs_dfs[1] == pcs_dfs1[1])
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+        # ls_custom_chains and ls_chains
+        df_chains = pipe.ls_chains(print_label=False)
+        assert df_chains.shape[0] == 2
+        assert (df_chains.to_numpy() == pipe.ls_process_chains(print_label=False).to_numpy()).all()
+        df_custom_chains = pipe.ls_custom_chains(print_label=False)
+        assert df_custom_chains is None
+        pcs_dfs2 = pcs_dfs[0].iloc[:-1, :]
+        pipe.custom_chains_from_df(pcs_dfs2)
+        assert pipe.ls_custom_chains(print_label=False).shape[0] == 1
+        assert (pipe.ls_chains().to_numpy() == pipe.ls_custom_chains().to_numpy()).all()
 
     @staticmethod
     @silent
     def test_custom_chains_from_df() -> None:
         """Test load custom process chains from dataframe."""
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
+
         regressor = RandomForestRegressor(n_estimators=10)
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create test spec exp
-            test_exp = create_test_spec_exp(test_dir)
-            pipe = SpecPipe(test_exp)
 
-            # Add process
-            pipe.add_process(0, 0, 0, original_img)
-            pipe.add_process(5, 7, 0, roi_mean)
-            pipe.add_process(7, 8, 0, regressor)
-            pipe.add_process(7, 8, 0, regressor)
+        # Create test spec exp
+        test_exp = create_test_spec_exp(test_dir)
+        pipe = SpecPipe(test_exp)
 
-            # Test procs to df
-            pcs_df = pipe.process_chains_to_df()
-            assert pipe.custom_chains == []
-            pipe.custom_chains_from_df(pcs_df)
-            assert (np.array(pipe.custom_chains) == pcs_df.to_numpy()).all()
+        # Add process
+        pipe.add_process(0, 0, 0, original_img)
+        pipe.add_process(5, 7, 0, roi_mean)
+        pipe.add_process(7, 8, 0, regressor)
+        pipe.add_process(7, 8, 0, regressor)
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+        # Test procs to df
+        pcs_df = pipe.process_chains_to_df()
+        assert pipe.custom_chains == []
+        pipe.custom_chains_from_df(pcs_df)
+        assert (np.array(pipe.custom_chains) == pcs_df.to_numpy()).all()
 
     @staticmethod
     @silent
     def test_save_load_config() -> None:  # noqa: C901
         """Test save and load pipeline configurations"""
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
+
         regressor = RandomForestRegressor(n_estimators=10)
-        with tempfile.TemporaryDirectory() as test_dir:
-            # Create test spec exp
-            test_exp = create_test_spec_exp(test_dir)
-            pipe = SpecPipe(test_exp)
 
-            # Add process
-            pipe.add_process(0, 0, 0, original_img)
-            pipe.add_process(5, 7, 0, roi_mean)
-            pipe.add_process(7, 8, 0, regressor)
+        # Create test spec exp
+        test_exp = create_test_spec_exp(test_dir)
+        pipe = SpecPipe(test_exp)
 
-            assert len(pipe.process_chains) == 1
+        # Add process
+        pipe.add_process(0, 0, 0, original_img)
+        pipe.add_process(5, 7, 0, roi_mean)
+        pipe.add_process(7, 8, 0, regressor)
 
-            pipe.save_pipe_config()
+        assert len(pipe.process_chains) == 1
 
-            pipe.add_process(7, 8, 0, regressor)
-            assert len(pipe.process_chains) == 2
+        pipe.save_pipe_config()
 
-            pipe.load_pipe_config()
-            assert len(pipe.process_chains) == 1
+        pipe.add_process(7, 8, 0, regressor)
+        assert len(pipe.process_chains) == 2
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+        pipe.load_pipe_config()
+        assert len(pipe.process_chains) == 1
 
     @staticmethod
     @silent
@@ -702,21 +720,22 @@ class TestSpecPipe(unittest.TestCase):
         if os.getenv("SPECPIPE_MODEL_RESUME_TEST_NUM") is not None:
             del os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"]
 
-        # Test dir
-        test_dir = tempfile.mkdtemp()
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
         # Create pipe
         pipe = create_test_spec_pipe(dir_path=test_dir, sample_n=12)
 
         # Fast test without saving result
-        assert pipe.tested is False
-        assert pipe.sample_data == []
+        assert pipe._tested is False
+        assert pipe._sample_data == []
 
         plt.close("all")
         pipe.test_run(test_modeling=False, dump_result=False, save_preprocessed_images=True)
         time.sleep(0.1)
 
-        assert pipe.tested is False
+        assert pipe._tested is False
         preprocessed_img_path = f"{test_dir}/test_run/Preprocessed_images/"
         assert os.path.exists(preprocessed_img_path)
         preproc_img_names = [
@@ -739,7 +758,7 @@ class TestSpecPipe(unittest.TestCase):
         time.sleep(0.1)
 
         # Assert modeling test status
-        assert pipe.tested is True
+        assert pipe._tested is True
         # Assert report files
         model_report_dir = f"{test_dir}/test_run/Model_evaluation_reports/"
         assert os.path.exists(model_report_dir)
@@ -783,8 +802,8 @@ class TestSpecPipe(unittest.TestCase):
         pipe.test_run()
         time.sleep(0.1)
 
-        assert pipe.tested is True
-        assert pipe.sample_data == []
+        assert pipe._tested is True
+        assert pipe._sample_data == []
         assert os.path.exists(f"{test_dir}/test_run/Step_results/PreprocessingTestingResult.dill")
 
         # Backup result
@@ -799,10 +818,6 @@ class TestSpecPipe(unittest.TestCase):
         ]
         assert len(result_dills) > 0
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
-
     @staticmethod
     @silent
     def test_test_run_classification() -> None:  # noqa: C901
@@ -814,21 +829,22 @@ class TestSpecPipe(unittest.TestCase):
             del os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"]
 
         # Test regression
-        # Test dir
-        test_dir = tempfile.mkdtemp()
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
         # Create pipe
         pipe = create_test_spec_pipe(test_dir, is_regression=False)
 
         # Fast test without saving result
-        assert pipe.tested is False
-        assert pipe.sample_data == []
+        assert pipe._tested is False
+        assert pipe._sample_data == []
 
         plt.close("all")
         pipe.test_run(test_modeling=False, dump_result=False, save_preprocessed_images=True)
         time.sleep(0.1)
 
-        assert pipe.tested is False
+        assert pipe._tested is False
         preprocessed_img_path = f"{test_dir}/test_run/Preprocessed_images/"
         assert os.path.exists(preprocessed_img_path)
         preproc_img_names = [
@@ -851,7 +867,7 @@ class TestSpecPipe(unittest.TestCase):
         time.sleep(0.1)
 
         # Assert modeling test status
-        assert pipe.tested is True
+        assert pipe._tested is True
         # Assert report files
         model_report_dir = f"{test_dir}/test_run/Model_evaluation_reports/"
         assert os.path.exists(model_report_dir)
@@ -891,8 +907,8 @@ class TestSpecPipe(unittest.TestCase):
         pipe.test_run()
         time.sleep(0.1)
 
-        assert pipe.tested is True
-        assert pipe.sample_data == []
+        assert pipe._tested is True
+        assert pipe._sample_data == []
         assert os.path.exists(f"{test_dir}/test_run/Step_results/PreprocessingTestingResult.dill")
 
         # Backup result
@@ -907,10 +923,6 @@ class TestSpecPipe(unittest.TestCase):
         ]
         assert len(result_dills) > 0
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
-
     @staticmethod
     @silent
     def criteria_preprocessing_result(pipe: SpecPipe) -> str:  # noqa: C901
@@ -920,7 +932,7 @@ class TestSpecPipe(unittest.TestCase):
         assert os.path.exists(test_dir)
 
         # Assert results
-        assert len(pipe.sample_data) == len(pipe.spec_exp.rois)
+        assert len(pipe._sample_data) == len(pipe.spec_exp.rois)
 
         # Assert resulting files
         preprocessed_img_path = f"{test_dir}/Preprocessing/Preprocessed_images/"
@@ -954,7 +966,7 @@ class TestSpecPipe(unittest.TestCase):
             for name in lsdir_robust(f"{result_dir}/Step_results/")
             if "PreprocessingResult_sample_" in name and ".dill" in name
         ]
-        assert len(preproc_step_names) == len(pipe.sample_data)
+        assert len(preproc_step_names) == len(pipe._sample_data)
 
         # Summary files
         path_X_mean = test_dir + "Preprocessing/" + "PreprocessingChainResult_chain_ind_0_X_mean.csv"  # noqa: N806
@@ -1207,14 +1219,15 @@ class TestSpecPipe(unittest.TestCase):
 
         plt.close("all")
 
-        # Test dir
-        test_dir = tempfile.mkdtemp()
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
         # Create regression exp data and pipe
         pipe = create_test_spec_pipe(test_dir, is_regression=True)
 
         # Preprocessing
-        assert pipe.sample_data == []
+        assert pipe._sample_data == []
         pipe.preprocessing()
         time.sleep(0.1)
 
@@ -1242,14 +1255,15 @@ class TestSpecPipe(unittest.TestCase):
 
         plt.close("all")
 
-        # Test dir
-        test_dir = tempfile.mkdtemp()
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
         # Create regression exp data and pipe
         pipe = create_test_spec_pipe(test_dir, is_regression=False)
 
         # Preprocessing
-        assert pipe.sample_data == []
+        assert pipe._sample_data == []
         pipe.preprocessing()
         time.sleep(0.1)
 
@@ -1278,7 +1292,9 @@ class TestSpecPipe(unittest.TestCase):
         plt.close("all")
 
         # Regression
-        test_dir = tempfile.mkdtemp()
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
         pipe = create_test_spec_pipe(test_dir, is_regression=True)
 
@@ -1322,32 +1338,31 @@ class TestSpecPipe(unittest.TestCase):
     def test_property_access() -> None:
         """Test read-only property access."""
 
-        with tempfile.TemporaryDirectory() as test_dir:
-            pipe = create_test_spec_pipe(test_dir, is_regression=True)
-            with pytest.raises(ValueError, match="cannot be modified"):
-                pipe.sample_targets = pipe.sample_targets
-            with pytest.raises(ValueError, match="cannot be modified"):
-                pipe.process = pipe.process
-            with pytest.raises(ValueError, match="cannot be modified"):
-                pipe.process_steps = pipe.process_steps
-            with pytest.raises(ValueError, match="cannot be modified"):
-                pipe.process_chains = pipe.process_chains
-            with pytest.raises(ValueError, match="cannot be modified"):
-                pipe.custom_chains = pipe.custom_chains
-            with pytest.raises(ValueError, match="cannot be modified"):
-                pipe.sample_data = pipe.sample_data
-            with pytest.raises(ValueError, match="cannot be modified"):
-                pipe.pretest_data = pipe.pretest_data
-            with pytest.raises(ValueError, match="cannot be modified"):
-                pipe.preprocess_result_path = pipe.preprocess_result_path
-            with pytest.raises(ValueError, match="cannot be modified"):
-                pipe.tested = pipe.tested
-            with pytest.raises(ValueError, match="cannot be modified"):
-                pipe.create_time = pipe.create_time
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
-        # Clear test report dir
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+        pipe = create_test_spec_pipe(test_dir, is_regression=True)
+        with pytest.raises(ValueError, match="cannot be modified"):
+            pipe._sample_targets = pipe._sample_targets
+        with pytest.raises(ValueError, match="cannot be modified"):
+            pipe.process = pipe.process
+        with pytest.raises(ValueError, match="cannot be modified"):
+            pipe.process_steps = pipe.process_steps
+        with pytest.raises(ValueError, match="cannot be modified"):
+            pipe.process_chains = pipe.process_chains
+        with pytest.raises(ValueError, match="cannot be modified"):
+            pipe.custom_chains = pipe.custom_chains
+        with pytest.raises(ValueError, match="cannot be modified"):
+            pipe._sample_data = pipe._sample_data
+        with pytest.raises(ValueError, match="cannot be modified"):
+            pipe._pretest_data = pipe._pretest_data
+        with pytest.raises(ValueError, match="cannot be modified"):
+            pipe._preprocess_result_path = pipe._preprocess_result_path
+        with pytest.raises(ValueError, match="cannot be modified"):
+            pipe._tested = pipe._tested
+        with pytest.raises(ValueError, match="cannot be modified"):
+            pipe.create_time = pipe.create_time
 
     @staticmethod
     @silent
@@ -1361,15 +1376,16 @@ class TestSpecPipe(unittest.TestCase):
 
         plt.close("all")
 
-        # Test dir
-        test_dir = tempfile.mkdtemp()
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
         # Create regression exp data and pipe
         pipe = create_test_spec_pipe(test_dir, is_regression=True)
 
         # Test preprocessing with error break
         os.environ["SPECPIPE_PREPROCESS_RESUME_TEST_NUM"] = "1"
-        pipe._tested = True  # skip test_run
+        pipe.__tested = True  # skip test_run
         with pytest.raises(ValueError, match="Preprocessing resume test raise"):
             pipe.preprocessing(resume=True)
             # time.sleep(0.1)
@@ -1382,7 +1398,7 @@ class TestSpecPipe(unittest.TestCase):
             name for name in step_dir_content if "PreprocessingResult_sample_" in name and ".dill" in name
         ]
         assert len(preproc_step_names) > 0
-        assert len(preproc_step_names) < len(pipe.sample_data)
+        assert len(preproc_step_names) < len(pipe._sample_data)
         assert "Error_logs" in step_dir_content
         assert "Preprocess_progress_logs" in step_dir_content
         assert len(lsdir_robust(f"{result_dir}/Step_results/Error_logs")) == 1
@@ -1396,7 +1412,7 @@ class TestSpecPipe(unittest.TestCase):
         time.sleep(0.1)
 
         # Assert resume results
-        finished = TestSpecPipe.criteria_preprocessing_result(pipe)
+        TestSpecPipe.criteria_preprocessing_result(pipe)
         step_dir_content = lsdir_robust(f"{result_dir}/Step_results/")
         assert "Error_logs" in step_dir_content
         assert "Preprocess_progress_logs" not in step_dir_content
@@ -1404,10 +1420,6 @@ class TestSpecPipe(unittest.TestCase):
         # Assert no secondary creation of results
         result_ctime1 = os.stat(f"{result_dir}/Step_results/{result_fn}").st_ctime_ns
         assert result_ctime1 == result_ctime
-
-        # Clear test report dir
-        if os.path.exists(test_dir) and finished == "finished":
-            shutil.rmtree(test_dir)
 
     @staticmethod
     @silent
@@ -1421,8 +1433,9 @@ class TestSpecPipe(unittest.TestCase):
 
         plt.close("all")
 
-        # Test dir
-        test_dir = tempfile.mkdtemp()
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
         # Create regression exp data and pipe
         pipe = create_test_spec_pipe(test_dir, is_regression=True)
@@ -1432,7 +1445,7 @@ class TestSpecPipe(unittest.TestCase):
 
         # Test modeling with error break
         os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"] = "1"
-        pipe._tested = True  # skip test_run
+        pipe.__tested = True  # skip test_run
         with pytest.raises(ValueError, match="Modeling resume test raise"):
             pipe.model_evaluation(resume=True)
             time.sleep(0.1)
@@ -1469,15 +1482,11 @@ class TestSpecPipe(unittest.TestCase):
         time.sleep(0.1)
 
         # Assert result
-        finished = TestSpecPipe.criteria_regression_model_report(pipe)
+        TestSpecPipe.criteria_regression_model_report(pipe)
 
         # Assert no secondary creation of results
         result_ctime1 = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
         assert result_ctime1 == result_ctime
-
-        # Clear test report dir
-        if os.path.exists(test_dir) and finished == "finished":
-            shutil.rmtree(test_dir)
 
     @staticmethod
     @silent
@@ -1491,8 +1500,9 @@ class TestSpecPipe(unittest.TestCase):
 
         plt.close("all")
 
-        # Test dir
-        test_dir = tempfile.mkdtemp()
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
         # Create classification exp data and pipe
         pipe = create_test_spec_pipe(test_dir, is_regression=False)
@@ -1502,7 +1512,7 @@ class TestSpecPipe(unittest.TestCase):
 
         # Test modeling with error break
         os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"] = "1"
-        pipe._tested = True  # skip test_run
+        pipe.__tested = True  # skip test_run
         with pytest.raises(ValueError, match="Modeling resume test raise"):
             pipe.model_evaluation(resume=True)
             time.sleep(0.1)
@@ -1539,33 +1549,35 @@ class TestSpecPipe(unittest.TestCase):
         time.sleep(0.1)
 
         # Assert result
-        finished = TestSpecPipe.criteria_classification_model_report(pipe)
+        TestSpecPipe.criteria_classification_model_report(pipe)
 
         # Assert no secondary creation of results
         result_ctime1 = os.stat(f"{model_report_dir}/{result_fn}").st_ctime_ns
         assert result_ctime1 == result_ctime
 
-        # Clear test report dir
-        if os.path.exists(test_dir) and finished == "finished":
-            shutil.rmtree(test_dir)
-
     @staticmethod
     def test_method_alias() -> None:
         """Test method alias"""
-        with tempfile.TemporaryDirectory() as test_dir:
-            pipe = create_test_spec_pipe(test_dir)
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
 
-            # Assert alias
-            assert pipe.ls_process_chains == pipe.process_chains_to_df
-            assert pipe.ls_custom_chains == pipe.custom_chains_to_df
+        pipe = create_test_spec_pipe(test_dir)
+
+        # Assert alias
+        assert pipe.ls_process_chains == pipe.process_chains_to_df
+        assert pipe.ls_custom_chains == pipe.custom_chains_to_df
 
 
 # %% Tests - SpecPipe
+
+# TestSpecPipe.setUpClass()
 
 # TestSpecPipe.test_initialization_image_exp()
 # TestSpecPipe.test_initialization_standalone_spec_exp()
 
 # TestSpecPipe.test_add_process()
+# TestSpecPipe.test_add_process_validation()
 # TestSpecPipe.test_ls_process()
 # TestSpecPipe.test_rm_process()
 
@@ -1592,6 +1604,8 @@ class TestSpecPipe(unittest.TestCase):
 # TestSpecPipe.test_resume_modeling_classification()
 
 # TestSpecPipe.test_method_alias()
+
+# TestSpecPipe.tearDownClass()
 
 
 # %% Test main

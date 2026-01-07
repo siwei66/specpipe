@@ -34,7 +34,7 @@ from .specio import (
     simple_type_validator,
     unc_path,
 )
-from .specpipe_validator import (
+from .pipeline_validator import (
     _target_type_validation_for_serialization,
     _dl_val,
 )
@@ -299,14 +299,20 @@ def _preprocessing_sample(  # noqa: C901
         Whether to update progress log files, use to enable resume. The default is False.
     """  # noqa: E501
     try:
-        # Break and resume testing mode
-        preprocess_resume_test_num = int(os.getenv("SPECPIPE_PREPROCESS_RESUME_TEST_NUM", "-1"))
-        if preprocess_resume_test_num > 0:
-            if preprocess_resume_test_num > 1:
-                raise ValueError("Preprocessing resume test raise")
-            else:
-                preprocess_resume_test_num = preprocess_resume_test_num + 1
-                os.environ["SPECPIPE_PREPROCESS_RESUME_TEST_NUM"] = str(preprocess_resume_test_num)
+        # Resume testing
+        # Resume testing - initial break status
+        env_preprocess_resume_test_num = int(os.getenv("SPECPIPE_PREPROCESS_RESUME_TEST_NUM", "-1"))
+        if env_preprocess_resume_test_num > 0 and not is_test_run:
+            with preprocess_status['lock']:
+                preprocess_resume_test_num = preprocess_status['preprocess_resume_test_num']
+                if env_preprocess_resume_test_num > int(preprocess_resume_test_num.value):
+                    preprocess_resume_test_num.value = env_preprocess_resume_test_num
+                # Resume testing - conditional break
+                if preprocess_resume_test_num.value > 1:
+                    raise ValueError("Preprocessing resume test raise")
+                # Resume testing - status update
+                preprocess_resume_test_num.value = preprocess_resume_test_num.value + 1
+                os.environ["SPECPIPE_PREPROCESS_RESUME_TEST_NUM"] = str(preprocess_resume_test_num.value)
 
         # Validate sample data label
         if (sample_data["label"] == "") or (sample_data["label"] == "-"):
@@ -630,7 +636,7 @@ def _image_processing_step(
     else:
         output_image_path = preprocessed_img_dir + img_name + "_px_app_" + method_func.__name__ + img_path_val[1]
 
-    # Extract shared objects
+    # Extract shared objects - preprocess_status of pathos.helpers.mp.Manager.list and lock in pipeline.py
     start_status = preprocess_status['start_status']
     completion_status = preprocess_status['completion_status']
     processed_image_init = preprocess_status['processed_image_init']
@@ -891,14 +897,16 @@ def _model_evaluator(  # noqa: C901
     import time
     import numpy as np
 
-    # Break and resume testing mode
+    # Resume testing - initial break status (EnvVar own copy in a subprocess in multiprocessing)
     model_resume_test_num = int(os.getenv("SPECPIPE_MODEL_RESUME_TEST_NUM", "-1"))
+    # Resume testing - conditional break
     if model_resume_test_num > 0:
         if model_resume_test_num > 1:
             raise ValueError("Modeling resume test raise")
-        else:
-            model_resume_test_num = model_resume_test_num + 1
-            os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"] = str(model_resume_test_num)
+    # Resume testing - status update (need lock for multiprocessing)
+    if model_resume_test_num > 0:
+        model_resume_test_num = model_resume_test_num + 1
+        os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"] = str(model_resume_test_num)
 
     # Name reassignment
     sample_list = preprocess_result

@@ -24,8 +24,9 @@ def pssr(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute PSSR (Pigment-specific Simple Ratio) R810/R676 and R810/R682 of 2D arraylike of 1D spectra data series.
+    Compute PSSR (Pigment-specific Simple Ratio) R810/R676 and R810/R682 of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
         Remote Sensing of Environment,
@@ -37,17 +38,21 @@ def pssr(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')
@@ -110,8 +115,9 @@ def pssr1(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute PSSR (Pigment-specific Simple Ratio) R810/R676 of 2D arraylike of 1D spectra data series.
+    Compute PSSR (Pigment-specific Simple Ratio) R810/R676 of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
         Remote Sensing of Environment,
@@ -123,17 +129,21 @@ def pssr1(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     result = pssr(spec_array=spec_array, wavelength=wavelength, axis=axis)
     if axis == 0:
@@ -149,8 +159,9 @@ def pssr2(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute PSSR (Pigment-specific Simple Ratio) R810/R682 of 2D arraylike of 1D spectra data series.
+    Compute PSSR (Pigment-specific Simple Ratio) R810/R682 of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
         Remote Sensing of Environment,
@@ -162,17 +173,21 @@ def pssr2(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     result = pssr(spec_array=spec_array, wavelength=wavelength, axis=axis)
     if axis == 0:

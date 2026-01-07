@@ -1,0 +1,8 @@
+/* Make "Contents" look exactly like an H2 */
+main .toctree-wrapper .caption {
+    font-size: var(--pst-font-size-h2);
+    font-weight: var(--pst-font-weight-heading);
+    line-height: var(--pst-line-height-heading);
+    margin-top: 3rem;      /* blank line before Contents */
+    margin-bottom: 1rem;
+}

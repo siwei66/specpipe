@@ -55,7 +55,6 @@ class RollWindow:
     """
     Apply a function to rolling window of a 2d array-like along axis 0 or 1.
 
-
     Attributes
     ----------
     window_size : int
@@ -65,37 +64,41 @@ class RollWindow:
         Window is rolling along the assigned axis. The default is 1.
 
     roll_mode : str, optional
-        Rolling mode.
-        'center' - window is created centered on current data point, better applicable to static data series.
-        'end' - for time series, window is created end with current data point, better applicable to time series.
-        'knn' - k-nearst neighbor mode, k is the window size.
-                For 'knn', the window is constructed with available data centered on current data point, except the edge windows.
-                For the edge windows, the window is constructed on the k nearst neighbor values.
-        The default is 'center'.
+        Rolling mode. Available options:
+
+        - "center" - window is created centered on current data point, better applicable to static data series.
+        - "end" - for time series, window is created end with current data point, better applicable to time series.
+        - "knn" - k-nearst neighbor mode, k is the window size.
+
+        For "knn", the window is constructed with available data centered on current data point, except the edge windows.
+        The edge windows are constructed on the k nearst neighbor values.
+
+        The default is "center".
 
     padding : str, optional
-        Padding approach for rolling mode "center" and "end", choose between:
-            'none' - No padding applied. For rolling mode "center" and "end", the resulting data series will be window_size - 1 smaller than the original data series without padding.
-            'nan' - Missing values are set to numpy nan after applying the function.
-            'ext_edge' - Edge value of the first and last window are applied to pad before applying the smoothing function.
-            'constant_edge' - Missing values are filled with edge value after applying function.
-            'extrapolation' - Missing values are linearly extrapolated from edge values with length of window_size/2 (center mode), window_size-1 (end mode) after function application.
-        The default is 'none'.
+        Padding approach for rolling mode ``"center"`` and ``"end"``. Available options:
+
+        - "none" - No padding applied. For rolling mode "center" and "end", the resulting data series will be window_size - 1 smaller than the original data series without padding.
+        - "nan" - Missing values are set to numpy nan after applying the function.
+        - "ext_edge" - Edge value of the first and last window are applied to pad before applying the smoothing function.
+        - "constant_edge" - Missing values are filled with edge value after applying function.
+        - "extrapolation" - Missing values are linearly extrapolated from edge values with length of window_size/2 (center mode), window_size-1 (end mode) after function application.
+
+        The default is "none".
 
     numtype : str, optional
-        Number type of given data, supported number type of Numpy. Default is float32.
+        Number type of given data, supports number type of Numpy. Default is ``"float32"``.
 
     axis_double_definition_warning : bool, optional
-        If True, the duplicate definition warning will prompt when function has 'axis' argument. The default is True.
-        Set false for known application.
+        If True, the duplicate definition warning will prompt when function has ``axis`` argument.
 
+        The default is True. Set false for known application.
 
     Methods
     -------
-    apply
+    _apply
         Apply function with arguments and keyword arguments to the rolling window.
-
-    chain_apply
+    _chain_apply
         Apply a list of functions to the rolling window with a list of arguments and keyword arguments matched by list index.
     """  # noqa: E501
 
@@ -109,6 +112,12 @@ class RollWindow:
         numtype: Union[str, type] = 'float32',
         axis_double_definition_warning: bool = True,
     ) -> None:
+        # Private internal attributes
+        self.__window_ind: int = 0
+        self.__data_array_shape: tuple[int, ...] = (0, 0)
+
+        # Public attributes
+        # Validate window_size
         self.numtype: Union[str, type] = numtype
         if window_size < 2:
             raise ValueError('window_size must be at least 2!')
@@ -134,29 +143,26 @@ class RollWindow:
         self.padding: str = padding
 
         self.axis_double_definition_warning: bool = axis_double_definition_warning
-        # Private attributes
-        self._window_ind: int = 0
-        self._data_array_shape: tuple[int, ...] = (0, 0)
 
     @property
-    def window_ind(self) -> int:
-        return self._window_ind
+    def _window_ind(self) -> int:
+        return self.__window_ind
 
-    @window_ind.setter
-    def window_ind(self, value: int) -> None:
+    @_window_ind.setter
+    def _window_ind(self, value: int) -> None:
         raise ValueError("window_ind cannot be modified.")
 
     @property
-    def data_array_shape(self) -> tuple[int, ...]:
-        return self._data_array_shape
+    def _data_array_shape(self) -> tuple[int, ...]:
+        return self.__data_array_shape
 
-    @data_array_shape.setter
-    def data_array_shape(self, value: tuple[int, int]) -> None:
+    @_data_array_shape.setter
+    def _data_array_shape(self, value: tuple[int, int]) -> None:
         raise ValueError("data_array_shape cannot be modified.")
 
     # Apply function to rolling window
     @simple_type_validator
-    def apply(  # noqa: C901
+    def _apply(  # noqa: C901
         self,
         data_array: Annotated[Any, arraylike_validator(ndim=2)],
         func: Callable,
@@ -170,7 +176,7 @@ class RollWindow:
         ----------
         data_array : 2D array-like
             Data for processing, data series as row or column.
-        func : function
+        func : callable
             Applied function for the window.
         args : list, optional
             A list of positional parameters for the applied function in addition to your data.
@@ -183,19 +189,50 @@ class RollWindow:
         -------
         np.ndarray
             Array of rolling calculation result.
+
+        Examples
+        --------
+        Prepare an exemplary 2D data array::
+
+            >>> arr = np.array([[1, 2, 3, 4, 5, 6], [2, 2, 4, 4, 6, 6]])
+
+        Define a function to apply::
+
+            >>> def func_to_apply(arr):
+            ...     return np.mean(arr, axis=0, keepdims=True)
+
+        Apply the defined function::
+
+            >>> RollWindow(3)._apply(arr, func_to_apply)
+
+        Use different window size::
+
+            >>> RollWindow(4)._apply(arr, func_to_apply)
+
+        Pad with ``numpy.nan``::
+
+            >>> RollWindow(3, padding='nan')._apply(arr, func_to_apply)
+
+        Specify rolling mode::
+
+            >>> RollWindow(3, roll_mode='knn')._apply(arr, func_to_apply)
+
+        Compute along a different axis::
+
+            >>> RollWindow(3, axis=0)._apply(arr.T, func_to_apply)
         """
         if args is None:
             arg_values: list = []
         if kwargs is None:
             kwarg_values: dict = {}
-        result = self.chain_apply(data_array, [func], [arg_values], [kwarg_values])
+        result = self._chain_apply(data_array, [func], [arg_values], [kwarg_values])
         assert isinstance(result, np.ndarray)
         return result
 
-    # Apply helper: padder
+    # Apply helper: _padder
     @staticmethod
     @simple_type_validator
-    def padder(
+    def _padder(
         result: np.ndarray, window_size: int, arr: np.ndarray, padding: str, pdist0: int, pdist1: int
     ) -> np.ndarray:
         if (padding == 'none') | (padding == 'ext_edge'):
@@ -244,7 +281,7 @@ class RollWindow:
 
     # Apply functions in chain with args
     @simple_type_validator
-    def chain_apply(  # noqa: C901
+    def _chain_apply(  # noqa: C901
         self,
         data_array: Annotated[Any, arraylike_validator(ndim=2)],
         function_list: list[Callable],
@@ -258,14 +295,14 @@ class RollWindow:
         ----------
         data_array : 2D array-like
             Input data array to process.
-        function_list : list[Callable]
+        function_list : list of callables
             List of functions.
-        arg_lists : list[list], optional
+        arg_lists : list of list or None, optional
             Lists of additional positional arguments of the functions in a list. The functions and corresponding arg lists are matched by list index.
             If provided, arg_lists must have the same number of lists with the number of functions.
             Please note the data must be the first argument in all functions.
             The default is [].
-        kwarg_dicts : list[dict], optional
+        kwarg_dicts : list of dict or None, optional
             Dictionaries of keyword arguments of the functions in a list. The functions and corresponding kwarg dictionaries are matched by list index.
             If provided, kwarg_dicts must have the same number of dictionaries with the number of functions.
             The default is [].
@@ -279,6 +316,31 @@ class RollWindow:
         ------
         ValueError
             If number of arguments in addition to input data exceeds a supported maximum of 5.
+
+        Examples
+        --------
+        Prepare an exemplary 2D data array::
+
+            >>> arr = np.array([[1, 2, 3, 4, 5, 6], [2, 2, 4, 4, 6, 6]])
+
+        Define functions to apply::
+
+            >>> def func1(arr):
+            ...     return np.std(arr, axis=0, keepdims=True)
+            >>> def func2(arr):
+            ...     return np.mean(arr, axis=0, keepdims=True)
+
+        Sequentially apply two functions::
+
+            >>> RollWindow(3)._chain_apply(arr, [func1, func2])
+
+        Pass additional parameters to the functions to apply::
+
+            >>> RollWindow(3)._chain_apply(
+            ...     arr,
+            ...     [np.std, np.mean],
+            ...     kwarg_dicts=[{'axis': 0, 'keepdims': True}, {'axis': 0, 'keepdims': True}]
+            ... )
         """  # noqa: E501
 
         # Validate arg lists
@@ -320,7 +382,7 @@ class RollWindow:
             padding = 'none'
 
         # Set internal data shape in calculation
-        self._data_array_shape = arr.shape
+        self.__data_array_shape = arr.shape
 
         # Padding distance
         if roll_mode == 'center':
@@ -354,7 +416,7 @@ class RollWindow:
         # Apply function to rolling window
         init_switch = 0
         for i in itr:
-            self._window_ind = i
+            self.__window_ind = i
             # Create window data
             if (roll_mode == 'center') | (roll_mode == 'end'):
                 arr_current_window = arr[(i - pdist0) : (i + pdist1 + 1), :]  # window_size = pdist0 + pdist1 + 1
@@ -408,7 +470,7 @@ class RollWindow:
                 result = np.concatenate((result, arr_current_window))
 
         # Post-calculation Padding
-        result = self.padder(
+        result = self._padder(
             result=result, window_size=window_size, arr=arr, padding=padding, pdist0=pdist0, pdist1=pdist1
         )
 

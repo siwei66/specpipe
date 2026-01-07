@@ -26,8 +26,8 @@ from sklearn.neighbors import KNeighborsClassifier
 
 from specpipe.specio import simple_type_validator, silent
 from specpipe.example_data import create_test_spec_exp
-from specpipe.vegeind.demo_data import create_vegeind_demo_data
-from specpipe.specpipe import SpecPipe
+from specpipe.vegeind.demo_data import create_specind_demo_data
+from specpipe.pipeline import SpecPipe
 from specpipe.roistats import roi_mean
 
 from specpipe.modelconnector import (
@@ -49,7 +49,7 @@ def create_model_test_data(
     incr_id = nsample // 3
     incr_idt = nsample // 6
     # X train
-    X_train = np.array(create_vegeind_demo_data(nsample=nsample, nband=nfeature))  # noqa: N806
+    X_train = np.array(create_specind_demo_data(nsample=nsample, nband=nfeature))  # noqa: N806
     X_train[0:incr_id] = X_train[0:incr_id] + 5000
     X_train[incr_id : (incr_id * 2)] = X_train[incr_id : (incr_id * 2)] + 10000
 
@@ -64,7 +64,7 @@ def create_model_test_data(
         y_train[incr_id : (incr_id * 2)] = np.random.random((incr_id,)) + 1.0
 
     # Test data
-    X_test = np.array(create_vegeind_demo_data(nsample=nsample // 2, nband=nfeature))  # noqa: N806
+    X_test = np.array(create_specind_demo_data(nsample=nsample // 2, nband=nfeature))  # noqa: N806
     X_test[0:incr_idt] = X_test[0:incr_idt] + 5000
     X_test[incr_idt : (incr_idt * 2)] = X_test[incr_idt : (incr_idt * 2)] + 10000
 

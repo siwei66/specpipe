@@ -35,14 +35,13 @@ from specpipe.example_data import create_test_raster
 
 # Functions to test
 from specpipe.roistats import (
-    make_img_only,
-    make_roi_only,
-    make_array_only,
+    make_img_func,
+    make_roi_func,
+    make_array_func,
     roispec,
     Stats2d,
-    arr_spectral_angles,
     axisconv,
-    bandhist,
+    bandquant,
     cmval,
     minbbox,
     moment2d,
@@ -57,10 +56,11 @@ from specpipe.roistats import (
     round_digit,
     smopt,
     spectral_angle,
+    spectral_angle_arr,
 )
 
 
-# %% test functions : make_img_only
+# %% test functions : make_img_func
 
 
 class TestMakeImgOnly(unittest.TestCase):
@@ -87,7 +87,7 @@ class TestMakeImgOnly(unittest.TestCase):
         def sample_func(image_path: str, param1: int = 0, param2: int = 0) -> str:
             return f"{image_path}-{param1}-{param2}"
 
-        img_only_func = make_img_only(sample_func, param1=5, param2=10)
+        img_only_func = make_img_func(sample_func, param1=5, param2=10)
         result = img_only_func(TestMakeImgOnly.temp_file_path)
         assert (
             result == f"{TestMakeImgOnly.temp_file_path}-5-10"
@@ -98,7 +98,7 @@ class TestMakeImgOnly(unittest.TestCase):
         def sample_func(image_path: str) -> str:
             return image_path
 
-        img_only_func = make_img_only(sample_func, name_suffix="custom_suffix")
+        img_only_func = make_img_func(sample_func, name_suffix="custom_suffix")
         assert (
             img_only_func.__name__ == "sample_func_custom_suffix"
         ), f"Expected function name 'sample_func_custom_suffix', got {img_only_func.__name__}"
@@ -108,7 +108,7 @@ class TestMakeImgOnly(unittest.TestCase):
         def sample_func(image_path: str, a: int, b: int) -> str:
             return f"{image_path}-{a}-{b}"
 
-        img_only_func = make_img_only(sample_func, "", 1, 2)
+        img_only_func = make_img_func(sample_func, "", 1, 2)
         result = img_only_func(TestMakeImgOnly.temp_file_path)
         assert (
             result == f"{TestMakeImgOnly.temp_file_path}-1-2"
@@ -120,7 +120,7 @@ class TestMakeImgOnly(unittest.TestCase):
             return "ok"
 
         with pytest.raises(TypeError, match="Function must accept at least 1 data parameter"):
-            make_img_only(sample_func)
+            make_img_func(sample_func)
 
     @staticmethod
     def test_non_positional_data_parameter_raises_typeerror() -> None:
@@ -128,10 +128,10 @@ class TestMakeImgOnly(unittest.TestCase):
             return image_path
 
         with pytest.raises(TypeError, match="Data parameter 1 must be positional"):
-            make_img_only(sample_func)
+            make_img_func(sample_func)
 
 
-# %% test functions : make_roi_only
+# %% test functions : make_roi_func
 
 
 class TestMakeRoiOnly(unittest.TestCase):
@@ -162,7 +162,7 @@ class TestMakeRoiOnly(unittest.TestCase):
         def sample_func(image_path: str, roi_coordinates: list[list], param1: int = 0, param2: int = 0) -> str:
             return f"{image_path}-{roi_coordinates}-{param1}-{param2}"
 
-        roi_only_func = make_roi_only(sample_func, param1=5, param2=10)
+        roi_only_func = make_roi_func(sample_func, param1=5, param2=10)
         result = roi_only_func(TestMakeRoiOnly.temp_file_path, TestMakeRoiOnly.example_roi)
         expected = f"{TestMakeRoiOnly.temp_file_path}-{TestMakeRoiOnly.example_roi}-5-10"
         assert result == expected, f"Expected '{expected}', got {result}"
@@ -172,7 +172,7 @@ class TestMakeRoiOnly(unittest.TestCase):
         def sample_func(image_path: str, roi_coordinates: list[list]) -> str:
             return image_path
 
-        roi_only_func = make_roi_only(sample_func, name_suffix="custom_suffix")
+        roi_only_func = make_roi_func(sample_func, name_suffix="custom_suffix")
         assert (
             roi_only_func.__name__ == "sample_func_custom_suffix"
         ), f"Expected function name 'sample_func_custom_suffix', got {roi_only_func.__name__}"
@@ -182,7 +182,7 @@ class TestMakeRoiOnly(unittest.TestCase):
         def sample_func(image_path: str, roi_coordinates: list[list], a: int, b: int) -> str:
             return f"{image_path}-{roi_coordinates}-{a}-{b}"
 
-        roi_only_func = make_roi_only(sample_func, "", 1, 2)
+        roi_only_func = make_roi_func(sample_func, "", 1, 2)
         result = roi_only_func(TestMakeRoiOnly.temp_file_path, TestMakeRoiOnly.example_roi)
         expected = f"{TestMakeRoiOnly.temp_file_path}-{TestMakeRoiOnly.example_roi}-1-2"
         assert result == expected, f"Expected '{expected}', got {result}"
@@ -193,7 +193,7 @@ class TestMakeRoiOnly(unittest.TestCase):
             return image_path
 
         with pytest.raises(TypeError, match="Function must accept at least 2 data parameters"):
-            make_roi_only(sample_func)
+            make_roi_func(sample_func)
 
     @staticmethod
     def test_non_positional_data_parameter_raises_typeerror() -> None:
@@ -201,10 +201,10 @@ class TestMakeRoiOnly(unittest.TestCase):
             return image_path
 
         with pytest.raises(TypeError, match="Data parameter 1 must be positional"):
-            make_roi_only(sample_func)
+            make_roi_func(sample_func)
 
 
-# %% test functions : make_array_only
+# %% test functions : make_array_func
 
 
 class TestMakeArrayOnly(unittest.TestCase):
@@ -222,7 +222,7 @@ class TestMakeArrayOnly(unittest.TestCase):
             result = data_array.sum() + param1 + param2
             return int(result)
 
-        arr_only_func = make_array_only(sample_func, param1=5, param2=10)
+        arr_only_func = make_array_func(sample_func, param1=5, param2=10)
         result = arr_only_func(TestMakeArrayOnly.test_array)
         expected = TestMakeArrayOnly.test_array.sum() + 5 + 10
         assert result == expected, f"Expected {expected}, got {result}"
@@ -232,7 +232,7 @@ class TestMakeArrayOnly(unittest.TestCase):
         def sample_func(data_array: np.ndarray) -> np.ndarray:
             return data_array
 
-        arr_only_func = make_array_only(sample_func, name_suffix="custom_suffix")
+        arr_only_func = make_array_func(sample_func, name_suffix="custom_suffix")
         assert (
             arr_only_func.__name__ == "sample_func_custom_suffix"
         ), f"Expected function name 'sample_func_custom_suffix', got {arr_only_func.__name__}"
@@ -243,7 +243,7 @@ class TestMakeArrayOnly(unittest.TestCase):
             result = data_array.sum() + a + b
             return int(result)
 
-        arr_only_func = make_array_only(sample_func, "", 1, 2)
+        arr_only_func = make_array_func(sample_func, "", 1, 2)
         result = arr_only_func(TestMakeArrayOnly.test_array)
         expected = TestMakeArrayOnly.test_array.sum() + 1 + 2
         assert result == expected, f"Expected {expected}, got {result}"
@@ -254,7 +254,7 @@ class TestMakeArrayOnly(unittest.TestCase):
             return 0
 
         with pytest.raises(TypeError, match="Function must accept at least 1 data parameter"):
-            make_array_only(sample_func)
+            make_array_func(sample_func)
 
     @staticmethod
     def test_non_positional_data_parameter_raises_typeerror() -> None:
@@ -262,7 +262,7 @@ class TestMakeArrayOnly(unittest.TestCase):
             return data_array
 
         with pytest.raises(TypeError, match="Data parameter 1 must be positional"):
-            make_array_only(sample_func)
+            make_array_func(sample_func)
 
 
 # %% test functions : roispec
@@ -645,11 +645,20 @@ class TestPixCount(unittest.TestCase):
 
         roi_coordinates = [[(0.5, 0.5), (0.5, 3.5), (3.5, 3.5), (3.5, 0.5)]]
 
-        df_counts = pixcounts(tmp_path, roi_coordinates, bands=[1, 2, 3, 4], thresholds=None)
+        # Multiple bands
+        df_counts = pixcounts(tmp_path, roi_coordinates, band=[1, 2, 3, 4], threshold=None)
 
         assert isinstance(df_counts, pd.DataFrame)
         assert df_counts.shape == (1, 4)
         assert list(df_counts.columns) == [f"Band_{i + 1}" for i in range(4)]
+        assert np.sum(np.array(df_counts)) > 0
+
+        # Single band
+        df_counts = pixcounts(tmp_path, roi_coordinates, band=1, threshold=None)
+
+        assert isinstance(df_counts, pd.DataFrame)
+        assert df_counts.shape == (1, 1)
+        assert list(df_counts.columns) == ["Band_1"]
         assert np.sum(np.array(df_counts)) > 0
 
     @staticmethod
@@ -661,11 +670,12 @@ class TestPixCount(unittest.TestCase):
 
         roi_coordinates = [[(0.5, 0.5), (0.5, 3.5), (3.5, 3.5), (3.5, 0.5)]]
 
+        # Multiple bands
         df_counts = pixcounts(
             tmp_path,
             roi_coordinates,
-            bands=[1, 2, 3, 4],
-            thresholds=[(10000, 10001), (-1, 10001), (10000, 10001), (-1, 10001)],
+            band=[1, 2, 3, 4],
+            threshold=[(10000, 10001), (-1, 10001), (10000, 10001), (-1, 10001)],
         )
 
         assert isinstance(df_counts, pd.DataFrame)
@@ -675,6 +685,19 @@ class TestPixCount(unittest.TestCase):
         assert df_counts.iloc[0, 1] > 0
         assert df_counts.iloc[0, 2] == 0
         assert df_counts.iloc[0, 3] > 0
+
+        # Single bands
+        df_counts = pixcounts(
+            tmp_path,
+            roi_coordinates,
+            band=2,
+            threshold=(-1, 10001),
+        )
+
+        assert isinstance(df_counts, pd.DataFrame)
+        assert df_counts.shape == (1, 1)
+        assert list(df_counts.columns) == ["Band_2"]
+        assert df_counts.iloc[0, 0] > 0
 
 
 # %% Test - pixcount
@@ -1428,11 +1451,11 @@ class TestMoment2D:
 # TestMoment2D.test_return_type()
 
 
-# %% test functions : bandhist
+# %% test functions : bandquant
 
 
-class TestBandHist:
-    """Test class for bandhist function"""
+class TestBandQuant:
+    """Test class for bandquant function"""
 
     @staticmethod
     def test_basic_functionality() -> None:
@@ -1441,7 +1464,7 @@ class TestBandHist:
         spec_array = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [10.0, 11.0, 12.0]])
 
         # Test with band 0 and 3 bins
-        result = bandhist(spec_array, band=0, bins=3)
+        result = bandquant(spec_array, band=0, bins=3)
 
         # Expected quantiles: 0%, 50%, 100%
         expected = (1.0, 5.5, 10.0)
@@ -1456,7 +1479,7 @@ class TestBandHist:
 
         # Test with custom quantiles
         quantiles = [0.0, 0.25, 0.5, 0.75, 1.0]
-        result = bandhist(spec_array, band=1, bins=quantiles)
+        result = bandquant(spec_array, band=1, bins=quantiles)
 
         expected = (10.0, 20.0, 30.0, 40.0, 50.0)
 
@@ -1469,8 +1492,8 @@ class TestBandHist:
         spec_array = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
 
         # Test with negative index (should access last band)
-        result_neg = bandhist(spec_array, band=-1, bins=2)
-        result_pos = bandhist(spec_array, band=2, bins=2)
+        result_neg = bandquant(spec_array, band=-1, bins=2)
+        result_pos = bandquant(spec_array, band=2, bins=2)
 
         assert result_neg == result_pos
 
@@ -1479,8 +1502,8 @@ class TestBandHist:
         """Test with different axis parameter"""
         spec_array = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
 
-        result1 = bandhist(spec_array, band=0, bins=2, axis=1)
-        result2 = bandhist(spec_array.T, band=0, bins=2, axis=0)
+        result1 = bandquant(spec_array, band=0, bins=2, axis=1)
+        result2 = bandquant(spec_array.T, band=0, bins=2, axis=0)
 
         assert result1 == result2
 
@@ -1490,7 +1513,7 @@ class TestBandHist:
         spec_array = np.array([[1.0, np.nan, 3.0], [4.0, 5.0, 6.0], [np.nan, 8.0, 9.0], [10.0, 11.0, 12.0]])
 
         # Should handle NaN values gracefully
-        result = bandhist(spec_array, band=1, bins=3)
+        result = bandquant(spec_array, band=1, bins=3)
 
         # NaN values should be ignored in quantile calculation
         assert not any(np.isnan(val) for val in result)
@@ -1500,12 +1523,12 @@ class TestBandHist:
         """Test edge cases"""
         # Single row array
         single_row = np.array([[1.0, 2.0, 3.0]])
-        result = bandhist(single_row, band=0, bins=2)
+        result = bandquant(single_row, band=0, bins=2)
         assert result == (1.0, 1.0)  # All quantiles same for single value
 
         # Two identical values
         identical = np.array([[5.0, 1.0], [5.0, 2.0], [5.0, 3.0]])
-        result = bandhist(identical, band=0, bins=3)
+        result = bandquant(identical, band=0, bins=3)
         assert all(val == 5.0 for val in result)
 
     @staticmethod
@@ -1515,28 +1538,28 @@ class TestBandHist:
 
         # Band index out of bounds
         with pytest.raises(ValueError, match="band index exceeds"):
-            bandhist(spec_array, band=5, bins=2)
+            bandquant(spec_array, band=5, bins=2)
 
         with pytest.raises(ValueError, match="band index exceeds"):
-            bandhist(spec_array, band=-5, bins=2)
+            bandquant(spec_array, band=-5, bins=2)
 
         # Invalid bin count
         with pytest.raises(ValueError, match="number of bins must be greater than 1"):
-            bandhist(spec_array, band=0, bins=1)
+            bandquant(spec_array, band=0, bins=1)
 
         # Invalid quantile range
         with pytest.raises(ValueError, match="Bin value must be in range"):
-            bandhist(spec_array, band=0, bins=[-0.1, 0.5, 1.1])
+            bandquant(spec_array, band=0, bins=[-0.1, 0.5, 1.1])
 
         with pytest.raises(ValueError, match="number of bins must be greater than 1"):
-            bandhist(spec_array, band=0, bins=[0.5])
+            bandquant(spec_array, band=0, bins=[0.5])
 
     @staticmethod
     def test_return_type() -> None:
         """Test that return type is correct"""
         spec_array = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
 
-        result = bandhist(spec_array, band=0, bins=3)
+        result = bandquant(spec_array, band=0, bins=3)
 
         assert isinstance(result, tuple)
         assert all(isinstance(val, float) for val in result)
@@ -1547,9 +1570,9 @@ class TestBandHist:
         spec_array = np.array([[1.0, 10.0, 100.0], [2.0, 20.0, 200.0], [3.0, 30.0, 300.0]])
 
         # Test different bands give different results
-        result_band0 = bandhist(spec_array, band=0, bins=2)
-        result_band1 = bandhist(spec_array, band=1, bins=2)
-        result_band2 = bandhist(spec_array, band=2, bins=2)
+        result_band0 = bandquant(spec_array, band=0, bins=2)
+        result_band1 = bandquant(spec_array, band=1, bins=2)
+        result_band2 = bandquant(spec_array, band=2, bins=2)
 
         assert result_band0 != result_band1 != result_band2
 
@@ -1558,7 +1581,7 @@ class TestBandHist:
         """Test that function works with list input (not just numpy arrays)"""
         spec_list = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]
 
-        result = bandhist(spec_list, band=1, bins=3)
+        result = bandquant(spec_list, band=1, bins=3)
 
         expected = (2.0, 5.0, 8.0)
         assert all(np.isclose(result[i], expected[i]) for i in range(3))
@@ -1569,7 +1592,7 @@ class TestBandHist:
         np.random.seed(42)  # For reproducible results
         large_array = np.random.rand(1000, 5)
 
-        result = bandhist(large_array, band=2, bins=5)
+        result = bandquant(large_array, band=2, bins=5)
 
         # Should return 5 values
         assert len(result) == 5
@@ -1577,19 +1600,19 @@ class TestBandHist:
         assert all(result[i] <= result[i + 1] for i in range(4))
 
 
-# %% Test - bandhist
+# %% Test - bandquant
 
-# TestBandHist.test_basic_functionality()
-# TestBandHist.test_custom_quantiles()
-# TestBandHist.test_negative_band_index()
-# TestBandHist.test_different_axis()
-# TestBandHist.test_with_nan_values()
-# TestBandHist.test_edge_cases()
-# TestBandHist.test_error_cases()
-# TestBandHist.test_return_type()
-# TestBandHist.test_multiple_bands()
-# TestBandHist.test_with_list_input()
-# TestBandHist.test_large_dataset()
+# TestBandQuant.test_basic_functionality()
+# TestBandQuant.test_custom_quantiles()
+# TestBandQuant.test_negative_band_index()
+# TestBandQuant.test_different_axis()
+# TestBandQuant.test_with_nan_values()
+# TestBandQuant.test_edge_cases()
+# TestBandQuant.test_error_cases()
+# TestBandQuant.test_return_type()
+# TestBandQuant.test_multiple_bands()
+# TestBandQuant.test_with_list_input()
+# TestBandQuant.test_large_dataset()
 
 
 # %% test functions : smopt
@@ -2181,7 +2204,7 @@ class TestStats2d:
 
     @staticmethod
     def test_single_string_measure() -> None:
-        """Test Stats2d.stats2d with single string measure"""
+        """Test Stats2d.summary with single string measure"""
         arr = np.array(
             [
                 [1.0, 2.0, 3.0],
@@ -2201,7 +2224,7 @@ class TestStats2d:
 
     @staticmethod
     def test_multiple_measures() -> None:
-        """Test Stats2d.stats2d with multiple measures"""
+        """Test Stats2d.summary with multiple measures"""
         arr = np.array(
             [
                 [1.0, 2.0, 3.0],
@@ -2223,7 +2246,7 @@ class TestStats2d:
 
     @staticmethod
     def test_default_measures() -> None:
-        """Test Stats2d.stats2d with default measures (None)"""
+        """Test Stats2d.summary with default measures (None)"""
         arr = np.array(
             [
                 [1.0, 2.0, 3.0],
@@ -2243,7 +2266,7 @@ class TestStats2d:
 
     @staticmethod
     def test_insufficient_samples() -> None:
-        """Test Stats2d.stats2d with insufficient samples"""
+        """Test Stats2d.summary with insufficient samples"""
         arr = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [10.0, 11.0, 12.0]])  # Only 4 samples
 
         with pytest.raises(ValueError, match="Sample size must be at least 5"):
@@ -2251,7 +2274,7 @@ class TestStats2d:
 
     @staticmethod
     def test_callable_measure() -> None:
-        """Test Stats2d.stats2d with callable measure"""
+        """Test Stats2d.summary with callable measure"""
         arr = np.array(
             [
                 [1.0, 2.0, 3.0],
@@ -2276,7 +2299,7 @@ class TestStats2d:
 
     @staticmethod
     def test_invalid_measure_type() -> None:
-        """Test Stats2d.stats2d with invalid measure type"""
+        """Test Stats2d.summary with invalid measure type"""
         with pytest.raises(TypeError):
             Stats2d(measure=123)
 
@@ -2412,11 +2435,11 @@ def test_spectral_angle() -> None:
 # test_spectral_angle()
 
 
-# %% test functions : arr_spectral_angles
+# %% test functions : spectral_angle_arr
 
 
-class TestArrSpectralAngles:
-    """Test class for arr_spectral_angles function"""
+class TestSpectralAngleArr:
+    """Test class for spectral_angle_arr function"""
 
     @staticmethod
     def create_test_data() -> tuple[np.ndarray, np.ndarray]:
@@ -2439,10 +2462,10 @@ class TestArrSpectralAngles:
     @staticmethod
     def test_basic_functionality() -> None:
         """Test basic functionality with valid inputs"""
-        spec_array_2d, reference_spectrum = TestArrSpectralAngles.create_test_data()
+        spec_array_2d, reference_spectrum = TestSpectralAngleArr.create_test_data()
 
         # Calculate spectral angles
-        result = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0)
+        result = spectral_angle_arr(spec_array_2d, reference_spectrum, axis=0)
 
         # Expected results
         expected = np.array([0.0, 0.0, 0.0], dtype=np.float64)
@@ -2453,12 +2476,12 @@ class TestArrSpectralAngles:
     @staticmethod
     def test_axis_1_functionality() -> None:
         """Test functionality with axis=1"""
-        spec_array_2d, reference_spectrum = TestArrSpectralAngles.create_test_data()
+        spec_array_2d, reference_spectrum = TestSpectralAngleArr.create_test_data()
 
         # Transpose the array to test axis=1
         spec_array_2d_transposed = spec_array_2d.T
 
-        result = arr_spectral_angles(spec_array_2d_transposed, reference_spectrum, axis=1)
+        result = spectral_angle_arr(spec_array_2d_transposed, reference_spectrum, axis=1)
 
         expected = np.array([0.0, 0.0, 0.0], dtype=np.float64)
 
@@ -2478,7 +2501,7 @@ class TestArrSpectralAngles:
 
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
 
-        result = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0)
+        result = spectral_angle_arr(spec_array_2d, reference_spectrum, axis=0)
 
         # Angles should be positive and non-zero
         assert result.shape == (2,)
@@ -2496,10 +2519,10 @@ class TestArrSpectralAngles:
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
 
         with pytest.raises(ValueError):
-            arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0, invalid_raise=True)
+            spectral_angle_arr(spec_array_2d, reference_spectrum, axis=0, invalid_raise=True)
 
-        result = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0, invalid_raise=False)
-        result1 = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0)
+        result = spectral_angle_arr(spec_array_2d, reference_spectrum, axis=0, invalid_raise=False)
+        result1 = spectral_angle_arr(spec_array_2d, reference_spectrum, axis=0)
 
         # Should not raise error and should return valid angles
         assert result.shape == (2,)
@@ -2510,10 +2533,10 @@ class TestArrSpectralAngles:
     @staticmethod
     def test_invalid_axis() -> None:
         """Test that invalid axis raises ValueError"""
-        spec_array_2d, reference_spectrum = TestArrSpectralAngles.create_test_data()
+        spec_array_2d, reference_spectrum = TestSpectralAngleArr.create_test_data()
 
         with pytest.raises(ValueError, match="axis can only be 0 or 1"):
-            arr_spectral_angles(spec_array_2d, reference_spectrum, axis=2)
+            spectral_angle_arr(spec_array_2d, reference_spectrum, axis=2)
 
     @staticmethod
     def test_non_2d_array() -> None:
@@ -2521,7 +2544,7 @@ class TestArrSpectralAngles:
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
 
         with pytest.raises(ValueError, match="input spec_array_2d must be 2d array like"):
-            arr_spectral_angles([1, 2, 3, 4], reference_spectrum)
+            spectral_angle_arr([1, 2, 3, 4], reference_spectrum)
 
     @staticmethod
     def test_nan_values() -> None:
@@ -2531,7 +2554,7 @@ class TestArrSpectralAngles:
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
 
         with pytest.raises(ValueError, match="input spec_array_2d must not contain nan values"):
-            arr_spectral_angles(spec_array_2d, reference_spectrum)
+            spectral_angle_arr(spec_array_2d, reference_spectrum)
 
     @staticmethod
     def test_dimension_mismatch() -> None:
@@ -2544,7 +2567,7 @@ class TestArrSpectralAngles:
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)  # 4 bands
 
         with pytest.raises(ValueError, match="input spec_array_2d does not match with reference_spectrum"):
-            arr_spectral_angles(spec_array_2d, reference_spectrum)
+            spectral_angle_arr(spec_array_2d, reference_spectrum)
 
     @staticmethod
     def test_empty_array() -> None:
@@ -2552,7 +2575,7 @@ class TestArrSpectralAngles:
         spec_array_2d = np.array([[]], dtype=np.float64)  # Empty 2D array
         reference_spectrum = np.array([], dtype=np.float64)  # Empty reference
 
-        result = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0)
+        result = spectral_angle_arr(spec_array_2d, reference_spectrum, axis=0)
 
         assert result.shape == (1,)
 
@@ -2562,7 +2585,7 @@ class TestArrSpectralAngles:
         spec_array_2d = np.array([[1.0, 2.0, 3.0, 4.0]], dtype=np.float64)
         reference_spectrum = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
 
-        result = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0)
+        result = spectral_angle_arr(spec_array_2d, reference_spectrum, axis=0)
 
         assert result.shape == (1,)
         np.testing.assert_allclose(result, [0.0], atol=1e-6)
@@ -2574,7 +2597,7 @@ class TestArrSpectralAngles:
 
         reference_spectrum = [1.0, 2.0, 3.0, 4.0]
 
-        result = arr_spectral_angles(spec_array_2d, reference_spectrum, axis=0)
+        result = spectral_angle_arr(spec_array_2d, reference_spectrum, axis=0)
 
         assert result.shape == (2,)
         np.testing.assert_allclose(result, [0.0, 0.0], atol=1e-6)
@@ -2582,17 +2605,17 @@ class TestArrSpectralAngles:
 
 # %% Test - spectral_angle
 
-# TestArrSpectralAngles.test_basic_functionality()
-# TestArrSpectralAngles.test_axis_1_functionality()
-# TestArrSpectralAngles.test_non_zero_angles()
-# TestArrSpectralAngles.test_undefined_angles()
-# TestArrSpectralAngles.test_invalid_axis()
-# TestArrSpectralAngles.test_non_2d_array()
-# TestArrSpectralAngles.test_nan_values()
-# TestArrSpectralAngles.test_dimension_mismatch()
-# TestArrSpectralAngles.test_empty_array()
-# TestArrSpectralAngles.test_single_spectrum()
-# TestArrSpectralAngles.test_list_input()
+# TestSpectralAngleArr.test_basic_functionality()
+# TestSpectralAngleArr.test_axis_1_functionality()
+# TestSpectralAngleArr.test_non_zero_angles()
+# TestSpectralAngleArr.test_undefined_angles()
+# TestSpectralAngleArr.test_invalid_axis()
+# TestSpectralAngleArr.test_non_2d_array()
+# TestSpectralAngleArr.test_nan_values()
+# TestSpectralAngleArr.test_dimension_mismatch()
+# TestSpectralAngleArr.test_empty_array()
+# TestSpectralAngleArr.test_single_spectrum()
+# TestSpectralAngleArr.test_list_input()
 
 
 # %% test functions : num_sig_digit

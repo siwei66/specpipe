@@ -11,3 +11,7 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+docs/build/
+docs/source/generated/
+docs/source/api/generated/
+venv/

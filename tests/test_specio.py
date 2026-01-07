@@ -48,7 +48,7 @@ from specpipe.specio import (
     envi_roi_coords,
     load_vars,
     names_filter,
-    roi_to_envi_xml,
+    roi_to_envi,
     roi_to_shp,
     search_file,
     shp_roi_coords,
@@ -2967,10 +2967,10 @@ class TestDfFromCsv:
 # TestDfFromCsv.test_invalid_compression_format()
 
 
-# %% test functions : roi_to_envi_xml
+# %% test functions : roi_to_envi
 
 
-class TestRoiToEnviXml:
+class TestRoiToEnvi:
     @staticmethod
     def create_test_coordinates() -> list[list[tuple[float, float]]]:
         """Create test polygon coordinates for testing."""
@@ -3010,9 +3010,9 @@ class TestRoiToEnviXml:
         """Test basic functionality with individual parameters."""
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, "test_roi")
-            coordinates = TestRoiToEnviXml.create_test_coordinates()
+            coordinates = TestRoiToEnvi.create_test_coordinates()
 
-            result = roi_to_envi_xml(
+            result = roi_to_envi(
                 file_path=file_path,
                 name="test_roi",
                 coordinates=coordinates,
@@ -3024,7 +3024,7 @@ class TestRoiToEnviXml:
             assert os.path.exists(result)
             assert result.endswith(".xml")
 
-            content = TestRoiToEnviXml.read_file_content(result)
+            content = TestRoiToEnvi.read_file_content(result)
             assert "test_roi" in content
             assert "255,0,0" in content
             assert "EPSG:4326" in content
@@ -3037,14 +3037,14 @@ class TestRoiToEnviXml:
         """Test functionality with roi_list parameter."""
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, "test_roi_list")
-            roi_list = TestRoiToEnviXml.create_test_roi_list()
+            roi_list = TestRoiToEnvi.create_test_roi_list()
 
-            result = roi_to_envi_xml(file_path=file_path, roi_list=roi_list)
+            result = roi_to_envi(file_path=file_path, roi_list=roi_list)
 
             assert result is not None
             assert os.path.exists(result)
 
-            content = TestRoiToEnviXml.read_file_content(result)
+            content = TestRoiToEnvi.read_file_content(result)
             assert "test_roi_1" in content
             assert "test_roi_2" in content
             assert "255,0,0" in content
@@ -3058,11 +3058,11 @@ class TestRoiToEnviXml:
         """Test that random colors are generated when color is None."""
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, "test_random_color")
-            coordinates = TestRoiToEnviXml.create_test_coordinates()
+            coordinates = TestRoiToEnvi.create_test_coordinates()
 
-            result = roi_to_envi_xml(file_path=file_path, name="test_roi", coordinates=coordinates, color=None)
+            result = roi_to_envi(file_path=file_path, name="test_roi", coordinates=coordinates, color=None)
 
-            content = TestRoiToEnviXml.read_file_content(result)
+            content = TestRoiToEnvi.read_file_content(result)
             # Should contain color values in the format "r,g,b"
             import re
 
@@ -3079,9 +3079,9 @@ class TestRoiToEnviXml:
             # Open polygon (first and last points not the same)
             coordinates = [[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]]
 
-            result = roi_to_envi_xml(file_path=file_path, name="test_roi", coordinates=coordinates)
+            result = roi_to_envi(file_path=file_path, name="test_roi", coordinates=coordinates)
 
-            content = TestRoiToEnviXml.read_file_content(result)
+            content = TestRoiToEnvi.read_file_content(result)
             # Should contain the closing coordinate
             assert "0.0 0.0 1.0 0.0 1.0 1.0 0.0 1.0 0.0 0.0" in content
 
@@ -3093,13 +3093,13 @@ class TestRoiToEnviXml:
         """Test that non-existent directories are created."""
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, "nonexistent_dir", "test_roi")
-            coordinates = TestRoiToEnviXml.create_test_coordinates()
+            coordinates = TestRoiToEnvi.create_test_coordinates()
 
             with pytest.warns(
                 UserWarning,
                 match="The specified path directory does not exist, the directory is created",
             ):
-                result = roi_to_envi_xml(file_path=file_path, name="test_roi", coordinates=coordinates)
+                result = roi_to_envi(file_path=file_path, name="test_roi", coordinates=coordinates)
 
             assert os.path.exists(os.path.dirname(result))
             assert os.path.exists(result)
@@ -3112,9 +3112,9 @@ class TestRoiToEnviXml:
         """Test behavior when return_path is False."""
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, "test_no_return")
-            coordinates = TestRoiToEnviXml.create_test_coordinates()
+            coordinates = TestRoiToEnvi.create_test_coordinates()
 
-            result = roi_to_envi_xml(file_path=file_path, name="test_roi", coordinates=coordinates, return_path=False)
+            result = roi_to_envi(file_path=file_path, name="test_roi", coordinates=coordinates, return_path=False)
 
             assert result is None
             assert os.path.exists(file_path + ".xml")
@@ -3127,10 +3127,10 @@ class TestRoiToEnviXml:
         """Test that invalid color values raise ValueError."""
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, "test_invalid_color")
-            coordinates = TestRoiToEnviXml.create_test_coordinates()
+            coordinates = TestRoiToEnvi.create_test_coordinates()
 
             with pytest.raises(ValueError, match="RGB values must be in the range of 0 to 255"):
-                roi_to_envi_xml(
+                roi_to_envi(
                     file_path=file_path,
                     name="test_roi",
                     coordinates=coordinates,
@@ -3145,10 +3145,10 @@ class TestRoiToEnviXml:
         """Test that missing name with individual parameters raises ValueError."""
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, "test_missing_name")
-            coordinates = TestRoiToEnviXml.create_test_coordinates()
+            coordinates = TestRoiToEnvi.create_test_coordinates()
 
             with pytest.raises(ValueError, match="ROI name is not specified"):
-                roi_to_envi_xml(file_path=file_path, name="", coordinates=coordinates)  # Empty name
+                roi_to_envi(file_path=file_path, name="", coordinates=coordinates)  # Empty name
 
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -3169,7 +3169,7 @@ class TestRoiToEnviXml:
             ]
 
             with pytest.raises(ValueError, match="ROI name is not specified"):
-                roi_to_envi_xml(file_path=file_path, roi_list=roi_list)
+                roi_to_envi(file_path=file_path, roi_list=roi_list)
 
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -3197,7 +3197,7 @@ class TestRoiToEnviXml:
             ]
 
             with pytest.raises(ValueError, match="ROI name must be unique"):
-                roi_to_envi_xml(file_path=file_path, roi_list=roi_list)
+                roi_to_envi(file_path=file_path, roi_list=roi_list)
 
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -3210,7 +3210,7 @@ class TestRoiToEnviXml:
             coordinates = [[(0.0, 0.0), (1.0, 0.0)]]  # Only 2 vertices
 
             with pytest.raises(ValueError, match="At least 3 vertices must be defined"):
-                roi_to_envi_xml(file_path=file_path, name="test_roi", coordinates=coordinates)
+                roi_to_envi(file_path=file_path, name="test_roi", coordinates=coordinates)
 
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -3220,7 +3220,7 @@ class TestRoiToEnviXml:
             coordinates = [[(0.0, 0.0), (1.0, 0.0), (0.0, 0.0)]]  # Only 3 vertices including closing one
 
             with pytest.raises(ValueError, match="At least 3 vertices must be defined"):
-                roi_to_envi_xml(file_path=file_path, name="test_roi", coordinates=coordinates)
+                roi_to_envi(file_path=file_path, name="test_roi", coordinates=coordinates)
 
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -3232,7 +3232,7 @@ class TestRoiToEnviXml:
             file_path = os.path.join(temp_dir, "test_empty_coords")
 
             with pytest.raises(ValueError, match="ROI polygon vertex coordinates is not provided"):
-                roi_to_envi_xml(
+                roi_to_envi(
                     file_path=file_path,
                     name="test_roi",
                     coordinates=[],  # Empty coordinates
@@ -3246,9 +3246,9 @@ class TestRoiToEnviXml:
         """Test that the generated XML has the correct structure."""
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, "test_xml_structure")
-            coordinates = TestRoiToEnviXml.create_test_coordinates()
+            coordinates = TestRoiToEnvi.create_test_coordinates()
 
-            result = roi_to_envi_xml(
+            result = roi_to_envi(
                 file_path=file_path,
                 name="test_roi",
                 coordinates=coordinates,
@@ -3256,7 +3256,7 @@ class TestRoiToEnviXml:
                 color=(255, 0, 0),
             )
 
-            content = TestRoiToEnviXml.read_file_content(result)
+            content = TestRoiToEnvi.read_file_content(result)
 
             # Check XML declaration
             assert '<?xml version="1.0" encoding="UTF-8"?>' in content
@@ -3282,21 +3282,21 @@ class TestRoiToEnviXml:
             os.remove(file_path)
 
 
-# %% Test - roi_to_envi_xml
+# %% Test - roi_to_envi
 
-# TestRoiToEnviXml.test_basic_functionality()
-# TestRoiToEnviXml.test_roi_list_functionality()
-# TestRoiToEnviXml.test_random_color_generation()
-# TestRoiToEnviXml.test_auto_closing_polygons()
-# TestRoiToEnviXml.test_directory_creation()
-# TestRoiToEnviXml.test_return_path_false()
-# TestRoiToEnviXml.test_invalid_color_range()
-# TestRoiToEnviXml.test_missing_name_individual()
-# TestRoiToEnviXml.test_missing_name_roi_list()
-# TestRoiToEnviXml.test_duplicate_names()
-# TestRoiToEnviXml.test_insufficient_vertices()
-# TestRoiToEnviXml.test_empty_coordinates()
-# TestRoiToEnviXml.test_xml_structure()
+# TestRoiToEnvi.test_basic_functionality()
+# TestRoiToEnvi.test_roi_list_functionality()
+# TestRoiToEnvi.test_random_color_generation()
+# TestRoiToEnvi.test_auto_closing_polygons()
+# TestRoiToEnvi.test_directory_creation()
+# TestRoiToEnvi.test_return_path_false()
+# TestRoiToEnvi.test_invalid_color_range()
+# TestRoiToEnvi.test_missing_name_individual()
+# TestRoiToEnvi.test_missing_name_roi_list()
+# TestRoiToEnvi.test_duplicate_names()
+# TestRoiToEnvi.test_insufficient_vertices()
+# TestRoiToEnvi.test_empty_coordinates()
+# TestRoiToEnvi.test_xml_structure()
 
 
 # %% test functions : roi_to_shp

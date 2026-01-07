@@ -25,33 +25,41 @@ class LocalPolynomial(RollWindow):
     Apply local polynomial data smoothing to 2D array of 1D series data.
     Local polynomial regression is applied to the rolling window to smooth the data series.
 
-
     Attributes
     ----------
     window_size : int
         Size of rolling window, must be at least 2.
 
+    polynomial_order : int
+        Order of used polynomial regression.
+
     axis : int, optional
         Window is rolling along the assigned axis. The default is 1.
 
     mode : str, optional
-        Rolling mode for kernel application.
-        'center' - window is created centered on current data point, better applicable to static data series.
-        'end' - for time series, window is created end with current data point, better applicable to time series.
-        'knn' - k-nearst neighbor mode, k is the window size.
-                For 'knn', the window is constructed with available data centered on current data point, except the edge windows.
-                For the edge windows, the window is constructed on the k nearst neighbor values.
-                'knn' cannot be applied to 'savitzky_golay_filter'.
-        The default is 'center'.
+        Rolling mode for kernel application. Available options:
+
+        - "center" - window is created centered on current data point, better applicable to static data series.
+        - "end" - for time series, window is created end with current data point, better applicable to time series.
+        - "knn" - k-nearst neighbor mode, k is the window size.
+
+        For "knn", the window is constructed with available data centered on current data point, except the edge windows.
+        The edge windows are constructed on the k nearst neighbor values.
+
+        Note: "knn" cannot be applied to "savitzky_golay_filter".
+
+        The default is "center".
 
     padding : str, optional
-        Padding approach for rolling mode "center" and "end", choose between:
-            'none' - No padding applied. For rolling mode "center" and "end", the resulting data series will be window_size - 1 smaller than the original data series without padding.
-            'nan' - Missing values are set to numpy nan after applying the function. 'nan' cannot be applied to 'savitzky_golay_filter'.
-            'ext_edge' - Edge value of the first and last window are applied to pad before applying the smoothing function.
-            'constant_edge' - Missing values are filled with edge value after applying function.
-            'extrapolation' - Missing values are linearly extrapolated from edge values with length of window_size/2 (center mode), window_size-1 (end mode) after function application.
-        The default is 'ext_edge'.
+        Padding approach for rolling mode "center" and "end". Available options:
+
+        - "none" - No padding applied. For rolling mode "center" and "end", the resulting data series will be window_size - 1 smaller than the original data series without padding.
+        - "nan" - Missing values are set to numpy nan after applying the function. "nan" cannot be applied to "savitzky_golay_filter".
+        - "ext_edge" - Edge value of the first and last window are applied to pad before applying the smoothing function.
+        - "constant_edge" - Missing values are filled with edge value after applying function.
+        - "extrapolation" - Missing values are linearly extrapolated from edge values with length of window_size/2 (center mode), window_size-1 (end mode) after function application.
+
+        The default is "ext_edge".
 
     numtype : str, optional
         Number type of given data, supported number type of Numpy. Default is float32.
@@ -59,57 +67,123 @@ class LocalPolynomial(RollWindow):
     outlier_replacer : ArrayOutlier object, optional
         Outlier removing object with defined attributes. The default is None.
 
-    polynomial_order : int
-        Order of used polynomial regression.
-
     wfunc_x : str or function
-        Weight distribution function for LOWESS filter at x axis. The weight function can be a distribution name or a custom function.
+        Weight distribution function for LOWESS filter at x axis.
+
+        The weight function can be a distribution name or a custom function.
+
         Available weight distribution names:
-            'tricubic' / 'triangular' / 'cosine' / 'gaussian' / 'epanechnikov' / 'exponential' / 'uniform'
-        The default is 'tricubic'.
+
+        "tricubic" / "triangular" / "cosine" / "gaussian" / "epanechnikov" / "exponential" / "uniform"
+
+        The default is "tricubic".
         Configure distribution feature using shape parameter wdist_param_x.
 
     wdist_param_x : float
         Shape parameter of weight distribution at x axis for LOWESS filter.
 
+        Default is ``-1.0``, which applies the default shape parameter for the selected weight distribution.
+
+        The shape parameter affects the weight computation as follows:
+
+            For ``"triangular"`` weight distribution:
+
+                ``sample_weights = 1 - abs(distance_to_focal_point) / b``
+
+                ``b`` is the shape parameter. Default is the distance of window boundary to focal point.
+
+            For ``"cosine"`` weight distribution:
+
+                ``sample_weights = cos(Pi * distance_to_focal_point / (2 * s))``
+
+                ``s`` is the shape parameter. Default is the distance of window boundary to focal point.
+
+            For ``"gaussian"`` weight distribution:
+
+                ``sample_weights = exp(-(distance_to_focal_point ** 2) / (2 * (sigma ** 2)))``
+
+                ``sigma`` is the shape parameter. Default is 1.0.
+
+            For ``"epanechnikov"`` weight distribution:
+
+                ``sample_weights = 1 - (distance_to_focal_point / h) ** 2``
+
+                ``h`` is the shape parameter. Default is the distance of window boundary to focal point.
+
+            For ``"exponential"`` weight distribution:
+
+                ``sample_weights = exp(-abs(distance_to_focal_point / h))``
+
+                ``h`` is the shape parameter. Default is the distance of window boundary to focal point.
+
     wfunc_y : str or function
         Weight distribution function for LOWESS filter at y axis. The weight function can be a distribution name or a custom function.
+
         Available weight distribution names:
-            'tricubic' / 'triangular' / 'cosine' / 'gaussian' / 'epanechnikov' / 'exponential' / 'uniform'
-        The default is 'uniform'.
+
+        "tricubic" / "triangular" / "cosine" / "gaussian" / "epanechnikov" / "exponential" / "uniform"
+
+        The default is "uniform".
         Configure distribution feature using shape parameter wdist_param_y.
 
     wdist_param_y : float
         Shape parameter of weight distribution at y axis for LOWESS filter.
 
-    axis_double_definition_warning : bool, optional
-        If True, the duplicate definition warning will prompt when function has 'axis' argument. The default is True.
-        Set false for known application.
+        Default is ``-1.0``, which applies the default shape parameter for the selected weight distribution.
+        See ``wdist_param_x`` for details.
 
+    axis_double_definition_warning : bool, optional
+        If True, the duplicate definition warning will prompt when function has "axis" argument.
+
+        The default is True. Set false for known application.
 
     Methods
     -------
     savitzky_golay_filter
         Implemente Savitzky-Golay smoothing of input 2D data array.
-
     simple_polynomial_filter
         Implemente simple polynomial smoothing of input 2D data array.
-
     lowess_filter
         Implemente LOWESS smoothing of input 2D data array.
+
+    Examples
+    --------
+    Basic usage with ``window_size`` and ``polynomial_order``::
+
+        >>> lp = LocalPolynomial(3, 1)
+
+    Use different ``window_size``::
+
+        >>> lp = LocalPolynomial(4, 1)
+
+    Use different ``polynomial_order``::
+
+        >>> lp = LocalPolynomial(3, 2)
+
+    Pad with ``numpy.nan``::
+
+        >>> lp = LocalPolynomial(3, 1, padding='nan')
+
+    Specify rolling mode::
+
+        >>> lp = LocalPolynomial(3, 1, mode='knn')
+
+    Compute along a different axis::
+
+        >>> lp = LocalPolynomial(3, 1, axis=0)
     """  # noqa: E501
 
     @simple_type_validator
     def __init__(
         self,
         window_size: int,
+        polynomial_order: int,
         axis: int = 1,
         mode: str = 'center',
         padding: str = 'ext_edge',
         numtype: str = 'float32',
         outlier_replacer: Optional[ArrayOutlier] = None,
         *,
-        polynomial_order: int,
         wfunc_x: Union[str, Callable] = 'tricubic',
         wdist_param_x: float = -1.0,
         wfunc_y: Union[str, Callable] = 'uniform',
@@ -149,18 +223,18 @@ class LocalPolynomial(RollWindow):
 
     # SG kernel
     @simple_type_validator
-    def savitzky_golay_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def _savitzky_golay_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
         Savitzky-Golay kernel.
 
         Parameters
         ----------
-        window_array : np.ndarray
+        window_array : numpy.ndarray
             2D window data of 1D data series.
 
         Returns
         -------
-        window_array
+        numpy.ndarray
             Resulting smoothed data.
 
         Raises
@@ -207,13 +281,27 @@ class LocalPolynomial(RollWindow):
 
         Parameters
         ----------
-        data_array : 1D or 2D arraylike
+        data_array : 1D array-like or 2D array-like
             1D data array or 2D data array of 1D series data.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Resulting smoothed data array.
+
+        Examples
+        --------
+        >>> lp = LocalPolynomial(5, polynomial_order=2)
+        >>> lp.savitzky_golay_filter([1, 2, 3, 4, 5, 6, 77, 88, 9, 10])
+        >>> lp.savitzky_golay_filter([[1, 2, 3, 4, 5, 6, 77, 88, 9, 10], [1, 22, 33, 4, 5, 6, 7, 8, 9, 10]])
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for ROI pixel spectrum processing::
+
+            >>> pipe.add_process(6, 6, 0, LocalPolynomial(5, polynomial_order=2).savitzky_golay_filter)
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for the processing of 1D sample data::
+
+            >>> pipe.add_process(7, 7, 0, LocalPolynomial(5, polynomial_order=2).savitzky_golay_filter)
         """
         data_array = _to_2d_arr(data_array).astype(self.numtype)
 
@@ -227,25 +315,25 @@ class LocalPolynomial(RollWindow):
 
         # Apply kernel
         if self.outlier_replacer is None:
-            result = super().apply(data_array, self.savitzky_golay_kernel)
+            result = super()._apply(data_array, self._savitzky_golay_kernel)
         else:
-            result = super().chain_apply(
-                data_array=data_array, function_list=[self.outlier_replacer.replace, self.savitzky_golay_kernel]
+            result = super()._chain_apply(
+                data_array=data_array, function_list=[self.outlier_replacer.replace, self._savitzky_golay_kernel]
             )
 
         return _back_1d_arr(result)
 
     # Polynomial regression on 1-d series data, return estimation of focal point
     @simple_type_validator
-    def polynomial_estimator(self, y: np.ndarray, x: np.ndarray) -> float:
+    def _polynomial_estimator(self, y: np.ndarray, x: np.ndarray) -> float:
         """
         Perform polynomial regression on local window data.
 
         Parameters
         ----------
-        y : np.ndarray
+        y : numpy.ndarray
             Responses.
-        x : np.ndarray
+        x : numpy.ndarray
             Predictors.
 
         Returns
@@ -265,18 +353,18 @@ class LocalPolynomial(RollWindow):
 
     # Perform polynomial regression on all column data series in a 2D array
     @simple_type_validator
-    def simple_polynomial_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def _simple_polynomial_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
         Polynomial kernel.
 
         Parameters
         ----------
-        window_array : np.ndarray
+        window_array : numpy.ndarray
             2D window data of 1D data series.
 
         Returns
         -------
-        window_array
+        numpy.ndarray
             Resulting smoothed data.
 
         Raises
@@ -297,10 +385,10 @@ class LocalPolynomial(RollWindow):
         window_size = self.window_size
         if self.roll_mode == 'knn':
             self.focal_ind = self.focal_ind0  # middle range focus on center
-            if self.window_ind < self.focal_ind:  # start
-                self.focal_ind = self.window_ind
-            elif self.window_ind > self.data_array_shape[0] - window_size + self.focal_ind:  # end
-                self.focal_ind = self.window_ind + window_size - self.data_array_shape[0]
+            if self._window_ind < self.focal_ind:  # start
+                self.focal_ind = self._window_ind
+            elif self._window_ind > self._data_array_shape[0] - window_size + self.focal_ind:  # end
+                self.focal_ind = self._window_ind + window_size - self._data_array_shape[0]
         elif self.roll_mode == 'center':
             self.focal_ind = self.focal_ind0
         elif self.roll_mode == 'end':
@@ -309,7 +397,7 @@ class LocalPolynomial(RollWindow):
         x = np.linspace(0, window_size - 1, window_size)
         y_pred_list = []
         for i in range(window_array.shape[1]):
-            y_pred_list.append(self.polynomial_estimator(window_array[:, i], x))
+            y_pred_list.append(self._polynomial_estimator(window_array[:, i], x))
         y_pred = np.array(y_pred_list).reshape(-1, 1).T
         assert isinstance(y_pred, np.ndarray)
         return y_pred
@@ -325,22 +413,36 @@ class LocalPolynomial(RollWindow):
 
         Parameters
         ----------
-        data_array : 1D or 2D arraylike
+        data_array : 1D array-like or 2D array-like
             1D data array or 2D data array of 1D series data.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Resulting smoothed data array.
+
+        Examples
+        --------
+        >>> lp = LocalPolynomial(5, polynomial_order=2)
+        >>> lp.simple_polynomial_filter([1, 2, 3, 4, 5, 6, 77, 88, 9, 10])
+        >>> lp.simple_polynomial_filter([[1, 2, 3, 4, 5, 6, 77, 88, 9, 10], [1, 22, 33, 4, 5, 6, 7, 8, 9, 10]])
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for ROI pixel spectrum processing::
+
+            >>> pipe.add_process(6, 6, 0, LocalPolynomial(5, polynomial_order=2).simple_polynomial_filter)
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for the processing of 1D sample data::
+
+            >>> pipe.add_process(7, 7, 0, LocalPolynomial(5, polynomial_order=2).simple_polynomial_filter)
         """
         data_array = _to_2d_arr(data_array).astype(self.numtype)
 
         # Apply kernel
         if self.outlier_replacer is None:
-            result = super().apply(data_array, self.simple_polynomial_kernel)
+            result = super()._apply(data_array, self._simple_polynomial_kernel)
         else:
-            result = super().chain_apply(
-                data_array=data_array, function_list=[self.outlier_replacer.replace, self.simple_polynomial_kernel]
+            result = super()._chain_apply(
+                data_array=data_array, function_list=[self.outlier_replacer.replace, self._simple_polynomial_kernel]
             )
 
         return _back_1d_arr(result)
@@ -348,7 +450,7 @@ class LocalPolynomial(RollWindow):
     # weight function for lowess
     @staticmethod
     @simple_type_validator
-    def tricubic(sample_distances_to_focal: Annotated[np.ndarray, arraylike_validator(ndim=1)]) -> np.ndarray:
+    def _tricubic(sample_distances_to_focal: Annotated[np.ndarray, arraylike_validator(ndim=1)]) -> np.ndarray:
         """Tricubic kernel function mapping distances from focus to weights."""
         fdist = sample_distances_to_focal
         data_boundary = max(abs(fdist))
@@ -361,7 +463,7 @@ class LocalPolynomial(RollWindow):
 
     @staticmethod
     @simple_type_validator
-    def triangular(
+    def _triangular(
         sample_distances_to_focal: Annotated[np.ndarray, arraylike_validator(ndim=1)], b: float = -1.0
     ) -> np.ndarray:
         """Triangular kernel function mapping distances from focus to weights."""
@@ -379,7 +481,7 @@ class LocalPolynomial(RollWindow):
 
     @staticmethod
     @simple_type_validator
-    def cosine(
+    def _cosine(
         sample_distances_to_focal: Annotated[np.ndarray, arraylike_validator(ndim=1)], s: float = -1.0
     ) -> np.ndarray:
         """Cosine kernel function mapping distances from focus to weights."""
@@ -397,7 +499,7 @@ class LocalPolynomial(RollWindow):
 
     @staticmethod
     @simple_type_validator
-    def gaussian(
+    def _gaussian(
         sample_distances_to_focal: Annotated[np.ndarray, arraylike_validator(ndim=1)], sigma: float = -1.0
     ) -> np.ndarray:
         """Gaussian kernel function mapping distances from focus to weights."""
@@ -406,12 +508,12 @@ class LocalPolynomial(RollWindow):
             sigma = 1.0
         if sigma <= 0:
             raise ValueError('Kernel parameter sigma must be positive')
-        sample_weights = np.exp(-(fdist**2) / (2 * sigma**2))
+        sample_weights = np.exp(-(fdist**2) / (2 * (sigma**2)))
         return np.array(sample_weights)
 
     @staticmethod
     @simple_type_validator
-    def epanechnikov(
+    def _epanechnikov(
         sample_distances_to_focal: Annotated[np.ndarray, arraylike_validator(ndim=1)], h: float = -1.0
     ) -> np.ndarray:
         """Epanechnikov kernel function mapping distances from focus to weights."""
@@ -429,7 +531,7 @@ class LocalPolynomial(RollWindow):
 
     @staticmethod
     @simple_type_validator
-    def exponential(
+    def _exponential(
         sample_distances_to_focal: Annotated[np.ndarray, arraylike_validator(ndim=1)], h: float = -1.0
     ) -> np.ndarray:
         """Exponential kernel function mapping distances from focus to weights."""
@@ -441,15 +543,15 @@ class LocalPolynomial(RollWindow):
 
     # Polynomial regression on 1-d series data, return estimation of focal point
     @simple_type_validator
-    def lowess_estimator(self, y: np.ndarray, x: np.ndarray) -> float:  # noqa: C901
+    def _lowess_estimator(self, y: np.ndarray, x: np.ndarray) -> float:  # noqa: C901
         """
         Perform locally weighted regression.
 
         Parameters
         ----------
-        y : np.ndarray
+        y : numpy.ndarray
             Responses.
-        x : np.ndarray
+        x : numpy.ndarray
             Predictors.
 
         Returns
@@ -470,17 +572,17 @@ class LocalPolynomial(RollWindow):
                 if xweight == 'uniform':
                     self.sample_weight_x = np.full(len(fdist_x), 1.0)
                 elif xweight == 'tricubic':
-                    self.sample_weight_x = self.tricubic(fdist_x)
+                    self.sample_weight_x = self._tricubic(fdist_x)
                 elif xweight == 'triangular':
-                    self.sample_weight_x = self.triangular(fdist_x, self.wdist_param_x)
+                    self.sample_weight_x = self._triangular(fdist_x, self.wdist_param_x)
                 elif xweight == 'cosine':
-                    self.sample_weight_x = self.cosine(fdist_x, self.wdist_param_x)
+                    self.sample_weight_x = self._cosine(fdist_x, self.wdist_param_x)
                 elif xweight == 'gaussian':
-                    self.sample_weight_x = self.gaussian(fdist_x, self.wdist_param_x)
+                    self.sample_weight_x = self._gaussian(fdist_x, self.wdist_param_x)
                 elif xweight == 'epanechnikov':
-                    self.sample_weight_x = self.epanechnikov(fdist_x, self.wdist_param_x)
+                    self.sample_weight_x = self._epanechnikov(fdist_x, self.wdist_param_x)
                 elif xweight == 'exponential':
-                    self.sample_weight_x = self.exponential(fdist_x, self.wdist_param_x)
+                    self.sample_weight_x = self._exponential(fdist_x, self.wdist_param_x)
                 else:
                     raise ValueError('Invalid x weight function name, please provide weight function instead.')
             else:
@@ -497,17 +599,17 @@ class LocalPolynomial(RollWindow):
                 if yweight == 'uniform':
                     self.sample_weight_y = np.full(len(fdist_y), 1.0)
                 elif yweight == 'tricubic':
-                    self.sample_weight_y = self.tricubic(fdist_y)
+                    self.sample_weight_y = self._tricubic(fdist_y)
                 elif yweight == 'triangular':
-                    self.sample_weight_y = self.triangular(fdist_y, self.wdist_param_y)
+                    self.sample_weight_y = self._triangular(fdist_y, self.wdist_param_y)
                 elif yweight == 'cosine':
-                    self.sample_weight_y = self.cosine(fdist_y, self.wdist_param_y)
+                    self.sample_weight_y = self._cosine(fdist_y, self.wdist_param_y)
                 elif yweight == 'gaussian':
-                    self.sample_weight_y = self.gaussian(fdist_y, self.wdist_param_y)
+                    self.sample_weight_y = self._gaussian(fdist_y, self.wdist_param_y)
                 elif yweight == 'epanechnikov':
-                    self.sample_weight_y = self.epanechnikov(fdist_y, self.wdist_param_y)
+                    self.sample_weight_y = self._epanechnikov(fdist_y, self.wdist_param_y)
                 elif yweight == 'exponential':
-                    self.sample_weight_y = self.exponential(fdist_y, self.wdist_param_y)
+                    self.sample_weight_y = self._exponential(fdist_y, self.wdist_param_y)
                 else:
                     raise ValueError('Invalid y weight function name, please provide weight function instead.')
             else:
@@ -533,18 +635,18 @@ class LocalPolynomial(RollWindow):
 
     # lowess kernel
     @simple_type_validator
-    def lowess_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
+    def _lowess_kernel(self, window_array: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
         """
         Locally weighted scatterplot smoothing kernel.
 
         Parameters
         ----------
-        window_array : np.ndarray
+        window_array : numpy.ndarray
             Window 2D array of 1D series data.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Resulting smoothed window array.
 
         Raises
@@ -565,10 +667,10 @@ class LocalPolynomial(RollWindow):
         window_size = self.window_size
         if self.roll_mode == 'knn':
             self.focal_ind = self.focal_ind0  # middle range focus on center
-            if self.window_ind < self.focal_ind:  # start
-                self.focal_ind = self.window_ind
-            elif self.window_ind > self.data_array_shape[0] - window_size + self.focal_ind:  # end
-                self.focal_ind = self.window_ind + window_size - self.data_array_shape[0]
+            if self._window_ind < self.focal_ind:  # start
+                self.focal_ind = self._window_ind
+            elif self._window_ind > self._data_array_shape[0] - window_size + self.focal_ind:  # end
+                self.focal_ind = self._window_ind + window_size - self._data_array_shape[0]
         elif self.roll_mode == 'center':
             self.focal_ind = self.focal_ind0
         elif self.roll_mode == 'end':
@@ -582,7 +684,7 @@ class LocalPolynomial(RollWindow):
         x = np.linspace(0, window_size - 1, window_size)
         y_pred_list = []
         for i in range(window_array.shape[1]):
-            y_pred_list.append(self.lowess_estimator(window_array[:, i], x))
+            y_pred_list.append(self._lowess_estimator(window_array[:, i], x))
         y_pred = np.array(y_pred_list).reshape(-1, 1).T
         assert isinstance(y_pred, np.ndarray)
         return y_pred
@@ -598,22 +700,36 @@ class LocalPolynomial(RollWindow):
 
         Parameters
         ----------
-        data_array : 1D or 2D arraylike
+        data_array : 1D array-like or 2D array-like
             1D data array or 2D data array of 1D series data.
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Resulting smoothed data array.
+
+        Examples
+        --------
+        >>> lp = LocalPolynomial(5, polynomial_order=2)
+        >>> lp.lowess_filter([1, 2, 3, 4, 5, 6, 77, 88, 9, 10])
+        >>> lp.lowess_filter([[1, 2, 3, 4, 5, 6, 77, 88, 9, 10], [1, 22, 33, 4, 5, 6, 7, 8, 9, 10]])
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for ROI pixel spectrum processing::
+
+            >>> pipe.add_process(6, 6, 0, LocalPolynomial(5, polynomial_order=2).lowess_filter)
+
+        Add to prepared ``SpecPipe`` instance ``pipe`` for the processing of 1D sample data::
+
+            >>> pipe.add_process(7, 7, 0, LocalPolynomial(5, polynomial_order=2).lowess_filter)
         """
         data_array = _to_2d_arr(data_array).astype(self.numtype)
 
         # Apply kernel
         if self.outlier_replacer is None:
-            result = super().apply(data_array, self.lowess_kernel)
+            result = super()._apply(data_array, self._lowess_kernel)
         else:
-            result = super().chain_apply(
-                data_array=data_array, function_list=[self.outlier_replacer.replace, self.lowess_kernel]
+            result = super()._chain_apply(
+                data_array=data_array, function_list=[self.outlier_replacer.replace, self._lowess_kernel]
             )
 
         return _back_1d_arr(result)

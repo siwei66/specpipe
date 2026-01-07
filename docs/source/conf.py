@@ -1,0 +1,118 @@
+# Configuration file for the Sphinx documentation builder.
+# For the full list of built-in configuration values, see the documentation:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
+
+import os
+import sys
+
+# -- Source code path --------------------------------------------------------
+
+sys.path.insert(0, os.path.abspath('../../src'))
+
+# The following source code was created with AI assistance and has been human reviewed and edited.
+# --
+# -- Project information -----------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+
+project = 'SpecPipe'
+copyright = '2025, Siwei Luo'
+author = 'Siwei Luo'
+release = '0.3.1'
+
+# -- Sphinx extensions -------------------------------------------------------
+
+extensions = [
+    'sphinx.ext.autodoc',           # Automatically document Python code
+    'sphinx.ext.autosummary',       # Generate summary tables
+    'numpydoc',                     # Parse NumPy-style docstrings
+    'sphinx_autodoc_typehints',     # Include type hints in docs
+    'sphinx.ext.viewcode',          # Add "view source" links
+    'sphinx.ext.intersphinx',       # Link to external docs
+    'sphinx.ext.githubpages',       # Publish to GitHub Pages
+    'sphinx.ext.autosectionlabel',  # Cross-reference sections
+    'myst_parser',                  # Markdown support
+]
+
+# -- General configuration ---------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
+
+# -- Numpydoc settings -------------------------------------------------------
+
+numpydoc_show_class_members = False
+numpydoc_class_members_toctree = False
+numpydoc_xref_param_type = True  # Cross-reference types automatically
+numpydoc_validate = True  # Warn on docstring errors
+
+# -- Type hints --------------------------------------------------------------
+
+autodoc_typehints = "none"
+typehints_fully_qualified = False
+
+# -- MyST settings -----------------------------------------------------------
+
+myst_enable_extensions = [
+    "colon_fence",
+    "deflist",
+    "linkify",
+    "substitution",
+    "tasklist",
+]
+
+# -- Autodoc / Autosummary ---------------------------------------------------
+
+autosummary_generate = True
+autosummary_ignore_module_all = False  # Avoid duplication on class page
+
+autodoc_default_options = {
+    'members': True,
+    'inherited-members': True,
+    'private-members': False,
+    'undoc-members': False,
+    'exclude-members': '__weakref__',
+    'member-order': 'bysource',
+}
+
+# -- Templates ---------------------------------------------------------------
+
+templates_path = ['_templates']
+
+# -- Exclude patterns --------------------------------------------------------
+
+exclude_patterns = [
+    '_build',
+    'Thumbs.db',
+    '.DS_Store',
+]
+
+# -- HTML output -------------------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+
+html_theme = 'pydata_sphinx_theme'
+
+html_theme_options = {
+    "show_nav_level": 2,
+    "navigation_depth": 4,
+    "collapse_navigation": True,
+}
+
+html_static_path = ['_static']
+html_css_files = [
+    "index.css",
+]
+html_show_sourcelink = False
+
+# -- Intersphinx mapping -----------------------------------------------------
+# Provides automatic cross-references to external docs for these libraries
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "pandas": ("https://pandas.pydata.org/docs/", None),
+    "torch": ("https://pytorch.org/docs/stable/", None),
+    "PyWavelets": ("https://pywavelets.readthedocs.io/en/latest/", None),
+}

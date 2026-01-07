@@ -27,30 +27,48 @@ def pad(
     axis: int = 0,
 ) -> np.ndarray:
     """
-    Compute PAD (Derivative Pseudo-Absorption) of 2D arraylike of 1D spectra data series.
+    Compute PAD (Derivative Pseudo-Absorption) of a 2D array-like collection of 1D spectral data series.
+    The calculation is based on:
+
+        George Alan Blackburn,
+        Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
+        Remote Sensing of Environment,
+        Volume 66, Issue 3,
+        1998,
+        Pages 273-285,
+        ISSN 0034-4257,
+        https://doi.org/10.1016/S0034-4257(98)00059-5.
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
     order : int
-        Order of derivative.
-    padding : Union[int, float, str, None], optional
-        Boundary padding strategy for derivative arrays, choose between:
-            'nan' - pad with NaN.
-            'edge' - pad with edge values.
-            numeric - pad with specified number.
-            None - no padding.
-        If None, or nth order derivatives, the output length will be reduced by 2n along the computation axis.
+        Order of the derivative.
+    padding : int or float or str or None, optional
+        Boundary padding strategy for derivative arrays. Choose between:
+
+        - 'nan' – pad with NaN.
+        - 'edge' – pad with edge values.
+        - numeric – pad with the specified constant.
+        - None – no padding.
+
+        If None is used, or for n-th order derivatives, the output length will be reduced by 2n along the computation axis.
         The default is 'edge'.
     axis : int, optional
-        Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
+        Axis representing the spectral dimension. Must be 0 or 1.
+
+        If 0, each row represents a sample spectrum.
         The default is 0.
 
     Returns
     -------
     np.ndarray
-        Derivative Pseudo-Absorptions.
+        Derivative pseudo-absorptions.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')
@@ -85,8 +103,9 @@ def padvi(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute PAD vegetation indices (Derivative Pseudo-Absorption Vegetation Indices) of 2D arraylike of 1D spectra data series.
+    Compute PAD vegetation indices (Derivative Pseudo-Absorption Vegetation Indices) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
         Remote Sensing of Environment,
@@ -98,17 +117,21 @@ def padvi(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')
@@ -183,8 +206,9 @@ def pad1_r729(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute PAD1 R729 (First derivative pseudo-absorption R729) of 2D arraylike of 1D spectra data series.
+    Compute PAD1 R729 (First derivative pseudo-absorption R729) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
         Remote Sensing of Environment,
@@ -196,17 +220,21 @@ def pad1_r729(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     result = padvi(spec_array=spec_array, wavelength=wavelength, axis=axis)
     if axis == 0:
@@ -222,8 +250,9 @@ def pad1_r732(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute PAD1 R732 (First derivative pseudo-absorption R732) of 2D arraylike of 1D spectra data series.
+    Compute PAD1 R732 (First derivative pseudo-absorption R732) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
         Remote Sensing of Environment,
@@ -235,17 +264,21 @@ def pad1_r732(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     result = padvi(spec_array=spec_array, wavelength=wavelength, axis=axis)
     if axis == 0:
@@ -261,8 +294,9 @@ def pad2_r664(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute PAD2 R664 (Second derivative pseudo-absorption R664) of 2D arraylike of 1D spectra data series.
+    Compute PAD2 R664 (Second derivative pseudo-absorption R664) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
         Remote Sensing of Environment,
@@ -274,17 +308,21 @@ def pad2_r664(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     result = padvi(spec_array=spec_array, wavelength=wavelength, axis=axis)
     if axis == 0:

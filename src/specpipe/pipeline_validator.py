@@ -129,27 +129,24 @@ def _data_level_seq_validator(  # noqa: C901
     # Validate output data level
     if dl_out_name == "image_roi":
         raise ValueError(
-            f"Output data level '{dl_out_name}' is not supported, \
-                as dynamic ROIs are not supported currently. \
-                Please write the generated ROIs to files and start a new SpecPipe \
-                using SpecExp with the resulting ROI files."
+            f"Output data level '{dl_out_name}' is not supported, "
+            + "as dynamic ROIs are not supported currently. "
+            + "Please write the generated ROIs to files and start a new SpecPipe "
+            + "using SpecExp with the resulting ROI files."
         )
     if dl_out_ind < dl_in_ind:
         raise ValueError(
-            f"Output_data_level cannot precede the input_data_level in the processing pipeline, \
-                got input data level: '{input_data_level}', output data level: '{output_data_level}'"
+            "Output_data_level cannot precede the input_data_level in the processing pipeline, "
+            + f"got input data level: '{input_data_level}', output data level: '{output_data_level}'"
         )
 
     # Validate sequence
     if (application_sequence < 0) | (application_sequence > 999999):
-        raise ValueError(
-            f"Application sequence must be within [0, 1,000,000), \
-                got: {application_sequence}"
-        )
+        raise ValueError("Application sequence must be within [0, 1,000,000), " + f"got: {application_sequence}")
 
     # Validate existed process labels
     # [0 Process_ID, 1 Process_label, 2 Input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
-    f_fapp_seq, l_fapp_seq = 0, np.inf
+    f_fapp_seq, l_fapp_seq = -1, np.inf
     f_out_dl = None
     l_in_dl = None
     if len(existed_process) > 0:
@@ -166,42 +163,42 @@ def _data_level_seq_validator(  # noqa: C901
             if pr[6] == fapp_seq:
                 if dl_out_name != pr[3]:
                     raise ValueError(
-                        f"Methods with identical input data level (here: '{dl_in_name}') \
-                            and application sequence (here: '{application_sequence}') \
-                            must have identical output data levels. \nGot output data level: \
-                            '{dl_out_name}' \nconflicted with process item: \nProcess ID: {pr[0]}\
-                            \nOutput data level: '{pr[3]}'"
+                        f"Methods with identical input data level (here: '{dl_in_name}') "
+                        + f"and application sequence (here: '{application_sequence}') "
+                        + "must have identical output data levels. \nGot output data level: "
+                        + f"'{dl_out_name}' \nconflicted with process item: \nProcess ID: {pr[0]}"
+                        + f"\nOutput data level: '{pr[3]}'"
                     )
 
     # Validate I/O data level of previous and subsequent processes
     if f_out_dl is not None:
-        if dl_in_ind <= 4:
+        if dl_in_ind <= 5:
             if _dl_val(f_out_dl)[0] > 4:
                 raise ValueError(
-                    f"The specified input data level '{dl_in_name}' of added process \
-                        is inconsistent with the output data level '{f_out_dl}' of the previous process, \
-                        the input data level of added process must be image levels (0~4)."
+                    f"The specified input data level '{dl_in_name}' of added process "
+                    + f"is inconsistent with the output data level '{f_out_dl}' of the previous process, "
+                    + "the input data level of added process must be image levels (0~4)."
                 )
         else:
             if dl_in_ind >= 6 and dl_in_ind != _dl_val(f_out_dl)[0]:
                 raise ValueError(
-                    f"The specified input data level '{dl_in_name}' of added process \
-                        is inconsistent with the output data level '{f_out_dl}' of the previous process, \
-                        they must be identical."
+                    f"The specified input data level '{dl_in_name}' of added process "
+                    + f"is inconsistent with the output data level '{f_out_dl}' of the previous process, "
+                    + "they must be identical."
                 )
     if l_in_dl is not None:
-        if _dl_val(l_in_dl)[0] <= 4:
+        if _dl_val(l_in_dl)[0] <= 5:
             if dl_out_ind > 4:
                 raise ValueError(
-                    f"The specified output data level '{dl_out_name}' of added process \
-                        is inconsistent with the input data level '{l_in_dl}' of the subsequent process, \
-                        the output data level of added process must be image levels (0~4)."
+                    f"The specified output data level '{dl_out_name}' of added process "
+                    + f"is inconsistent with the input data level '{l_in_dl}' of the subsequent process, "
+                    + "the output data level of added process must be image levels (0~4)."
                 )
         if _dl_val(l_in_dl)[0] >= 6 and dl_out_ind != _dl_val(l_in_dl)[0]:
             raise ValueError(
-                f"The specified output data level '{dl_out_name}' of added process \
-                    is inconsistent with the input data level '{l_in_dl}' of the subsequent process, \
-                    they must be identical."
+                f"The specified output data level '{dl_out_name}' of added process "
+                + f"is inconsistent with the input data level '{l_in_dl}' of the subsequent process, "
+                + "they must be identical."
             )
 
 
@@ -283,9 +280,9 @@ def _spec_exp_validator(spec_exp: SpecExp) -> None:  # noqa: C901
     else:
         if len(spec_exp.images) > 0 or len(spec_exp.rois_sample) > 0:
             raise ValueError(
-                "Hybrid samples from both standalone spectra and spectral images \
-                    is not allowed by SpecPipe pipeline.\
-                    \nPlease provide either pure image samples or standalone spectrum samples"
+                "Hybrid samples from both standalone spectra and spectral images "
+                + "is not allowed by SpecPipe pipeline."
+                + "\nPlease provide either pure image samples or standalone spectrum samples"
             )
         for g in spec_exp.groups:
             if (
@@ -341,8 +338,8 @@ def _process_validator(  # noqa: C901
     # Pretest_data validation for static typing
     if pretest_data is None:
         raise ValueError(
-            "Internal Error: 'SpecPipe.pretest_data' is None. \
-                Pre-execution test data initialization fails. Please report."
+            "Internal Error: 'SpecPipe.pretest_data' is None. "
+            + "Pre-execution test data initialization fails. Please report."
         )
 
     # Applied only for image samples
@@ -456,9 +453,9 @@ def _process_validator(  # noqa: C901
         if result is None:
             assert hasattr(method, '__name__')
             raise ValueError(
-                f"Method '{method.__name__}' returns no data. \
-                    The added method must have a return. \
-                        For image processing methods, absolute path of resulting image must be returned."
+                f"Method '{method.__name__}' returns no data. "
+                + "The added method must have a return. "
+                + "For image processing methods, absolute path of resulting image must be returned."
             )
 
         # For raster image path and image file output
@@ -473,8 +470,8 @@ def _process_validator(  # noqa: C901
                             raise ValueError("Invalid raster: raster is None.")
                         elif (src.width == 0) or (src.height == 0) or (src.count == 0):
                             raise ValueError(
-                                f"Invalid raster, \
-                                    got dimensions: {src.width} x {src.height}, got number of bands: {src.count}."
+                                "Invalid raster, "
+                                + f"got dimensions: {src.width} x {src.height}, got number of bands: {src.count}."
                             )
                         else:
                             # Raster value validation
@@ -530,25 +527,25 @@ def _process_validator(  # noqa: C901
                 if np.issubdtype(result.dtype, np.number):
                     if (dl_out == 6) and (result.ndim != 2):
                         raise ValueError(
-                            f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' \
-                                must return an 2D array, got array dimension: {result.ndim}"
+                            f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' "
+                            + f"must return an 2D array, got array dimension: {result.ndim}"
                         )
                     else:
                         result = np.array(result)
                         if (dl_out == 7) and (result.ndim != 1):
                             raise ValueError(
-                                f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' \
-                                    must return an 1D array-like, got array dimension: {result.ndim}"
+                                f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' "
+                                + f"must return an 1D array-like, got array dimension: {result.ndim}"
                             )
                 else:
                     raise ValueError(
-                        f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' \
-                            must return an array of numbers, got array dtype: {result.dtype}"
+                        f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' "
+                        + f"must return an array of numbers, got array dtype: {result.dtype}"
                     )
             else:
                 raise TypeError(
-                    f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' \
-                        must return an NumPy array-like, got: {type(result)}"
+                    f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' "
+                    + f"must return an NumPy array-like, got: {type(result)}"
                 )
 
         return method
@@ -559,13 +556,13 @@ def _process_validator(  # noqa: C901
         dl_out = _dl_val(output_data_level)[0]
         if dl_in != 7:
             raise ValueError(
-                f"Method for one-dimensional standalone spectra must have input data level of 7 ('spec1d'), \
-                    but got: {input_data_level}"
+                "Method for one-dimensional standalone spectra must have input data level of 7 ('spec1d'), "
+                + f"but got: {input_data_level}"
             )
         if dl_out < 7:
             raise ValueError(
-                f"Method for one-dimensional standalone spectra cannot have output data level below 7 ('spec1d'), \
-                    but got level number: {dl_out}"
+                "Method for one-dimensional standalone spectra cannot have output data level below 7 ('spec1d'), "
+                + f"but got level number: {dl_out}"
             )
         if dl_out == 8:
             # Model method is not validated here
@@ -579,8 +576,8 @@ def _process_validator(  # noqa: C901
         # Output validation
         if result is None:
             raise ValueError(
-                f"Method '{method.__name__}' returns no data. The added method must have a return. \
-                    For image processing methods, absolute path of resulting image must be returned."
+                f"Method '{method.__name__}' returns no data. The added method must have a return. "
+                + "For image processing methods, absolute path of resulting image must be returned."
             )
 
         # For array-like output
@@ -590,18 +587,18 @@ def _process_validator(  # noqa: C901
                 result = np.array(result)
                 if (dl_out == 7) and (result.ndim != 1):
                     raise ValueError(
-                        f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' \
-                            must return an 1D array-like, got array dimension: {result.ndim}"
+                        f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' "
+                        + f"must return an 1D array-like, got array dimension: {result.ndim}"
                     )
             else:
                 raise ValueError(
-                    f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' \
-                        must return an array of numbers, got array dtype: {result.dtype}"
+                    f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' "
+                    + f"must return an array of numbers, got array dtype: {result.dtype}"
                 )
         else:
             raise TypeError(
-                f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' \
-                    must return an NumPy array-like, got: {type(result)}"
+                f"Method with output data level '{dl_out}' or '{_dl_val(dl_out)[1]}' "
+                + f"must return an NumPy array-like, got: {type(result)}"
             )
 
         return method

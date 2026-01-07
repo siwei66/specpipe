@@ -40,23 +40,31 @@ def croproi(
     raster_path: str, roi_coordinates: list[list[tuple[Union[int, float], Union[int, float]]]], output_path: str
 ) -> None:
     """
-    Crop ROI from a raster image and save croped region to a new image.
+    Crop a region of interest (ROI) from a raster image and save croped region to a new image.
 
     Parameters
     ----------
     raster_path : str
         Source raster path.
 
-    roi_coordinates : list[list[tuple[float,float]]]
-        Lists of ROI polygon coordinate pairs in tuple.
+    roi_coordinates : list of list of tuple of 2 (float or int)
+        Coordinates of the ROI polygons.
+        Structure::
+
+            [
+                [ (x1, y1), (x2, y2), ..., (xn, yn), (x1, y1) ],  # Polygon 1
+                [ (x1, y1), (x2, y2), ..., (xm, ym), (x1, y1) ],  # Polygon 2
+                ...
+            ]
+
+        Each inner list represents a polygon (for multipart geometries), and each tuple is a vertex coordinate.
 
     output_path : str
         Output raster path.
 
     Examples
     --------
-    >>> croproi("/image1.tif", [[(0, 0), (0, 10), (10, 0), (0, 0)]], output_path="/image1_processed.tif")
-
+    >>> croproi("/image1.tif", [[(0, 0), (0, 10), (10, 0), (0, 0)]], output_path="/image1_cropped.tif")
     """
     # Create a list of Polygons from the coordinate lists
     polygons = [Polygon(poly_coords) for poly_coords in roi_coordinates]
@@ -110,7 +118,7 @@ def dtype_mapper(  # noqa: C901
 
     Returns
     -------
-    : type
+    str or type
         The mapped data type in the target format.
     """
     torch_map = {
@@ -868,73 +876,114 @@ def pixel_apply(
     image_path : str
         Input raster image path in string.
 
-    spectral_function : Callable, optional
+    spectral_function : callable, optional
         Function to apply to 1D spectra of every pixel.
         The type of the function is specified to parameter function_type
 
-    function_type : Callable, optional
+    function_type : callable, optional
         Specifies the type of spectral processing function to apply. Must be one of:
-        * 'spec' :
-            Processes individual spectra. The function must:
-            Accept a 1D array-like as its only required input.
-            Return 1D array of the processed spectrum.
-        * 'array' :
-            Processes batches of spectra as a 2D array. The function must:
-            Accept a 2D array as its only required input, where each row represents a spectrum of a pixel.
-            Return a 2D array with the same number of rows (processed spectra).
-        * 'tensor' :
-            Processes data as a 3D PyTorch tensor, optimized for multispectral data with limited number of bands. 'cuda' is applied if available.
-            The function must:
-            Accept a 3D tensor as its only required input (shape: [Channels, Height, Width]).
-            Return a 3D tensor with identical shape except Channel axis (axis 0).
-            Compute operations along the Channel dimension (axis 0).
-        * 'tensor_hyper' :
-            Processes data as a 3D PyTorch tensor, optimized for hyperspectral data with large number of bands. 'cuda' is applied if available.
-            The function requirements are same as the 'tensor', except operation computed along axis 1.
+
+            - ``"spec"``
+                Processes individual spectra.
+
+                The function must:
+
+                    Accept a 1D ``array-like`` as its only required input.
+                    Return 1D ``numpy.ndarray`` of the processed spectra.
+
+            - ``"array"``
+                Processes batches of spectra as a 2D array.
+
+                The function must:
+
+                    Accept a 2D ``numpy.ndarray`` as its only required input, where each row represents a spectrum of a pixel.
+                    Return a 2D ``numpy.ndarray`` with the same number of rows (processed spectra).
+
+            - ``"tensor"``
+                Processes data as a 3D ``torch.Tensor``, used for multispectral data with limited number of bands.
+
+                "cuda" is applied if available.
+
+                The function must:
+
+                    Accept a 3D tensor as its only required input (shape: [Channels, Height, Width]).
+                    Return a 3D tensor with identical ``Height`` and ``Width``.
+                    Compute operations along the Channel dimension (axis 0).
+
+            - ``"tensor_hyper"``
+                Processes data as a 3D PyTorch tensor, optimized for hyperspectral data with large number of bands.
+
+                "cuda" is applied if available.
+
+                The function must:
+
+                    Accept a 3D tensor as its only required input (shape: [Channels, Height, Width]).
+                    Return a 3D tensor with identical ``Height`` and ``Width``.
+                    Compute operations along the ``Height`` dimension (axis 1).
 
     output_path : str
-        Output raster image path in string. Defaults to image_path combined with '_px_app_' and function name.
+        Output raster image path in string.
+        Defaults to ``image_path`` combined with "_px_app_" and function name.
 
-    dtype : Union[type, str], optional
-        Value data type of output array. The default is 'float32'.
+    dtype : type or str, optional
+        Value data type of output array. The default is ``"float32"``.
 
     tile_size : int, optional
         Size of the processing tiles in pixels.
+
         Larger values may improve performance, but require more memory.
-        Default for function type 'spec' and 'array' is 32, for 'tensor' is 64, and for
+
+        The default is ``-1``, in which case the value is determined by ``function_type`` as follows:
+
+            - ``"spec"``: 32
+            - ``"array"``: 32
+            - ``"tensor"``: 64
+            - ``"tensor_hyper"``: 4
 
     progress : bool, optional
-        If True, enables progress bar. If False, suppresses progress messages. Default is True.
+        Whether to show progress bar.
+
+        If True, enables progress bar.
+
+        If False, suppresses progress messages.
+
+        Default is True.
 
     return_output_path : bool, optional
-        Whether path of processed image is returned. Default is True.
+        Whether path of processed image is returned.
+        Default is True.
 
     override : bool, optional
         Whether existed image of output_path is override.
+
         If False, function will not be applied if output_path existed. The default is True.
 
     Returns
     -------
-    output_path : str
+    str
         Path of processed image.
 
     Examples
     --------
-    Apply function accepting 2D array:
-    >>> pixel_apply("/image1.tif", array_function, "array")
+    Apply function accepting 2D array::
 
-    Save to custom output path:
-    >>> pixel_apply("/image1.tif", array_function, "array", output_path="/image1_processed.tif")
+        >>> pixel_apply("/image1.tif", array_function, "array")
 
-    Apply function accepting 3D hyperspectral tensor and computing along axis 0:
-    >>> pixel_apply("/image1.tif", tensor_function, "tensor")
+    Save to custom output path::
 
-    Apply function accepting 3D hyperspectral tensor and computing along axis 1:
-    >>> pixel_apply("/image1.tif", hypertensor_function, "tensor_hyper")
+        >>> pixel_apply("/image1.tif", array_function, "array", output_path="/image1_processed.tif")
 
-    Customize tile size:
-    >>> pixel_apply("/image1.tif", array_function, "array", tile_size=128)
+    Apply function accepting 3D hyperspectral tensor and computing along axis 0::
 
+        >>> pixel_apply("/image1.tif", tensor_function, "tensor")
+
+    Apply function accepting 3D hyperspectral tensor and computing along axis 1::
+
+        >>> pixel_apply("/image1.tif", hypertensor_function, "tensor_hyper")
+
+    Customize tile size::
+
+        >>> pixel_apply("/image1.tif", array_function, "array", tile_size=128)
     """  # noqa: E501
     # Default output path
     if output_path is None:

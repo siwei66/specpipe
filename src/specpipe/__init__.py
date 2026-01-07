@@ -12,10 +12,9 @@ __license__ = "MIT"
 # Imports
 __all__ = [
     ## Core pipeline tools
-    ### Core class
+    ### Core modules
     "SpecExp",
     "SpecPipe",
-    "ModelEva",
     "raster_rgb_preview",
     ### Model combiners
     "combine_transformer_classifier",
@@ -25,41 +24,43 @@ __all__ = [
     "search_file",
     "envi_roi_coords",
     "shp_roi_coords",
+    "roi_to_envi",
+    "roi_to_shp",
     ### Raster operation
     "croproi",
     "pixel_apply",
     ## Spectral statistics tools
     ### ROI statistics
     "round_digit",
-    "make_img_only",
-    "make_roi_only",
-    "make_array_only",
+    "make_img_func",
+    "make_roi_func",
+    "make_array_func",
     "roispec",
     "pixcount",
     "nderiv",
     "moment2d",
-    "bandhist",
+    "bandquant",
     "Stats2d",
     "roi_mean",
     "roi_std",
     "roi_median",
     "spectral_angle",
-    "arr_spectral_angles",
-    ## Mock example data
+    "spectral_angle_arr",
+    ## Example data
     "create_example_raster",
     "create_example_roi_xml",
     "create_example_spec_exp",
-    ## Demo
     "download_demo_data",
+    ## Submodules
+    "denoiser",
+    "functions",
+    "vegeind",
 ]
 
 # Components
 ## Core pipeline tools
 ## Example data
 from .example_data import create_example_raster, create_example_roi_xml, create_example_spec_exp, download_demo_data
-
-## Model Evaluator
-from .modeleva import ModelEva
 
 ## Model combiners
 from .modelconnector import factorial_transformer_chains, combine_transformer_classifier, combine_transformer_regressor
@@ -70,20 +71,20 @@ from .rasterop import croproi, pixel_apply
 ## Spectral statistics tools
 from .roistats import (
     round_digit,
-    make_img_only,
-    make_roi_only,
-    make_array_only,
-    pixcount,
-    Stats2d,
-    arr_spectral_angles,
-    bandhist,
+    make_img_func,
+    make_roi_func,
+    make_array_func,
+    roispec,
     moment2d,
     nderiv,
+    pixcount,
+    Stats2d,
     roi_mean,
     roi_median,
     roi_std,
-    roispec,
+    bandquant,
     spectral_angle,
+    spectral_angle_arr,
 )
 
 ## Spectral experiment data management
@@ -91,7 +92,18 @@ from .specexp import SpecExp
 from .specexp_vis import raster_rgb_preview
 
 ## SpecPipe IO tools
-from .specio import envi_roi_coords, search_file, shp_roi_coords
+from .specio import (
+    envi_roi_coords,
+    search_file,
+    shp_roi_coords,
+    roi_to_envi,
+    roi_to_shp,
+)
 
 ## SpecPipe main pipeline
-from .specpipe import SpecPipe
+from .pipeline import SpecPipe
+
+## Submodules
+from . import denoiser
+from . import functions
+from . import vegeind

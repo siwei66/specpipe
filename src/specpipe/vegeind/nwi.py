@@ -24,8 +24,9 @@ def nwi(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute NWI (Normalized Water Index) of 2D arraylike of 1D spectra data series.
+    Compute NWI (Normalized Water Index) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         K.K. Bandyopadhyay, S. Pradhan, R.N. Sahoo, Ravender Singh, V.K. Gupta, D.K. Joshi, A.K. Sutradhar,
         Characterization of water stress and prediction of yield of wheat using spectral indices under varied water and nitrogen management practices,
         Agricultural Water Management,
@@ -37,17 +38,21 @@ def nwi(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     # Validate input spectral data array
     spec_array = np.array(spec_array).astype('float32')
@@ -131,8 +136,9 @@ def nwi1(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute NWI1 (Normalized Water Index - 1) of 2D arraylike of 1D spectra data series.
+    Compute NWI1 (Normalized Water Index - 1) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         K.K. Bandyopadhyay, S. Pradhan, R.N. Sahoo, Ravender Singh, V.K. Gupta, D.K. Joshi, A.K. Sutradhar,
         Characterization of water stress and prediction of yield of wheat using spectral indices under varied water and nitrogen management practices,
         Agricultural Water Management,
@@ -144,17 +150,21 @@ def nwi1(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     if axis == 0:
         df_vi = nwi(spec_array=spec_array, wavelength=wavelength, axis=axis).loc[:, ['NWI1']]
@@ -170,8 +180,9 @@ def nwi2(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute NWI1 (Normalized Water Index - 2) of 2D arraylike of 1D spectra data series.
+    Compute NWI1 (Normalized Water Index - 2) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         K.K. Bandyopadhyay, S. Pradhan, R.N. Sahoo, Ravender Singh, V.K. Gupta, D.K. Joshi, A.K. Sutradhar,
         Characterization of water stress and prediction of yield of wheat using spectral indices under varied water and nitrogen management practices,
         Agricultural Water Management,
@@ -183,17 +194,21 @@ def nwi2(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     if axis == 0:
         df_vi = nwi(spec_array=spec_array, wavelength=wavelength, axis=axis).loc[:, ['NWI2']]
@@ -209,8 +224,9 @@ def nwi3(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute NWI1 (Normalized Water Index - 3) of 2D arraylike of 1D spectra data series.
+    Compute NWI1 (Normalized Water Index - 3) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         K.K. Bandyopadhyay, S. Pradhan, R.N. Sahoo, Ravender Singh, V.K. Gupta, D.K. Joshi, A.K. Sutradhar,
         Characterization of water stress and prediction of yield of wheat using spectral indices under varied water and nitrogen management practices,
         Agricultural Water Management,
@@ -222,17 +238,21 @@ def nwi3(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     if axis == 0:
         df_vi = nwi(spec_array=spec_array, wavelength=wavelength, axis=axis).loc[:, ['NWI3']]
@@ -248,8 +268,9 @@ def nwi4(
     axis: int = 0,
 ) -> pd.DataFrame:
     """
-    Compute NWI1 (Normalized Water Index - 4) of 2D arraylike of 1D spectra data series.
+    Compute NWI1 (Normalized Water Index - 4) of 2D array-like of 1D spectra data series.
     The calculation is based on:
+
         K.K. Bandyopadhyay, S. Pradhan, R.N. Sahoo, Ravender Singh, V.K. Gupta, D.K. Joshi, A.K. Sutradhar,
         Characterization of water stress and prediction of yield of wheat using spectral indices under varied water and nitrogen management practices,
         Agricultural Water Management,
@@ -261,17 +282,21 @@ def nwi4(
 
     Parameters
     ----------
-    spec_array : 2D arraylike
-        2D arraylike of 1D spectral data series.
-    wavelength : 1D arraylike
+    spec_array : 2D array-like, shape (n_samples, n_features)
+        2D array-like of 1D spectral data series.
+    wavelength : 1D array-like
         Wavelengths for the spectra data.
     axis : int, optional
         Axis of spectral data series index, must be 0 or 1. If 0, each row represents a sample spectrum.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Dataframe containing spectral indices of the samples.
+
+    See Also
+    --------
+    vegeind_summary
     """  # noqa: E501
     if axis == 0:
         df_vi = nwi(spec_array=spec_array, wavelength=wavelength, axis=axis).loc[:, ['NWI4']]
