@@ -160,10 +160,11 @@ def _data_level_seq_validator(  # noqa: C901
                 l_fapp_seq = pr[6]
                 l_in_dl = pr[2]
             # Validate consistency of output with identical input data level and application sequence
-            if pr[6] == fapp_seq:
+            if (dl_in_ind != dl_out_ind) and (pr[6] == fapp_seq):
                 if dl_out_name != pr[3]:
                     raise ValueError(
-                        f"Methods with identical input data level (here: '{dl_in_name}') "
+                        "When a processing step has a different output data level with input, "
+                        + f"methods with identical input data level (here: '{dl_in_name}') "
                         + f"and application sequence (here: '{application_sequence}') "
                         + "must have identical output data levels. \nGot output data level: "
                         + f"'{dl_out_name}' \nconflicted with process item: \nProcess ID: {pr[0]}"

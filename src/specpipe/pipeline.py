@@ -1586,7 +1586,7 @@ class SpecPipe:
         dl_out_ind = dl_out[0]
 
         # Full application sequence
-        fapp_seq = 1000000 * dl_in_ind + application_sequence
+        fapp_seq = 2000000 * dl_in_ind + 1000000 * int(dl_in_ind != dl_out_ind) + application_sequence
 
         # Validate data levels and data level sequence
         _data_level_seq_validator(

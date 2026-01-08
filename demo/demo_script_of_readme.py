@@ -231,6 +231,10 @@ pipe.ls_model()
 # Check processing chains with method id
 pipe.ls_chains()
 
+
+# %% One-shot run barrier for Windows
+if os.name == "nt":
+    raise RuntimeError("SpecPipe.run must be executed separately on Windows.")
 # Run pipeline
 pipe.run()
 
@@ -327,6 +331,9 @@ pipe_reg.ls_model()
 # Check processing chains and run the pipeline
 pipe_reg.ls_chains()
 
+# %% One-shot run barrier for Windows
+if os.name == "nt":
+    raise RuntimeError("SpecPipe.run must be executed separately on Windows.")
 # Run regression pipeline
 pipe_reg.run()
 

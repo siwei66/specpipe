@@ -7,7 +7,7 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 
 # Setup: create directory and download demonstration data
 import os
-demo_dir = os.getcwd() + '/specpipe_demo/'
+demo_dir = os.getcwd() + '/SpecPipeDemoWorkflow/'
 os.makedirs(demo_dir)
 from specpipe import download_demo_data
 download_demo_data(demo_dir)
@@ -69,8 +69,13 @@ for model in models: pipe.add_model(model, validation_method="2-fold")  # noqa
 
 # Review the processing chains and run pipeline
 pipe.ls_chains()
+# pipe.run()
+# %% One-shot run barrier for Windows
+if os.name == "nt":
+    raise RuntimeError("SpecPipe.run must be executed separately on Windows.")
+# Run pipeline
 pipe.run()
 
 # Retrieve results to console
-pipe.report_summary()  # Summaries
-pipe.report_chains()  # Reports of each processing chain
+report_summaries = pipe.report_summary()  # Summaries
+chain_reports = pipe.report_chains()  # Reports of each processing chain

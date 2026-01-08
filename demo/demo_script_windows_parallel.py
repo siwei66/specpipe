@@ -17,7 +17,7 @@ if __name__ == '__main__':
     import shutil
 
     # Setup a directory for demo
-    demo_dir = os.getcwd() + "/SpecPipeDemo/"
+    demo_dir = os.getcwd() + "/SpecPipeDemoWinParallel/"
 
     if os.path.exists(demo_dir):
         shutil.rmtree(demo_dir)
@@ -70,7 +70,7 @@ if __name__ == '__main__':
     exp.add_rois_by_suffix("_[12].xml", data_dir, "group_1")
     exp.add_rois_by_suffix("_[34].xml", data_dir, "group_2")
     # The file 'demo_5.xml' does not match the new image name 'demo_copy.tiff', so uses adding by file list method
-    exp.add_rois_by_file(path_list=[data_dir + "demo_5.xml"], image_name="demo_copy.tiff", group="group_3")
+    exp.add_rois_by_file(path=[data_dir + "demo_5.xml"], image_name="demo_copy.tiff", group="group_3")
 
     # Check added ROIs
     exp.ls_rois()

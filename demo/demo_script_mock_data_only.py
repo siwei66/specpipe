@@ -9,9 +9,14 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 
 # 1. Prepare mock spectral experiment data
 # Create a directory for mock experiment data (The example uses a temporary directory)
-import tempfile
+import os
+import shutil
 
-data_dir = tempfile.mkdtemp(prefix="spec_pipe_example_")
+data_dir = os.getcwd() + "/SpecPipeDemoMock/"
+
+if os.path.exists(data_dir):
+    shutil.rmtree(data_dir)
+os.makedirs(data_dir)
 
 # Create mock data
 from specpipe import create_example_raster, create_example_roi_xml
@@ -229,9 +234,9 @@ pipe.ls_process()
 # Check processing chains with method id
 pipe.ls_chains()
 
-# Manually test all added methods (also run automatically before formal run)
-pipe.test_run()
-
+# %% One-shot run barrier for Windows
+if os.name == "nt":
+    raise RuntimeError("SpecPipe.run must be executed separately on Windows.")
 # Run pipeline
 pipe.run()
 

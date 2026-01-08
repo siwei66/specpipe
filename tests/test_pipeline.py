@@ -69,7 +69,7 @@ def original_img(input_path: str, output_path: str) -> str:
 
 
 # Image to spec1d
-def img_const(path: str) -> tuple:
+def img_const(input_path: str, output_path: str) -> tuple:
     return (0, 0, 0, 0)
 
 
@@ -369,7 +369,7 @@ class TestSpecPipe(unittest.TestCase):
         pipe = SpecPipe(test_exp)
 
         # Heterogenous data levels at same sequence
-        pipe.add_process(0, 0, 0, original_img)
+        pipe.add_process(0, 2, 0, original_img)
         with pytest.raises(ValueError, match="must have identical output data levels"):
             pipe.add_process(0, 7, 0, img_const)
 
