@@ -110,29 +110,38 @@ exp.ls_targets()
 _ = """
 The processing functions are wrapped according to different 'data levels'.
 A classic data levels in spectral image processing is:
-##    raster image data -> ROI spectra -> ROI statistics -> traits to model
 
-The data levels in SpecPipe is:
-    Images:
-    0 - 'image', input image path and output processed image path.
+##    raster images -> ROI spectra -> ROI statistics -> traits to model
 
-    Image pixel spectra:
-    1 - 'pixel_spec', 1D spectrum of image pixel
-    2 - 'pixel_specs_array', 2D spectra array of image pixels
-    3 - 'pixel_specs_tensor', 2D spectra tensor of image pixels
-    4 - 'pixel_hyperspecs_tensor', 2D hyperspectra tensor of image pixels (optimized tiling for hyperspectral images)
-    (See 'rasterop.pixel_apply')
+Data levels for spectroscopy:
 
-    Image ROIs
-    5 - 'image_roi', get image ROI data, commonly get a unsorted list of ROI spectra
-    6 - 'roispecs', ROI spectra in array
-    7 - 'spec1d', arbitray 1D data extracted from roispecs or 1D spectra data from spectrascopy
+##    Standalone 1D spectra of sample -> traits to model
 
-    Models
-    8 - 'model', model evaluation with standard reports in files, only as output level.
+The defined data levels in SpecPipe is:
 
-A process method is wrapped according to its data level,
-Parallel processes with same data levels and application sequences are arranged using full-factorial approach by default.
+    Raster images:
+
+        0 - 'image', input image path and output processed image path.
+        1 - 'pixel_spec', 1D spectrum of image pixel
+        2 - 'pixel_specs_array', 2D spectra array of image pixels
+        3 - 'pixel_specs_tensor', 2D spectra tensor of image pixels
+        4 - 'pixel_hyperspecs_tensor', 2D hyperspectra tensor of image pixels (optimized for hyperspectral images)
+
+    ROI spectra:
+
+        5 - 'image_roi', get image ROI data, commonly get a unsorted list of ROI spectra
+        6 - 'roispecs', ROI spectra in array
+
+    ROI spectral statistics or standalone 1D spectra:
+
+        7 - 'spec1d', arbitray 1D data extracted from roispecs or standalone 1D spectra from spectrascopy
+
+    Models:
+
+        8 - 'model', model evaluation with standard reports in files, only as output level.
+
+A process method is wrapped according to its data level.
+Parallel processes with same data levels and application sequences are arranged using full-factorial approach.
 """
 
 # 3.1 Create processing pipeline

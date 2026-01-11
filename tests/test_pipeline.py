@@ -146,8 +146,8 @@ def create_test_spec_pipe(dir_path: str, sample_n: int = 10, n_bands: int = 8, i
 
     # Add process
     pipe.add_process(0, 0, 0, original_img)
-    pipe.add_process(2, 2, 0, arr_ori)
-    pipe.add_process(2, 2, 0, arr_simple_half)
+    pipe.add_process(2, 2, 1, arr_ori)
+    pipe.add_process(2, 2, 1, arr_simple_half)
     pipe.add_process(5, 6, 0, roispec)
     pipe.add_process(6, 7, 0, Stats2d().mean)
     if is_regression:
@@ -308,26 +308,26 @@ class TestSpecPipe(unittest.TestCase):
         assert len(pipe.process) == 0
         pipe.add_process(0, 0, 0, original_img)
         assert len(pipe.process) == 1
-        pipe.add_process(1, 1, 0, snv)
+        pipe.add_process(1, 1, 1, snv)
         # Correct process updating
         assert len(pipe.process) == 2
         for proc in pipe.process:
             assert len(proc) == 8
         # Correct chain updating
-        assert pipe.process_steps == [["0_0_%#1"], ["1_0_%#1"]]
+        assert pipe.process_steps == [["0_0_%#1"], ["1_1_%#1"]]
         # Correct chains updating
-        assert pipe.process_chains == [("0_0_%#1", "1_0_%#1")]
+        assert pipe.process_chains == [("0_0_%#1", "1_1_%#1")]
 
         # Parallel test processes
-        pipe.add_process(1, 1, 0, snv)
+        pipe.add_process(1, 1, 1, snv)
         # Correct process updating
         assert len(pipe.process) == 3
         for proc in pipe.process:
             assert len(proc) == 8
         # Correct chain updating
-        assert pipe.process_steps == [["0_0_%#1"], ["1_0_%#1", "1_0_%#2"]]
+        assert pipe.process_steps == [["0_0_%#1"], ["1_1_%#1", "1_1_%#2"]]
         # Correct chains updating
-        assert pipe.process_chains == [("0_0_%#1", "1_0_%#1"), ("0_0_%#1", "1_0_%#2")]
+        assert pipe.process_chains == [("0_0_%#1", "1_1_%#1"), ("0_0_%#1", "1_1_%#2")]
 
         # Sequential test processes
         pipe = SpecPipe(test_exp)
@@ -339,12 +339,12 @@ class TestSpecPipe(unittest.TestCase):
         assert pipe.process_chains == [("1_0_%#1", "1_1_%#1", "1_2_%#1")]
 
         # Method of other data levels
-        pipe.add_process(2, 2, 0, arr_snv)
+        pipe.add_process(2, 2, 3, arr_snv)
         assert len(pipe.process) == 4
         if HAS_CUDA:
-            pipe.add_process(3, 3, 0, tensor_snv)
+            pipe.add_process(3, 3, 4, tensor_snv)
             assert len(pipe.process) == 5
-            pipe.add_process(4, 4, 0, hypert_snv)
+            pipe.add_process(4, 4, 5, hypert_snv)
             assert len(pipe.process) == 6
             pipe.add_process(5, 6, 0, roispec)
             assert len(pipe.process) == 7
@@ -355,6 +355,15 @@ class TestSpecPipe(unittest.TestCase):
             assert len(pipe.process) == 5
             pipe.add_process(6, 7, 0, Stats2d().median)
             assert len(pipe.process) == 6
+
+        # Image levels cross-level parallel processes
+        pipe = SpecPipe(test_exp)
+        pipe.add_process(0, 0, 0, original_img)
+        pipe.add_process(1, 1, 0, snv)
+        pipe.add_process(1, 1, 0, snv)
+        assert len(pipe.process) == 3
+        assert pipe.process_steps == [["0_0_%#1", "1_0_%#2", "1_0_%#3"]]
+        assert pipe.process_chains == [("0_0_%#1",), ("1_0_%#2",), ("1_0_%#3",)]
 
     @staticmethod
     @silent
@@ -401,10 +410,10 @@ class TestSpecPipe(unittest.TestCase):
         pipe.add_process(0, 0, 0, original_img)
         pipe.add_process(0, 0, 0, original_img)
         pipe.add_process(0, 0, 1, original_img)
-        pipe.add_process(1, 1, 0, snv)
-        pipe.add_process(2, 2, 0, arr_snv)
-        pipe.add_process(2, 2, 0, arr_snv)
-        pipe.add_process(2, 2, 0, arr_snv)
+        pipe.add_process(1, 1, 2, snv)
+        pipe.add_process(2, 2, 3, arr_snv)
+        pipe.add_process(2, 2, 3, arr_snv)
+        pipe.add_process(2, 2, 3, arr_snv)
 
         # List all
         procs = pipe.ls_process(print_result=False, return_result=True)
@@ -445,8 +454,8 @@ class TestSpecPipe(unittest.TestCase):
         pipe.add_process(0, 0, 0, original_img)
         pipe.add_process(0, 0, 0, original_img)
         pipe.add_process(0, 0, 1, original_img)
-        pipe.add_process(1, 1, 0, snv)
-        pipe.add_process(2, 2, 0, arr_snv)
+        pipe.add_process(1, 1, 2, snv)
+        pipe.add_process(2, 2, 3, arr_snv)
 
         assert len(pipe.process) == 5
         assert len(pipe.process_steps) == 4

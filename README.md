@@ -306,26 +306,24 @@ The instance stores and organizes the data loading configurations of an experime
 
 - The technical data levels in SpecPipe includes:
     ```text
-    Images: 
+    Raster images:
         0 - "image", input image path and output processed image path.
     
-    Image pixel spectra: 
-        1 - "pixel_spec", 1D spectrum of image pixel (simple)
+        1 - "pixel_spec", if the process callable is applied to 1D spectrum of image pixel
     
-        2 - "pixel_specs_array", 2D spectra array of image pixels (fast)
+        2 - "pixel_specs_array", if the process callable is applied to 2D spectra array of image pixels
     
-        3 - "pixel_specs_tensor", 2D spectra tensor of image pixels (fast)
+        3 - "pixel_specs_tensor", if the process callable is applied to 3D spectra tensor of image pixels
     
-        4 - "pixel_hyperspecs_tensor", 2D hyperspectra tensor of image pixels (fastest)
+        4 - "pixel_hyperspecs_tensor", same as "pixel_specs_tensor" but optimized for hyperspectral images
     
-        (See "rasterop.pixel_apply" - apply processing functions to spectra of image pixels)
-    
-    Image ROIs:
+    ROI spectra:
         5 - "image_roi", raster with sample ROIs, for spectrum extraction
     
         6 - "roispecs", 2D array of ROI spectra
     
-        7 - "spec1d", arbitrary 1D data of samples, e.g. 1D spectra, spectra statistics
+    ROI statistics:
+        7 - "spec1d", arbitrary 1D data of samples, e.g. 1D spectra, flattened spectra statistical metrics
     
     Models:
         8 - "model", model evaluation with standard report output as files

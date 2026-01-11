@@ -1423,27 +1423,37 @@ class SpecPipe:
         Parameters
         ----------
         input_data_level : int or str
-            Input data level for the process method. Options:
+            Input data level for the process. Available options:
 
-                ``0`` or ``"image"``:
-                    Method applied to raster images. Function must accept input raster path as first parameter and output path as second.
+                ``0`` or ``"image"``
+                    If the process callable is applied to raster images.
+                    The corresponding callable must accept the input raster path as the first argument and the output path as the second argument.
                 ``1`` or ``"pixel_spec"``
-                    Method applied to 1D spectra of each pixel.
+                    If the process callable is applied to 1D spectra of each pixel.
                 ``2`` or ``"pixel_specs_array"``
-                    Method applied to 2D NumPy array of pixel spectra. Each row is a pixel spectrum.
+                    If the process callable is applied to 2D ``numpy.ndarray`` of pixel spectra. Each row is a pixel spectrum.
                 ``3`` or ``"pixel_specs_tensor"``
-                    Method applied to 3D PyTorch Tensor [C, H, W], calculation along axis 0.
+                    If the process callable is applied to 3D ``torch.tensor`` (Shape: ``(C, H, W)``), with computation performed along axis 0.
                 ``4`` or ``"pixel_hyperspecs_tensor"``
-                    Method applied to 3D hyperspectral Tensor [C, H, W], calculation along axis 1.
+                    If the process callable is applied to 3D hyperspectral ``torch.tensor`` (Shape: ``(C, H, W)``), with computation performed along axis 1.
                 ``5`` or ``"image_roi"``
-                    Method applied to ROI of raster image, receiving raster path and ROI coordinates from SpecExp.
+                    If the process callable is applied to a region of interest (ROI) within a raster image.
+                    The callable must receive the raster path and ROI coordinates provided by provided ``SpecExp`` instance.
                 ``6`` or ``"roi_specs"``
-                    Method applied to 2D array of ROI spectra, each row is a pixel.
+                    If the process callable is applied to 2D array of ROI spectra, each row is a pixel.
                 ``7`` or ``"spec1d"``
-                    Method applied to 1D sample spectra or flattened data.
+                    If the process callable is applied to 1D sample spectra or flattened data, such as ROI spectral statistics.
+
+            Note:
+
+                Input data levels ``0`` through ``4`` share a single, common ``application_sequence`` scheme.
+                These data levels do not maintain independent application sequence series, in contrast to input data levels ``5``, ``6``, and ``7``.
+
+                For example, a process defined with input data level ``0`` (``"image"``) and ``application_sequence=0`` and a process defined with input data
+                level ``2`` (``"pixel_specs_array"``) and ``application_sequence=0`` are treated as parallel operations within the same image-processing step.
 
         output_data_level : int or str
-            Output data level. Options:
+            Output data level. Available options:
 
                 ``0`` or ``"image"``
                     Returns raster image path.
@@ -1586,7 +1596,7 @@ class SpecPipe:
         dl_out_ind = dl_out[0]
 
         # Full application sequence
-        fapp_seq = 2000000 * dl_in_ind + 1000000 * int(dl_in_ind != dl_out_ind) + application_sequence
+        fapp_seq = 2000000 * dl_in_ind * (dl_in_ind > 4) + 1000000 * int(dl_in_ind != dl_out_ind) + application_sequence
 
         # Validate data levels and data level sequence
         _data_level_seq_validator(
@@ -1601,9 +1611,13 @@ class SpecPipe:
         existed_proc_num = [0]
         if len(self.process) > 0:
             for pr in self.process:
-                # Get existed process number (repeat number)
-                if (pr[2] == dl_in_name) & (pr[4] == application_sequence):
-                    existed_proc_num.append(pr[7])
+                # Get existed process number (repeat number) / dl 0~4 share same application_sequence series
+                if dl_in_ind > 4:
+                    if (pr[2] == dl_in_name) & (pr[4] == application_sequence):
+                        existed_proc_num.append(pr[7])
+                else:
+                    if (_dl_val(pr[2])[0] <= 4) & (pr[4] == application_sequence):
+                        existed_proc_num.append(pr[7])
         proc_num_new = max(existed_proc_num) + 1
 
         # Build process ID
