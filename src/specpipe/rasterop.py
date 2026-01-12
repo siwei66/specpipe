@@ -5,15 +5,11 @@ High-performance raster image operation toolset for SpecPipe
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
 
-# OS
-import os
-
 # Interface
 from tqdm import tqdm
 
 # Typing
 from typing import Callable, Optional, Union, overload
-from types import ModuleType
 
 # Basic data
 import numpy as np
@@ -435,16 +431,17 @@ def pixel_spec_apply(  # noqa: C901
     *,
     progress: bool = True,
     override: bool = True,
-    # Dependencies for multiprocessing
-    os: ModuleType = os,
-    np: ModuleType = np,
-    torch: ModuleType = torch,
 ) -> None:
     """
     Apply a function to the 1D spectra of every pixel of a raster image.
     The function must accept 1D arraylike as only required parameter, and return processed 1D arraylike data.
     If override False, function will not be executed for existed dst image.
     """
+
+    # Dependencies for multiprocessing
+    import os
+    import numpy as np
+
     # Validate tile size and set default
     if tile_size == -1:
         tile_size = 32
@@ -521,10 +518,6 @@ def pixel_array_apply(  # noqa: C901
     *,
     progress: bool = True,
     override: bool = True,
-    # Dependencies for multiprocessing
-    os: ModuleType = os,
-    np: ModuleType = np,
-    torch: ModuleType = torch,
 ) -> None:
     """
     Apply a function to the 1D spectra of every pixel of a raster image.
@@ -532,6 +525,11 @@ def pixel_array_apply(  # noqa: C901
     Each row of the 2D array represents an 1D spectra or processed data of a pixel.
     If override False, function will not be executed for existed dst image.
     """
+
+    # Dependencies for multiprocessing
+    import os
+    import numpy as np
+
     # Validate tile size and set default
     if tile_size == -1:
         tile_size = 32
@@ -612,10 +610,6 @@ def pixel_tensor_apply(  # noqa: C901
     *,
     progress: bool = True,
     override: bool = True,
-    # Dependencies for multiprocessing
-    os: ModuleType = os,
-    np: ModuleType = np,
-    torch: ModuleType = torch,
 ) -> None:
     """
     Apply a function to the 1D spectra of every pixel of a raster image.
@@ -623,6 +617,12 @@ def pixel_tensor_apply(  # noqa: C901
     The function must compute along 0 axis. And the input and output tensor must have the same size except 0 axis.
     If override False, function will not be executed for existed dst image.
     """  # noqa: E501
+
+    # Dependencies for multiprocessing
+    import os
+    import numpy as np
+    import torch
+
     # Validate tile size and set default
     if tile_size == -1:
         tile_size = 64
@@ -744,10 +744,6 @@ def pixel_tensor_hyper_apply(  # noqa: C901
     *,
     progress: bool = True,
     override: bool = True,
-    # Dependencies for multiprocessing
-    os: ModuleType = os,
-    np: ModuleType = np,
-    torch: ModuleType = torch,
 ) -> None:
     """
     Apply a function to the 1D spectra of every pixel of a raster image, optimized for hyperspectral image data transfer.
@@ -755,6 +751,12 @@ def pixel_tensor_hyper_apply(  # noqa: C901
     The function must compute along 1 axis. And the input and output tensor must have the same size except 1 axis.
     If override False, function will not be executed for existed dst image.
     """  # noqa: E501
+
+    # Dependencies for multiprocessing
+    import os
+    import numpy as np
+    import torch
+
     # Validate tile size and set default
     if tile_size == -1:
         row_chunk = 4
@@ -863,10 +865,6 @@ def pixel_apply(
     progress: bool = True,
     return_output_path: bool = True,
     override: bool = True,
-    # Dependencies for multiprocessing
-    os: ModuleType = os,
-    np: ModuleType = np,
-    torch: ModuleType = torch,
 ) -> Optional[str]:
     """
     Apply a function to process the 1D spectra of every pixel of a raster image.
@@ -985,6 +983,10 @@ def pixel_apply(
 
         >>> pixel_apply("/image1.tif", array_function, "array", tile_size=128)
     """  # noqa: E501
+
+    # Dependencies for multiprocessing
+    import os
+
     # Default output path
     if output_path is None:
         ptx = os.path.splitext(image_path)
@@ -1012,10 +1014,6 @@ def pixel_apply(
             tile_size,
             progress=progress,
             override=override,
-            # Dependencies for multiprocessing
-            os=os,
-            np=np,
-            torch=torch,
         )
 
     # Array apply
@@ -1028,10 +1026,6 @@ def pixel_apply(
             tile_size,
             progress=progress,
             override=override,
-            # Dependencies for multiprocessing
-            os=os,
-            np=np,
-            torch=torch,
         )
 
     # Tensor apply
@@ -1045,10 +1039,6 @@ def pixel_apply(
             "cuda",
             progress=progress,
             override=override,
-            # Dependencies for multiprocessing
-            os=os,
-            np=np,
-            torch=torch,
         )
 
     # Hyper-tensor apply
@@ -1062,10 +1052,6 @@ def pixel_apply(
             "cuda",
             progress=progress,
             override=override,
-            # Dependencies for multiprocessing
-            os=os,
-            np=np,
-            torch=torch,
         )
 
     # Else

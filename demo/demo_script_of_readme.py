@@ -244,6 +244,7 @@ pipe.run()
 # running the pipeline again with `resume=True` to continue from last completed step.
 
 # 5 Check results
+
 # Retrieve reports in console
 result_summary = pipe.report_summary()
 chain_results = pipe.report_chains()
@@ -259,7 +260,10 @@ chain_results[0].keys()
 chain_results[0]['ROC_curve']
 
 
-# %%
+# %% One-shot run barrier for Windows
+if os.name == "nt":
+    raise RuntimeError("SpecPipe.run must be executed separately on Windows.")
+
 # 6 Regression Case
 
 # 6.1 Create a directory for regression results

@@ -736,9 +736,6 @@ def _image_processor(
             output_image_path,
             progress=False,
             override=False,
-            os=os,
-            np=np,
-            torch=torch,
         )
     # Return path of processed image
     return output_image_path

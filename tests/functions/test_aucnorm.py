@@ -7,36 +7,36 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 
 # ruff: noqa: I001
 # OS
-import os  # noqa: E402
-import sys  # noqa: E402
-import warnings  # noqa: E402
+import os
+import sys
+import warnings
 
 # Initialize LOKY_MAX_CPU_COUNT if it does not exist before imports to prevent corresponding warning
-os.environ.setdefault('LOKY_MAX_CPU_COUNT', '1')  # noqa: E402
+os.environ.setdefault('LOKY_MAX_CPU_COUNT', '1')
 
 # OS Files
-import shutil  # noqa: E402
-import tempfile  # noqa: E402
+import shutil
+import tempfile
 
 # Test
-import pytest  # noqa: E402
-import unittest  # noqa: E402
+import pytest
+import unittest
 
 
 # Basic data
-import numpy as np  # noqa: E402
-import torch  # noqa: E402
+import numpy as np
+import torch
 
 # Raster
-import rasterio  # noqa: E402
+import rasterio
 
 # Local
-from specpipe.example_data import create_test_raster  # noqa: E402
+from specpipe.example_data import create_test_raster
 
 # Function to test
-from specpipe.rasterop import pixel_apply  # noqa: E402
-from specpipe.functions.aucnorm import aucnorm  # noqa: E402
-from specpipe.functions.aucnorm_hyper import aucnorm_hyper  # noqa: E402
+from specpipe.rasterop import pixel_apply
+from specpipe.functions.aucnorm import aucnorm
+from specpipe.functions.aucnorm_hyper import aucnorm_hyper
 
 # Check if cuda is available
 try:

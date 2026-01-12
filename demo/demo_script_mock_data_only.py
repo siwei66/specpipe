@@ -18,7 +18,7 @@ if os.path.exists(data_dir):
     shutil.rmtree(data_dir)
 os.makedirs(data_dir)
 
-# Create mock data
+# Create random mock data
 from specpipe import create_example_raster, create_example_roi_xml
 
 create_example_raster(f"{data_dir}/example.tif")
@@ -251,6 +251,23 @@ pipe.run()
 
 # Set resume True to enable resuming after break
 # pipe.run(resume=True)
+
+
+# 5 Check results
+
+# Retrieve reports in console
+result_summary = pipe.report_summary()
+chain_results = pipe.report_chains()
+
+# Check summary reports
+result_summary.keys()
+result_summary['Performance_summary'].columns
+
+
+# Check processing chain reports
+chain_results[0].keys()
+chain_results[0]['Scatter_plot']
+
 
 # Input data file structure
 _ = """

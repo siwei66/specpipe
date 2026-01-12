@@ -458,7 +458,7 @@ class SpecPipe:
         try:
             self._spec_exp = spec_exp
             self.__sample_targets = spec_exp.sample_targets
-            self._is_regression = self._check_target_numeric(spec_exp)
+            self.__is_target_numeric = self._check_target_numeric(spec_exp)
             self._report_directory = spec_exp._report_directory
             self._pretest_data_init()
             if len(self.process_chains) > 0:
@@ -467,7 +467,7 @@ class SpecPipe:
             # Roll back when fail in test
             self._spec_exp = spec_exp_old
             self.__sample_targets = spec_exp_old.sample_targets
-            self._is_regression = self._check_target_numeric(spec_exp_old)
+            self.__is_target_numeric = self._check_target_numeric(spec_exp_old)
             self._report_directory = spec_exp_old._report_directory
             self._pretest_data_init()
             raise ValueError("Given SpecExp failed in test_run, spec_exp configuration rolls back.") from e

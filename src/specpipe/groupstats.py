@@ -127,7 +127,7 @@ def chain_sample_group_stats(  # noqa: C901
     # Group stats column names for X and numeric y
     stats_col = ['Group'] + list(df_preprocessed.columns[3:-1])
 
-    # Numeric targets
+    # Numeric targets - regression
     if is_regression:
         # Overall stats and default measures
         ostats = Stats2d().summary(df_preprocessed.iloc[:, 2:-1].values)
@@ -187,7 +187,7 @@ def chain_sample_group_stats(  # noqa: C901
                 index=False,
             )
 
-    # Categorical targets
+    # Categorical targets - classification
     else:
         # Overall stats and default measures
         ostats_x = Stats2d().summary(df_preprocessed.iloc[:, 3:-1].values)
