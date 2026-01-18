@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <RegionsOfInterest version="1.1">
-  <Region name="3-1" color="255,0,0">
+  <Region name="3_1" color="255,0,0">
     <GeometryDef>
       <CoordSysStr>none</CoordSysStr>
       <Polygon>
@@ -14,7 +14,7 @@
       </Polygon>
     </GeometryDef>
   </Region>
-  <Region name="3-2" color="0,128,0">
+  <Region name="3_2" color="0,128,0">
     <GeometryDef>
       <CoordSysStr>none</CoordSysStr>
       <Polygon>
@@ -28,7 +28,7 @@
       </Polygon>
     </GeometryDef>
   </Region>
-  <Region name="3-3" color="0,0,255">
+  <Region name="3_3" color="0,0,255">
     <GeometryDef>
       <CoordSysStr>none</CoordSysStr>
       <Polygon>
@@ -42,7 +42,7 @@
       </Polygon>
     </GeometryDef>
   </Region>
-  <Region name="3-4" color="255,255,0">
+  <Region name="3_4" color="255,255,0">
     <GeometryDef>
       <CoordSysStr>none</CoordSysStr>
       <Polygon>
@@ -56,7 +56,7 @@
       </Polygon>
     </GeometryDef>
   </Region>
-  <Region name="3-5" color="0,255,255">
+  <Region name="3_5" color="0,255,255">
     <GeometryDef>
       <CoordSysStr>none</CoordSysStr>
       <Polygon>

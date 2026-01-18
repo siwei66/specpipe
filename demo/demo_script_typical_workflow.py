@@ -8,6 +8,7 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 
 # Clear existed demo dir
 def ClearExistDemoDir():
+    import os
     import shutil
     demo_dir = os.getcwd() + '/SpecPipeDemoWorkflow/'
     shutil.rmtree(demo_dir)

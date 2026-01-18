@@ -35,13 +35,17 @@ global ModelEva
 
 
 # Target value type fixing after serialization
+# Sample_list item: (0 - Sample id, 1 - Sample label, 2 - Validation group, 3 - Original shape, 4 - Target value, 5 - Sample predictor value)  # noqa: E501
 @simple_type_validator
 def _target_type_validation_for_serialization(
-    pc_sample_list: list[tuple[str, tuple[int], Any, Annotated[Any, arraylike_validator(ndim=1)]]],
-) -> list[tuple[str, tuple[int], Union[str, int, bool, float], Annotated[Any, arraylike_validator(ndim=1)]]]:
+    # pc_sample_list: list[tuple[str, tuple[int], Any, Annotated[Any, arraylike_validator(ndim=1)]]],
+    pc_sample_list: list[tuple[str, str, str, tuple[int], Any, Annotated[Any, arraylike_validator(ndim=1)]]],
+    # TODO: ) -> list[tuple[str, tuple[int], Union[str, int, bool, float], Annotated[Any, arraylike_validator(ndim=1)]]]:  # noqa
+) -> list[tuple[str, str, str, tuple[int], Union[str, int, bool, float], Annotated[Any, arraylike_validator(ndim=1)]]]:
     """Fix typing for integer after dill serialization."""
     for loaded_i, loaded_sample in enumerate(pc_sample_list):
-        loaded_y = loaded_sample[2]
+        # TODO: loaded_y = loaded_sample[2]
+        loaded_y = loaded_sample[4]
         # Behavior check to fix type
         test_value_y = loaded_y
         try:
@@ -55,7 +59,15 @@ def _target_type_validation_for_serialization(
         except Exception:
             loaded_y = str(loaded_y)
         # Update target value
-        pc_sample_list[loaded_i] = (loaded_sample[0], loaded_sample[1], loaded_y, loaded_sample[3])
+        # TODO: pc_sample_list[loaded_i] = (loaded_sample[0], loaded_sample[1], loaded_y, loaded_sample[3])
+        pc_sample_list[loaded_i] = (
+            loaded_sample[0],
+            loaded_sample[1],
+            loaded_sample[2],
+            loaded_sample[3],
+            loaded_y,
+            loaded_sample[5],
+        )
     return pc_sample_list
 
 

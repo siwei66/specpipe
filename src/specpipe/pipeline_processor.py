@@ -382,13 +382,17 @@ def _preprocessing_sample(  # noqa: C901
             preprocess_status,
         )
 
-        # Dump test preprocessing results of current chain (chain i)
+        # Collect test preprocessing results of current chain (chain i)
         if final_result_only:
             status_results = status_results[-1:]
         status_results_out = {
             "ID": sample_data["ID"],
-            "label": sample_data_label,
+            "label": sample_data_label,  # Dataset label
             "target": sample_data["target"],
+            # TODO: new
+            "sample_label": sample_data["label"],
+            # TODO: new
+            "validation_group": sample_data["validation_group"],
             "status_results": status_results,
         }
 
@@ -793,6 +797,10 @@ class _ModelMethod:
         sample_list: list[
             tuple[
                 str,
+                # TODO: new
+                str,
+                # TODO: new
+                str,
                 tuple[int],
                 Union[str, int, bool, float],
                 Annotated[Any, arraylike_validator(ndim=1)],
@@ -808,7 +816,7 @@ class _ModelMethod:
 
         Parameters
         ----------
-        sample_list : TYPE
+        sample_list : list of (str, tuple of int, str or int or bool or float, 1D array-like)
             Standard sample data of SpecPipe for modeling.
         data_label : str
             Label for the specified dataset.
@@ -856,11 +864,15 @@ class _ModelMethod:
 
 # Run modeling on single dataset
 # Notes: different from '_test_model',
-# Sample_list item: (0 - Sample id, 1 - Original shape, 2 - Target value, 3 - Sample predictor value)
+# Sample_list item: (0 - Sample id, 1 - Sample label, 2 - Validation group, 3 - Original shape, 4 - Target value, 5 - Sample predictor value)  # noqa: E501
 @simple_type_validator
 def _model_evaluator(  # noqa: C901
     preprocess_result: list[
         tuple[
+            str,
+            # TODO: new
+            str,
+            # TODO: new
             str,
             tuple[int],
             Union[str, int, bool, float],
@@ -971,7 +983,7 @@ def _model_evaluator(  # noqa: C901
                     \nInput step data ID: {sample_list[0]}\nModel label: {modelit[1]}"
             )
         # Modeling
-        # Sample_list item: (0 - Sample id, 1 - Original shape, 2 - Target value, 3 - Sample predictor value)
+        # Sample_list item: (0 - Sample id, 1 - Sample label, 2 - Validation group, 3 - Original shape, 4 - Target value, 5 - Sample predictor value)  # noqa: E501
         if dl_in_ind == 7:
             # Regression
             if model_methodi.is_regression:

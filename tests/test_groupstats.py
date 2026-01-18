@@ -318,8 +318,10 @@ class TestGroupStats(unittest.TestCase):
         assert metrics_dict["regression_metrics"].shape[1] > 3
         assert (
             not (
-                (metrics_dict["regression_metrics"].iloc[:, 3:] == 0)
-                | (metrics_dict["regression_metrics"].iloc[:, 3:].isna())
+                # TODO: (metrics_dict["regression_metrics"].iloc[:, 3:] == 0)
+                # TODO: | (metrics_dict["regression_metrics"].iloc[:, 3:].isna())
+                (metrics_dict["regression_metrics"].iloc[:, 6:] == 0)
+                | (metrics_dict["regression_metrics"].iloc[:, 6:].isna())
             )
             .all()
             .all()
@@ -336,19 +338,25 @@ class TestGroupStats(unittest.TestCase):
         assert metrics_dict1["chains_in_ID"].shape[0] == len(self.spec_pipe_cls.process_chains)
         assert metrics_dict1["chains_in_ID"].shape[1] == 3
         assert metrics_dict1["macro_metrics"].shape[0] == len(self.spec_pipe_cls.process_chains)
-        assert metrics_dict1["macro_metrics"].shape[1] == 3 + 5
+        # TODO: assert metrics_dict1["macro_metrics"].shape[1] == 3 + 5
+        assert metrics_dict1["macro_metrics"].shape[1] == 3 * 2 + 5
         assert metrics_dict1["micro_metrics"].shape[0] == len(self.spec_pipe_cls.process_chains)
-        assert metrics_dict1["micro_metrics"].shape[1] == 3 + 5
+        # TODO: assert metrics_dict1["micro_metrics"].shape[1] == 3 + 5
+        assert metrics_dict1["micro_metrics"].shape[1] == 3 * 2 + 5
         assert (
             not (
-                (metrics_dict1["macro_metrics"].iloc[:, 3:] == 0) | (metrics_dict1["macro_metrics"].iloc[:, 3:].isna())
+                # TODO: (metrics_dict1["macro_metrics"].iloc[:, 3:] == 0) | (metrics_dict1["macro_metrics"].iloc[:, 3:].isna())  #noqa: E501
+                (metrics_dict1["macro_metrics"].iloc[:, 6:] == 0)
+                | (metrics_dict1["macro_metrics"].iloc[:, 6:].isna())
             )
             .all()
             .all()
         )
         assert (
             not (
-                (metrics_dict1["micro_metrics"].iloc[:, 3:] == 0) | (metrics_dict1["micro_metrics"].iloc[:, 3:].isna())
+                # TODO: (metrics_dict1["micro_metrics"].iloc[:, 3:] == 0) | (metrics_dict1["micro_metrics"].iloc[:, 3:].isna())  #noqa: E501
+                (metrics_dict1["micro_metrics"].iloc[:, 6:] == 0)
+                | (metrics_dict1["micro_metrics"].iloc[:, 6:].isna())
             )
             .all()
             .all()

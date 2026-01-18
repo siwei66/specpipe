@@ -72,7 +72,7 @@ exp.add_rois_by_suffix(roi_filename_suffix="_[12].xml", search_directory=data_di
 exp.add_rois_by_suffix("_[345].xml", data_dir, "group_2")
 
 # Remove ROIs by name
-exp.rm_rois(roi_name='5-5')
+exp.rm_rois(roi_name='5_5')
 
 # Remove ROIs by source file name
 exp.rm_rois(roi_source_file_name='demo_5.xml')
@@ -262,7 +262,7 @@ chain_results[0]['ROC_curve']
 
 # %% One-shot run barrier for Windows
 if os.name == "nt":
-    raise RuntimeError("SpecPipe.run must be executed separately on Windows.")
+    raise RuntimeError("SpecPipe update must be executed separately on Windows.")
 
 # 6 Regression Case
 
@@ -288,10 +288,15 @@ exp_reg.report_directory
 
 # Modify targets to numeric, here the numbers approaximate the age of the leaves
 targets_reg["Target_value"] = [(5 - int(labl[0])) for labl in targets['Label']]  # type: ignore
+
+# Set the ROIs within the same leaf to a validation group to prevent data leakage
+targets_reg["Validation_group"] = [f"leaf_{labl[0]}" for labl in targets['Label']]
+
+# Update target information using the modified target dataframe
 exp_reg.sample_targets_from_df(targets_reg)
 
 # Check target values
-exp_reg.ls_targets()[["Sample_ID", "Target_value"]]
+exp_reg.ls_targets()[["Label", "Target_value", "Validation_group"]]
 
 
 # 6.3 Update the pipeline models to regressors
@@ -326,6 +331,7 @@ models_reg = factorial_transformer_chains(
 # Add models
 # Skip time-consuming influence analysis
 for model in models_reg:
+    # pipe_reg.add_model(model, validation_method="2-fold")
     pipe_reg.add_model(model, validation_method="2-fold", influence_analysis_config=None)
 
 # Check models
@@ -351,7 +357,6 @@ chain_results_reg = pipe_reg.report_chains()
 # Check summary reports
 result_summary_reg.keys()
 result_summary_reg['Performance_summary'].columns
-
 
 # Check processing chain reports
 chain_results_reg[0].keys()

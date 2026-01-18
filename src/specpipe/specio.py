@@ -250,15 +250,18 @@ def arraylike_validator(  # noqa: C901
         # Validate ndim
         if ndim is not None:
             if arr.ndim != ndim:
-                raise ValueError(f"Given data has an incompatible ndim. Expected: {ndim}, Got: {arr.ndim}\n")
+                raise ValueError(f"Given data has an incompatible ndim. Expected: {ndim}, got: {arr.ndim}\n")
 
         # Validate shape
         if shape is not None:
             if len(arr.shape) != len(shape):
-                raise ValueError(f"Given data has an incompatible ndim. Expected: {len(shape)}, Got: {arr.ndim}\n")
+                raise ValueError(f"Given data has an incompatible ndim. Expected: {len(shape)}, got: {arr.ndim}\n")
             for dimkt in enumerate(shape):
-                if (dimkt[1] != 0) & (dimkt[1] != arr.shape[dimkt[0]]):
-                    raise ValueError(f"Given data has an incompatible shape. Expected: {shape}, Got: {arr.shape}\n")
+                if dimkt[1] is not None:
+                    if dimkt[1] < 0:
+                        raise ValueError(f"Shape dimensions cannot be negative. Got specified shape: {shape}\n")
+                    if (dimkt[1] > 0) & (dimkt[1] != arr.shape[dimkt[0]]):
+                        raise ValueError(f"Given data has an incompatible shape. Expected: {shape}, got: {arr.shape}\n")
 
         # Convert dtype
         if as_type is not None:
@@ -488,18 +491,18 @@ def dataframe_validator(  # noqa: C901
         # Validate shape
         if shape is not None:
             if v.shape != shape:
-                raise ValueError(f"Given dataframe has an incompatible shape. Expected: {shape}, Got: {v.shape}\n")
+                raise ValueError(f"Given dataframe has an incompatible shape. Expected: {shape}, got: {v.shape}\n")
 
         if nrow is not None:
             if v.shape[0] != nrow:
                 raise ValueError(
-                    f"Given dataframe has an incompatible number of rows. Expected: {nrow}, Got: {v.shape[0]}\n"
+                    f"Given dataframe has an incompatible number of rows. Expected: {nrow}, got: {v.shape[0]}\n"
                 )
 
         if ncol is not None:
             if v.shape[1] != ncol:
                 raise ValueError(
-                    f"Given dataframe has an incompatible number of columns. Expected: {ncol}, Got: {v.shape[1]}\n"
+                    f"Given dataframe has an incompatible number of columns. Expected: {ncol}, got: {v.shape[1]}\n"
                 )
 
         # Validate index

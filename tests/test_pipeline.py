@@ -134,14 +134,23 @@ def replace_nan(spec: np.ndarray) -> np.ndarray:
     return result
 
 
-# #%% test helper functions : create_test_spec_pipe
+# %% test helper functions : create_test_spec_pipe
 
 
 # Test helper functions : create_test_spec_pipe
-def create_test_spec_pipe(dir_path: str, sample_n: int = 10, n_bands: int = 8, is_regression: bool = True) -> SpecPipe:
+def create_test_spec_pipe(
+    dir_path: str,
+    sample_n: int = 10,
+    n_bands: int = 8,
+    is_regression: bool = True,
+    use_val_group: bool = False,
+    validation_method: str = "2-fold",
+) -> SpecPipe:
     """Create a standard test SpecPipe instance."""
     # Create test spec exp
-    test_exp = create_test_spec_exp(dir_path=dir_path, sample_n=sample_n, n_bands=n_bands, is_regression=is_regression)
+    test_exp = create_test_spec_exp(
+        dir_path=dir_path, sample_n=sample_n, n_bands=n_bands, is_regression=is_regression, use_val_group=use_val_group
+    )
     pipe = SpecPipe(test_exp)
 
     # Add process
@@ -151,13 +160,16 @@ def create_test_spec_pipe(dir_path: str, sample_n: int = 10, n_bands: int = 8, i
     pipe.add_process(5, 6, 0, roispec)
     pipe.add_process(6, 7, 0, Stats2d().mean)
     if is_regression:
-        pipe.add_process(7, 8, 0, RandomForestRegressor(n_estimators=6))
-        pipe.add_process(7, 8, 0, KNeighborsRegressor(n_neighbors=3))
+        pipe.add_process(7, 8, 0, RandomForestRegressor(n_estimators=6), validation_method=validation_method)
+        pipe.add_process(7, 8, 0, KNeighborsRegressor(n_neighbors=3), validation_method=validation_method)
     else:
-        pipe.add_process(7, 8, 0, RandomForestClassifier(n_estimators=6))
-        pipe.add_process(7, 8, 0, KNeighborsClassifier(n_neighbors=3))
+        pipe.add_process(7, 8, 0, RandomForestClassifier(n_estimators=6), validation_method=validation_method)
+        pipe.add_process(7, 8, 0, KNeighborsClassifier(n_neighbors=3), validation_method=validation_method)
 
     return pipe
+
+
+# %% Test modules
 
 
 class TestSpecPipe(unittest.TestCase):
@@ -1329,6 +1341,103 @@ class TestSpecPipe(unittest.TestCase):
         assert run_1_cleared
 
         pipe = create_test_spec_pipe(test_dir, is_regression=False)
+
+        pipe.run(n_processor=1)
+        time.sleep(0.1)
+
+        finished_3 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        finished_4 = TestSpecPipe.criteria_classification_model_report(pipe)
+
+        plt.close("all")
+
+        # Clear test report dir
+        if os.path.exists(test_dir) and finished_3 == "finished" and finished_4 == "finished" and crit_1:
+            shutil.rmtree(test_dir)
+
+    @staticmethod
+    @silent
+    def test_run_pipe_edge_cases() -> None:
+        """test edge cases in running preprocessing and modeling functionality using SpecPipe.run()"""
+
+        if os.getenv("SPECPIPE_PREPROCESS_RESUME_TEST_NUM") is not None:
+            del os.environ["SPECPIPE_PREPROCESS_RESUME_TEST_NUM"]
+        if os.getenv("SPECPIPE_MODEL_RESUME_TEST_NUM") is not None:
+            del os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"]
+
+        plt.close("all")
+
+        # Run with validation group enabled
+        # Regression - "2-fold" validation
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
+
+        pipe = create_test_spec_pipe(test_dir, sample_n=12, is_regression=True, use_val_group=True)
+
+        pipe.run(n_processor=1)
+        time.sleep(0.1)
+
+        finished_1 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        finished_2 = TestSpecPipe.criteria_regression_model_report(pipe)
+        finished_3 = "not_started"
+        finished_4 = "not_started"
+
+        # Clear test report dir
+        crit_1 = finished_1 == "finished" and finished_2 == "finished"
+        crit_2 = finished_3 == "not_started" and finished_4 == "not_started"
+        if os.path.exists(test_dir) and crit_1 and crit_2:
+            shutil.rmtree(test_dir)
+            run_1_cleared: bool = True
+
+        plt.close("all")
+
+        # Classification - "2-fold" validation
+        assert crit_1
+        assert run_1_cleared
+
+        pipe = create_test_spec_pipe(test_dir, sample_n=12, is_regression=False, use_val_group=True)
+
+        pipe.run(n_processor=1)
+        time.sleep(0.1)
+
+        finished_3 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        finished_4 = TestSpecPipe.criteria_classification_model_report(pipe)
+
+        plt.close("all")
+
+        # Regression - "loo" validation - logo
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
+
+        pipe = create_test_spec_pipe(
+            test_dir, sample_n=12, is_regression=True, use_val_group=True, validation_method="loo"
+        )
+
+        pipe.run(n_processor=1)
+        time.sleep(0.1)
+
+        finished_1 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        finished_2 = TestSpecPipe.criteria_regression_model_report(pipe)
+        finished_3 = "not_started"
+        finished_4 = "not_started"
+
+        # Clear test report dir
+        crit_1 = finished_1 == "finished" and finished_2 == "finished"
+        crit_2 = finished_3 == "not_started" and finished_4 == "not_started"
+        if os.path.exists(test_dir) and crit_1 and crit_2:
+            shutil.rmtree(test_dir)
+            run_1_cleared = True
+
+        plt.close("all")
+
+        # Classification - "loo" validation - logo
+        assert crit_1
+        assert run_1_cleared
+
+        pipe = create_test_spec_pipe(
+            test_dir, sample_n=12, is_regression=False, use_val_group=True, validation_method="loo"
+        )
 
         pipe.run(n_processor=1)
         time.sleep(0.1)

@@ -73,8 +73,10 @@ def chain_sample_group_stats(  # noqa: C901
     # Read preprocessed data
     df_preprocessed = pd.read_csv(unc_path(sample_data_path), header=0).iloc[:, 1:]
     # Validate columns
-    if len(df_preprocessed.columns) > 3:
-        if list(df_preprocessed.columns)[0:3] == ["Sample_ID", "X_shape", "y"]:
+    # TODO: if len(df_preprocessed.columns) > 3:
+    # TODO:     if list(df_preprocessed.columns)[0: 3] == ["Sample_ID", "X_shape", "y"]:
+    if len(df_preprocessed.columns) > 5:
+        if list(df_preprocessed.columns)[0:5] == ["Sample_ID", "Label", "Validation_group", "X_shape", "y"]:
             pass
         else:
             raise ValueError(f"Invalid sample data columns: {df_preprocessed.columns}")
@@ -84,7 +86,8 @@ def chain_sample_group_stats(  # noqa: C901
     # Read sample groups
     df_sample_targets = pd.read_csv(unc_path(sample_target_path))
     # Validate columns
-    if list(df_sample_targets.columns) == ['Sample_ID', 'Label', 'Target_value', 'Group']:
+    # if list(df_sample_targets.columns) == ['Sample_ID', 'Label', 'Target_value', 'Group']:
+    if list(df_sample_targets.columns) == ['Sample_ID', 'Label', 'Target_value', 'Group', 'Validation_group']:
         pass
     else:
         raise ValueError(f"Invalid sample data columns: {df_sample_targets.columns}")
@@ -92,7 +95,8 @@ def chain_sample_group_stats(  # noqa: C901
 
     # Validate target type if not specified
     # Check numeric-like
-    targets = df_preprocessed.iloc[:, 2]
+    # TODO: targets = df_preprocessed.iloc[:, 2]
+    targets = df_preprocessed.iloc[:, 4]
     is_numeric = True
     for yi in targets:
         if not isinstance(yi, RealNumber):
@@ -125,12 +129,14 @@ def chain_sample_group_stats(  # noqa: C901
     df_preprocessed['Group'] = group
 
     # Group stats column names for X and numeric y
-    stats_col = ['Group'] + list(df_preprocessed.columns[3:-1])
+    # TODO: stats_col = ['Group'] + list(df_preprocessed.columns[3:-1])
+    stats_col = ['Group'] + list(df_preprocessed.columns[5:-1])
 
     # Numeric targets - regression
     if is_regression:
         # Overall stats and default measures
-        ostats = Stats2d().summary(df_preprocessed.iloc[:, 2:-1].values)
+        # TODO: ostats = Stats2d().summary(df_preprocessed.iloc[:, 2:-1].values)
+        ostats = Stats2d().summary(df_preprocessed.iloc[:, 4:-1].values)
         # y stats
         df_ystats = pd.DataFrame(np.zeros((1 + len(df_preprocessed['Group'].unique()), 1 + len(ostats.keys()))))
         df_ystats.columns = ['Group'] + list(ostats.keys())
@@ -153,7 +159,8 @@ def chain_sample_group_stats(  # noqa: C901
         # Group stats
         for ig, g in enumerate(list(df_preprocessed['Group'].unique())):
             gdata = df_preprocessed[df_preprocessed['Group'] == g]
-            gstats = Stats2d().summary(gdata.iloc[:, 2:-1].values)
+            # TODO: gstats = Stats2d().summary(gdata.iloc[:, 2:-1].values)
+            gstats = Stats2d().summary(gdata.iloc[:, 4:-1].values)
             ystats_row = [str(g)]
             for m in list(gstats.keys()):
                 # Y group stats
@@ -190,9 +197,11 @@ def chain_sample_group_stats(  # noqa: C901
     # Categorical targets - classification
     else:
         # Overall stats and default measures
-        ostats_x = Stats2d().summary(df_preprocessed.iloc[:, 3:-1].values)
+        # TODO: ostats_x = Stats2d().summary(df_preprocessed.iloc[:, 3:-1].values)
+        ostats_x = Stats2d().summary(df_preprocessed.iloc[:, 5:-1].values)
         # y stats
-        ylabel, ycount = np.unique(df_preprocessed.iloc[:, 2], return_counts=True)
+        # TODO: ylabel, ycount = np.unique(df_preprocessed.iloc[:, 2], return_counts=True)
+        ylabel, ycount = np.unique(df_preprocessed.iloc[:, 4], return_counts=True)
         df_ystats = pd.DataFrame(np.zeros((1 + len(df_preprocessed['Group'].unique()), 1 + len(ylabel))))
         df_ystats.columns = ['Group'] + list(ylabel)
         df_ystats['Group'] = df_ystats['Group'].astype('string')
@@ -211,8 +220,10 @@ def chain_sample_group_stats(  # noqa: C901
         # Group stats
         for ig, g in enumerate(list(df_preprocessed['Group'].unique())):
             gdata = df_preprocessed[df_preprocessed['Group'] == g]
-            gstats_x = Stats2d().summary(gdata.iloc[:, 3:-1].values)
-            ylabel, ycount = np.unique(gdata.iloc[:, 2], return_counts=True)
+            # TODO: gstats_x = Stats2d().summary(gdata.iloc[:, 3:-1].values)
+            gstats_x = Stats2d().summary(gdata.iloc[:, 5:-1].values)
+            # TODO: ylabel, ycount = np.unique(gdata.iloc[:, 2], return_counts=True)
+            ylabel, ycount = np.unique(gdata.iloc[:, 4], return_counts=True)
             ycount_row = list(ycount)
             # Y stats - fill target category counts of the current group
             df_ystats.at[df_ystats.index[ig + 1], 'Group'] = str(g)
@@ -474,6 +485,7 @@ def performance_metrics_summary(  # noqa: C901
     # Get chain model performance metrics
     metrics_micro = []
     metrics_macro = []
+    # TODO: summary fix
     metrics_reg = []
     for dir_name, result_chain in zip(dir_names, result_chains):
         # Validate result chain - all item to process IDs
@@ -508,7 +520,8 @@ def performance_metrics_summary(  # noqa: C901
                 .to_numpy()
                 .tolist()[0]
             )
-            metrics_micro.append(tuple(list(result_chain) + micro_metrics))
+            # TODO: metrics_micro.append(tuple(list(result_chain) + micro_metrics))
+            metrics_micro.append(tuple(list(result_chain) + cprocs_in_label + micro_metrics))
             # macro metrics
             macro_metrics = (
                 df_metrics.loc[
@@ -517,33 +530,46 @@ def performance_metrics_summary(  # noqa: C901
                 .to_numpy()
                 .tolist()[0]
             )
-            metrics_macro.append(tuple(list(result_chain) + macro_metrics))
+            # TODO: metrics_macro.append(tuple(list(result_chain) + macro_metrics))
+            metrics_macro.append(tuple(list(result_chain) + cprocs_in_label + macro_metrics))
         elif "Regression_performance_" in metrics_filename:
             # Regression metrics
             reg_metrics = df_metrics.iloc[[0], :].to_numpy().tolist()[0]
-            metrics_reg.append(tuple(list(result_chain) + reg_metrics))
+            # TODO: metrics_reg.append(tuple(list(result_chain) + reg_metrics))
+            metrics_reg.append(tuple(list(result_chain) + cprocs_in_label + reg_metrics))
         else:
             raise ValueError(f"Invalid performance file name: {dir_name}")
 
     # Convert to metrics dataframe
     if len(metrics_micro) > 0 and len(metrics_macro) > 0 and len(metrics_reg) == 0:
         df_micro_metrics = pd.DataFrame(metrics_micro)
-        df_micro_metrics.columns = list(df_config_chains.columns) + [
-            "Precision",
-            "Recall",
-            "F1_Score",
-            "Accuracy",
-            "AUC",
-        ]
+        # TODO: df_micro_metrics.columns = list(df_config_chains.columns) + [
+        df_micro_metrics.columns = (
+            list(df_config_chains.columns)
+            + [f"{s}_name" for s in list(df_config_chains.columns)]
+            + [
+                "Precision",
+                "Recall",
+                "F1_Score",
+                "Accuracy",
+                "AUC",
+            ]
+        )
         df_macro_metrics = pd.DataFrame(metrics_macro)
-        df_macro_metrics.columns = list(df_config_chains.columns) + [
-            "Precision",
-            "Recall",
-            "F1_Score",
-            "Accuracy",
-            "AUC",
-        ]
+        # TODO: df_macro_metrics.columns = list(df_config_chains.columns) + [
+        df_macro_metrics.columns = (
+            list(df_config_chains.columns)
+            + [f"{s}_name" for s in list(df_config_chains.columns)]
+            + [
+                "Precision",
+                "Recall",
+                "F1_Score",
+                "Accuracy",
+                "AUC",
+            ]
+        )
         # Output results
+        # TODO: summary fix
         metrics_dict = {
             "is_regression": False,
             "chains_in_ID": df_cid,
@@ -553,7 +579,12 @@ def performance_metrics_summary(  # noqa: C901
         return metrics_dict
     elif len(metrics_micro) == 0 and len(metrics_macro) == 0 and len(metrics_reg) > 0:
         df_reg_metrics = pd.DataFrame(metrics_reg)
-        df_reg_metrics.columns = list(df_config_chains.columns) + list(df_metrics.columns)
+        # TODO: df_reg_metrics.columns = list(df_config_chains.columns) + list(df_metrics.columns)
+        df_reg_metrics.columns = (
+            list(df_config_chains.columns)
+            + [f"{s}_name" for s in list(df_config_chains.columns)]
+            + list(df_metrics.columns)
+        )
         # Output results
         metrics_dict = {"is_regression": True, "chains_in_ID": df_cid, "regression_metrics": df_reg_metrics}
         return metrics_dict
@@ -583,6 +614,7 @@ def regression_performance_marginal_stats(
 
     # Get summarized metrics data and corresponding chains
     df_cid = metrics_dict["chains_in_ID"]
+    # TODO: summary fix
     df_reg_metrics = metrics_dict["regression_metrics"]
     config_dir = pipeline_config_dir
 
@@ -651,6 +683,7 @@ def regression_performance_marginal_stats(
                 os.makedirs(unc_path(os.path.dirname(dill_result_path)))
             dill.dump(step_gstats_r2, open(unc_path(dill_result_path), "wb"))
 
+    # TODO: summary fix
     # Save summary results used
     df_reg_metrics.to_csv(unc_path(report_dir + "Performance_summary.csv"), index=False)
     # Dump dill (specpipe private)

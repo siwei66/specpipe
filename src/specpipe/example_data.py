@@ -320,7 +320,13 @@ create_example_roi_xml = create_test_roi_xml
 # Test helper functions : create_test_spec_exp
 @silent
 @simple_type_validator
-def create_test_spec_exp(dir_path: str, sample_n: int = 10, n_bands: int = 4, is_regression: bool = True) -> SpecExp:
+def create_test_spec_exp(
+    dir_path: str,
+    sample_n: int = 10,
+    n_bands: int = 4,
+    is_regression: bool = True,
+    use_val_group: bool = False,
+) -> SpecExp:
     """
     Create a standard test `SpecExp` instance for spectral experiments.
 
@@ -349,6 +355,9 @@ def create_test_spec_exp(dir_path: str, sample_n: int = 10, n_bands: int = 4, is
         If True, target values are numeric (regression).
         If False, targets are categorical (classification).
         Default is True.
+
+    use_val_group : bool, optional
+        Whether validation group is enabled. Default is False.
 
     Returns
     -------
@@ -432,6 +441,9 @@ def create_test_spec_exp(dir_path: str, sample_n: int = 10, n_bands: int = 4, is
         dft["Target_value"] = list(range(len(dft)))
     else:
         dft["Target_value"] = [["a", "b"][int(i % 2)] for i in range(len(dft))]
+    # Set validation groups
+    if use_val_group:
+        dft["Validation_group"] = [f"vg_{int(i / 4) + 1}" for i in range(len(dft))]
     exp1.sample_targets_from_df(dft)
 
     return exp1

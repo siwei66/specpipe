@@ -30,8 +30,17 @@ from scipy.spatial.distance import mahalanobis
 from scipy.stats import entropy
 
 # Modeling
-from sklearn.model_selection import KFold, LeaveOneOut, StratifiedKFold, train_test_split
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import (
+    train_test_split,
+    GroupShuffleSplit,
+    KFold,
+    GroupKFold,
+    StratifiedKFold,
+    StratifiedGroupKFold,
+    LeaveOneOut,
+    LeaveOneGroupOut,
+)
 
 # Model evaluation
 from sklearn.metrics import (
@@ -99,7 +108,7 @@ def is_float(value: Any) -> bool:  # type: ignore[no-untyped-def]
 # Modeling 1D input data without shape hint
 
 # Model module accepts: 0 - list of samples with arbitrary data level, 1 - ScikitLearn-style model class
-# Sample data item: (0 - Sample id, 1 - Original shape, 2 - Target value, 3 - Sample predictor value)
+# Sample_list item: (0 - Sample id, 1 - Sample label, 2 - Validation group, 3 - Original shape, 4 - Target value, 5 - Sample predictor value)  # noqa: E501
 # Original shape is used for reading and reshape the X values in the provided model, not necessary,
 # commonly not required for spectral model, and the models all use 1D data.
 # Data shape can be provided with 1D data to enable modeling higher dimensional data within this frame.
@@ -187,6 +196,10 @@ class ModelEva:
         sample_list: list[
             tuple[
                 str,
+                # TODO: new
+                str,
+                # TODO: new
+                str,
                 tuple[int, ...],
                 Union[str, int, bool, float],
                 Annotated[Any, arraylike_validator(ndim=1)],
@@ -219,25 +232,35 @@ class ModelEva:
 
         # Model types - regression or classification
         if is_regression is None:
-            if is_numeric(sample_list[0][2]):
+            # TODO: if is_numeric(sample_list[0][2]):
+            if is_numeric(sample_list[0][4]):
                 is_regression = True
             else:
                 is_regression = False
         self.is_regression: bool = is_regression
 
         # Set sample data features from sample_list (must be first) for model training and evaluation
-        # Sample_list item: (0 - Sample id, 1 - Original shape, 2 - Target value, 3 - Sample predictor value)
+        # Sample_list item: (0 - Sample id, 1 - Sample label, 2 - Validation group, 3 - Original shape, 4 - Target value, 5 - Sample predictor value)  # noqa: E501
         # Sample data validated: (0 - Sample ids, 1 - Original shapes, 2 - Target values, 3 - Sample predictor values)
         # (np.array(sid), tuple(xshp), np.array(y).reshape(-1,1), X)
         sample_data_structured = self._val_sample_list(sample_list)
         del sample_list
         self._sid: Annotated[Any, arraylike_validator(ndim=1)] = sample_data_structured[0]  # Sample ID
-        self._X_original_shape: tuple[int, ...] = sample_data_structured[1]
-        self._y: Annotated[Any, arraylike_validator(ndim=2)] = sample_data_structured[2]
-        self._X: Annotated[Any, arraylike_validator(ndim=2)] = sample_data_structured[3]
-        if sample_data_structured[2].dtype.kind in ("U", "S", "i", "b"):
+        # TODO: new
+        self._sample_label: Annotated[Any, arraylike_validator(ndim=1)] = sample_data_structured[1]
+        # TODO: new
+        self._validation_group: Annotated[Any, arraylike_validator(ndim=1)] = sample_data_structured[2]
+        # TODO: self._X_original_shape: tuple[int, ...] = sample_data_structured[1]
+        self._X_original_shape: tuple[int, ...] = sample_data_structured[3]
+        # TODO: self._y: Annotated[Any, arraylike_validator(ndim=2)] = sample_data_structured[2]
+        self._y: Annotated[Any, arraylike_validator(ndim=2)] = sample_data_structured[4]
+        # TODO: self._X: Annotated[Any, arraylike_validator(ndim=2)] = sample_data_structured[3]
+        self._X: Annotated[Any, arraylike_validator(ndim=2)] = sample_data_structured[5]
+        # TODO: if sample_data_structured[2].dtype.kind in ("U", "S", "i", "b"):
+        if sample_data_structured[4].dtype.kind in ("U", "S", "i", "b"):
             ynames = list(np.unique(self._y))
-        elif sample_data_structured[2].dtype.kind in ("i", "f"):
+        # TODO: elif sample_data_structured[2].dtype.kind in ("i", "f"):
+        elif sample_data_structured[4].dtype.kind in ("i", "f"):
             ynames = None
         self._ynames: Optional[list[Union[str, int, bool]]] = ynames
 
@@ -308,6 +331,30 @@ class ModelEva:
     @sid.setter
     def sid(self, value: Annotated[Any, arraylike_validator(ndim=1)]) -> None:
         raise ValueError("Sample IDs (sid) cannot be modified directly, use method 'update_samples' to update sid")
+
+    # TODO: new
+    @property
+    def sample_label(self) -> Annotated[Any, arraylike_validator(ndim=1)]:
+        return self._sample_label
+
+    @sample_label.setter
+    def sample_label(self, value: Annotated[Any, arraylike_validator(ndim=1)]) -> None:
+        raise ValueError(
+            "Sample IDs (sample_label) cannot be modified directly,",
+            "use method 'update_samples' to update sample_label",
+        )
+
+    # TODO: new
+    @property
+    def validation_group(self) -> Annotated[Any, arraylike_validator(ndim=1)]:
+        return self._validation_group
+
+    @validation_group.setter
+    def validation_group(self, value: Annotated[Any, arraylike_validator(ndim=1)]) -> None:
+        raise ValueError(
+            "Validation groups (validation_group) cannot be modified directly,",
+            "use method 'update_samples' to update validation_group",
+        )
 
     @property
     def X_original_shape(self) -> tuple[int, ...]:  # noqa: N802
@@ -483,6 +530,10 @@ class ModelEva:
         sample_list: list[
             tuple[
                 str,
+                # TODO: new
+                str,
+                # TODO: new
+                str,
                 tuple[int, ...],
                 Union[str, int, bool, float],
                 Annotated[Any, arraylike_validator(ndim=1)],
@@ -492,23 +543,36 @@ class ModelEva:
         # Update sample_list (must be first)
         sample_data_structured = self._val_sample_list(sample_list)
         self._sid = sample_data_structured[0]
-        self._X_original_shape = sample_data_structured[1]
-        self._y = sample_data_structured[2]
-        self._X = sample_data_structured[3]
+        # TODO: new
+        self._sample_label = sample_data_structured[1]
+        # TODO: new
+        self._validation_group = sample_data_structured[2]
+        # TODO: self._X_original_shape = sample_data_structured[1]
+        self._X_original_shape = sample_data_structured[3]
+        # TODO: self._y = sample_data_structured[2]
+        self._y = sample_data_structured[4]
+        # TODO: self._X = sample_data_structured[3]
+        self._X = sample_data_structured[5]
         # Update ynames
-        if sample_data_structured[2].dtype.kind in ("U", "S", "i", "b"):
+        # TODO: if sample_data_structured[2].dtype.kind in ("U", "S", "i", "b"):
+        if sample_data_structured[4].dtype.kind in ("U", "S", "i", "b"):
             ynames = list(np.unique(self._y))
-        elif sample_data_structured[2].dtype.kind in ("i", "f"):
+        # TODO: elif sample_data_structured[2].dtype.kind in ("i", "f"):
+        elif sample_data_structured[4].dtype.kind in ("i", "f"):
             ynames = None
         self._ynames = ynames
 
     # Validate  and transform sample data from SpecPipe
-    # Sample data item: (0 - Sample id, 1 - Original shape, 2 - Target value, 3 - Sample predictor value)
+    # Sample_list item: (0 - Sample id, 1 - Sample label, 2 - Validation group, 3 - Original shape, 4 - Target value, 5 - Sample predictor value)  # noqa: E501
     @simple_type_validator
     def _val_sample_list(  # noqa: C901
         self,
         sample_list: list[
             tuple[
+                str,
+                # TODO: new
+                str,
+                # TODO: new
                 str,
                 tuple[int, ...],
                 Union[str, int, bool, float],
@@ -516,6 +580,9 @@ class ModelEva:
             ]
         ],
     ) -> tuple[
+        Annotated[np.ndarray, arraylike_validator(ndim=1)],
+        # TODO: new
+        Annotated[np.ndarray, arraylike_validator(ndim=1)],
         Annotated[np.ndarray, arraylike_validator(ndim=1)],
         tuple[int, ...],
         Annotated[np.ndarray, arraylike_validator(ndim=2)],
@@ -526,10 +593,15 @@ class ModelEva:
         """
         # Construct input samples
         y = []
+        # TODO: new
+        sample_labels = []
+        # Validate sample items, st - sample item
         for i, st in enumerate(sample_list):
             # Get predictors
-            if np.asarray(st[3]).ndim == 1:
-                Xi = np.array([st[3]])  # noqa: N806
+            # TODO: if np.asarray(st[3]).ndim == 1:
+            if np.asarray(st[-1]).ndim == 1:
+                # TODO: Xi = np.array([st[3]])  # noqa: N806
+                Xi = np.array([st[-1]])  # noqa: N806
             else:
                 raise ValueError(
                     f"Expected 1D sample data, \
@@ -542,32 +614,54 @@ class ModelEva:
 
             # Get targets
             if i == 0:
-                y0 = st[2]
-            if self.is_regression & (not is_numeric(st[2])):
+                # TODO: y0 = st[2]
+                y0 = st[4]
+            # TODO: if self.is_regression & (not is_numeric(st[2])):
+            if self.is_regression & (not is_numeric(st[4])):
+                # TODO: raise TypeError(
+                #     f"Expected numeric target variable dtypes for regression models, \
+                #         but got type '{type(st[2])}' at index {i}."
+                # )
                 raise TypeError(
                     f"Expected numeric target variable dtypes for regression models, \
-                        but got type '{type(st[2])}' at index {i}."
+                        but got type '{type(st[4])}' at index {i}."
                 )
             elif not self.is_regression:
-                if is_float(st[2]):
+                # TODO: if is_float(st[2]):
+                if is_float(st[4]):
+                    # raise TypeError(
+                    #     f"Target variable dtype cannot be float, but got type '{type(st[2])}' at index {i}."
+                    # )
                     raise TypeError(
-                        f"Target variable dtype cannot be float, but got type '{type(st[2])}' at index {i}."
+                        f"Target variable dtype cannot be float, but got type '{type(st[4])}' at index {i}."
                     )
-                elif type(st[2]) is not type(y0):
+                # TODO: elif type(st[2]) is not type(y0):
+                elif type(st[4]) is not type(y0):
+                    # TODO: raise TypeError(
+                    #     f"Inconsistent target value dtypes, expected type: '{type(y0)}', \
+                    #         got type '{type(st[2])}' at index {i}."
+                    # )
                     raise TypeError(
                         f"Inconsistent target value dtypes, expected type: '{type(y0)}', \
-                            got type '{type(st[2])}' at index {i}."
+                            got type '{type(st[4])}' at index {i}."
                     )
-            y.append(st[2])
+            # TODO: y.append(st[2])
+            y.append(st[4])
 
             # Get original shape
             if i == 0:
-                xshp = st[1]
+                # TODO: xshp = st[1]
+                xshp = st[3]
             else:
-                if st[1] != xshp:
+                # TODO: if st[1] != xshp:
+                #     raise TypeError(
+                #         f"Inconsistent predictor shape, expected shape: '{xshp}', \
+                #             got shape '{st[1]}' at index {i} in the give sample_list."
+                #     )
+                if st[3] != xshp:
                     raise TypeError(
                         f"Inconsistent predictor shape, expected shape: '{xshp}', \
-                            got shape '{st[1]}' at index {i} in the give sample_list."
+                            got shape '{st[3]}' at index {i} in the give sample_list."
                     )
 
             # Get sample ID
@@ -576,8 +670,30 @@ class ModelEva:
             else:
                 sid.append(st[0])
 
+            # Validate sample labels
+            slabel = st[1]
+            if slabel in sample_labels:
+                raise ValueError(f"Sample labels must be unique, got duplicated: {slabel}")
+            else:
+                sample_labels.append(slabel)
+
+            # Get validation group
+            # TODO: new
+            if i == 0:
+                val_group = [st[2]]
+            else:
+                val_group.append(st[2])
+
         # Convert and return result in tuple of np.ndarrays
-        return (np.asarray(sid), tuple(xshp), np.asarray(y).reshape(-1, 1), X)
+        # TODO: return (np.asarray(sid), tuple(xshp), np.asarray(y).reshape(-1, 1), X)
+        return (
+            np.asarray(sid),
+            np.asarray(sample_labels),
+            np.asarray(val_group),
+            tuple(xshp),
+            np.asarray(y).reshape(-1, 1),
+            X,
+        )
 
     # Validate specified model
     @simple_type_validator
@@ -671,6 +787,38 @@ class ModelEva:
                     'loo' / 'k-fold' (e.g. '5-fold') / 'm-n-split' (e.g. '70-30-split')"
             )
 
+    # TODO: new
+    # Sample ID to sample label
+    @simple_type_validator
+    def _sid_to_label(
+        self, sample_id: Union[str, list[str], tuple[str], np.ndarray, pd.Series]
+    ) -> Union[str, list[str]]:
+        # Map all sid to labels
+        label_dict: dict = {}
+        for i, sidi in enumerate(self.sid):
+            label_dict[sidi] = self.sample_label[i]
+
+        # Single ID
+        if type(sample_id) is str:
+            if sample_id in label_dict.keys():
+                return str(label_dict[sample_id])
+            else:
+                raise ValueError(f"Provided sample ID not found: {sample_id}")
+
+        # Sample ID Series
+        else:
+            sid_arr = np.asarray(sample_id)
+            if sid_arr.ndim == 1:
+                labels = []
+                for sidi in sid_arr:
+                    if str(sidi) in label_dict.keys():
+                        labels.append(label_dict[str(sidi)])
+                    else:
+                        raise ValueError(f"Provided sample ID not found: {str(sidi)}")
+                return labels
+            else:
+                raise ValueError(f"Dimension of give sample ID series must be 1, got: {sid_arr.ndim}")
+
     # Get indices for data train-test split
     @overload
     def _data_split(
@@ -713,53 +861,112 @@ class ModelEva:
         else:
             val_method = self._val_validation_method(validation_method)
 
+        # Validation groups
+        # TODO: new
+        valgroups: np.ndarray = np.asarray(self._validation_group)
+        # TODO: new
+        if valgroups.ndim != 1 or len(valgroups) != len(self._X):
+            # TODO: new
+            raise ValueError("'validation_groups' must be a 1D array aligned with X")
+
         # Get sample indices
         indices = np.arange(len(self._X))
 
-        # Train-test split
         dsp_inds: list = []
+
+        # Train-test split
         if type(val_method) is tuple:
-            train_idx, test_idx = train_test_split(
-                indices, test_size=val_method[1], random_state=random_state, shuffle=True
-            )
-            dsp_inds = [(train_idx, test_idx)]
+            # TODO: new
+            if len(valgroups) == len(set(valgroups)):
+                train_idx, test_idx = train_test_split(
+                    indices, test_size=val_method[1], random_state=random_state, shuffle=True
+                )
+                dsp_inds = [(train_idx, test_idx)]
+            # TODO: new method
+            else:
+                gss = GroupShuffleSplit(
+                    n_splits=1,
+                    test_size=val_method[1],
+                    random_state=random_state,
+                )
+                train_idx, test_idx = next(gss.split(indices, groups=valgroups))
+                dsp_inds = [(train_idx, test_idx)]
 
         # k-Fold
         elif type(val_method) is int:
-            if self.is_regression:
-                kf = KFold(n_splits=val_method, shuffle=True, random_state=random_state)
-                for train_idx, val_idx in kf.split(indices):
-                    dsp_inds.append((train_idx, val_idx))
-            else:
-                # Validate number of class
-                y_1d_arr: np.ndarray = self.y.reshape(1, -1)[0]
-                n_member_min: int = len(y_1d_arr)
-                assert self.ynames is not None
-                for yn in self.ynames:
-                    n_member_min = min(n_member_min, len(y_1d_arr[y_1d_arr == yn]))
-                # If number of samples/members in each class greater than number of splits
-                # StratifiedKFold if available
-                if n_member_min >= val_method:
-                    kf = StratifiedKFold(n_splits=val_method, shuffle=True, random_state=random_state)
-                    for train_idx, val_idx in kf.split(self.X, self.y):
-                        dsp_inds.append((train_idx, val_idx))
-                # Fall back to plain KFold
-                else:
-                    warnings.warn(
-                        f"Sample number of single class {n_member_min} less than number of classes,\
-                            data split falls back to 'KFold' instead of 'StratifiedKFold'",
-                        UserWarning,
-                        stacklevel=1,
-                    )
+            # TODO: new
+            if len(valgroups) == len(set(valgroups)):
+                if self.is_regression:
                     kf = KFold(n_splits=val_method, shuffle=True, random_state=random_state)
                     for train_idx, val_idx in kf.split(indices):
                         dsp_inds.append((train_idx, val_idx))
+                else:
+                    # Validate number of class
+                    # y_1d_arr: np.ndarray = self.y.reshape(1, -1)[0]
+                    y_1d_arr: np.ndarray = self.y.reshape(-1)
+                    # n_member_min: int = len(y_1d_arr)
+                    assert self.ynames is not None
+                    n_member_min: int = min([np.sum(y_1d_arr == yn) for yn in self.ynames])
+                    # for yn in self.ynames:
+                    #     n_member_min = min(n_member_min, len(y_1d_arr[y_1d_arr == yn]))
+                    # If number of samples/members in each class greater than number of splits
+                    # StratifiedKFold if available
+                    if n_member_min >= val_method:
+                        kf = StratifiedKFold(n_splits=val_method, shuffle=True, random_state=random_state)
+                        for train_idx, val_idx in kf.split(self.X, self.y):
+                            dsp_inds.append((train_idx, val_idx))
+                    # Fall back to plain KFold
+                    else:
+                        warnings.warn(
+                            f"Sample number of single class {n_member_min} less than number of classes,\
+                                data split falls back to 'KFold' instead of 'StratifiedKFold'",
+                            UserWarning,
+                            stacklevel=1,
+                        )
+                        kf = KFold(n_splits=val_method, shuffle=True, random_state=random_state)
+                        for train_idx, val_idx in kf.split(indices):
+                            dsp_inds.append((train_idx, val_idx))
+            # TODO: new method
+            else:
+                if self.is_regression:
+                    kf = GroupKFold(n_splits=val_method)
+                    for train_idx, val_idx in kf.split(indices, groups=valgroups):
+                        dsp_inds.append((train_idx, val_idx))
+                else:
+                    # Validate number of class
+                    y_1d_arr = self.y.reshape(-1)
+                    assert self.ynames is not None
+                    n_member_min = min([np.sum(y_1d_arr == yn) for yn in self.ynames])
+                    # If number of samples/members in each class greater than number of splits
+                    # StratifiedGroupKFold if available
+                    if n_member_min >= val_method:
+                        kf = StratifiedGroupKFold(n_splits=val_method, shuffle=True, random_state=random_state)
+                        for train_idx, val_idx in kf.split(self.X, self.y, groups=valgroups):
+                            dsp_inds.append((train_idx, val_idx))
+                    # Fall back to plain GroupKFold
+                    else:
+                        warnings.warn(
+                            f"Sample number of single class {n_member_min} less than number of classes,"
+                            "data split falls back to 'GroupKFold' instead of 'StratifiedGroupKFold'",
+                            UserWarning,
+                            stacklevel=1,
+                        )
+                        kf = GroupKFold(n_splits=val_method, shuffle=True, random_state=random_state)
+                        for train_idx, val_idx in kf.split(indices, groups=valgroups):
+                            dsp_inds.append((train_idx, val_idx))
 
         # LOOCV
         elif val_method == "loo":
-            loo = LeaveOneOut()
-            for train_idx, val_idx in loo.split(indices):
-                dsp_inds.append((train_idx, val_idx))
+            # TODO: new
+            if len(valgroups) == len(set(valgroups)):
+                loo = LeaveOneOut()
+                for train_idx, val_idx in loo.split(indices):
+                    dsp_inds.append((train_idx, val_idx))
+            # TODO: new method
+            else:
+                logo = LeaveOneGroupOut()
+                for train_idx, val_idx in logo.split(indices, groups=valgroups):
+                    dsp_inds.append((train_idx, val_idx))
 
         # Invalid validation_method
         else:
@@ -943,12 +1150,16 @@ class ModelEva:
 
         # Result dataframe for write to file
         assert ynames is not None
-        coln_val = ["Sample_ID", "y_true", "y_predicted"] + [f"Proba_{str(yn)}" for yn in list(ynames)]
+        # TODO: coln_val = ["Sample_ID", "y_true", "y_predicted"] + [f"Proba_{str(yn)}" for yn in list(ynames)]
+        coln_val = ["Sample_ID", "Label", "y_true", "y_predicted"] + [f"Proba_{str(yn)}" for yn in list(ynames)]
         df_val = pd.DataFrame(np.zeros((len(y_true), len(coln_val))), columns=coln_val)
         df_val["Sample_ID"] = sid_eva
+        # TODO: new
+        df_val["Label"] = self._sid_to_label(sid_eva)
         df_val["y_true"] = y_true
         df_val["y_predicted"] = y_pred
-        df_val.iloc[:, 3:] = y_pred_proba
+        # TODO: df_val.iloc[:, 3:] = y_pred_proba
+        df_val.iloc[:, 4:] = y_pred_proba
 
         # Write result to file
         task_time = self._model_time
@@ -1345,8 +1556,12 @@ class ModelEva:
             columns=[f"Probability_residual_{yn}" for yn in ynames],
             index=list(sid),
         )
+        # TODO: new
+        df_label = pd.DataFrame(self._sid_to_label(list(sid)), columns=["Label"], index=list(sid))
+        # TODO: new
+        df_res = pd.concat([df_label, df_res], axis=1)
         df_res.index.name = "Sample_ID"
-        df_res_data = df_res.copy(deep=True)
+        df_res_data = df_res.select_dtypes(np.number).copy(deep=True)
 
         # Residual z-score
         for yn in ynames:
@@ -1592,7 +1807,12 @@ class ModelEva:
         # Avg influence
         influence_avg = np.sum(influence_list, axis=0) / (X_train.shape[0] - 1)
         influence_df = pd.DataFrame(influence_avg, columns=ynames, index=sid)
-        influence_df.columns = [f"{yn}_probability_Cooks_distance_like" for yn in ynames]
+        # TODO: new
+        df_label = pd.DataFrame(self._sid_to_label(sid), columns=["Label"], index=sid)
+        # TODO: new
+        influence_df = pd.concat([df_label, influence_df], axis=1)
+        # TODO: influence_df.columns = [f"{yn}_probability_Cooks_distance_like" for yn in ynames]
+        influence_df.columns = ["Label"] + [f"{yn}_probability_Cooks_distance_like" for yn in ynames]
         influence_df.index.name = "Sample_ID"
 
         # Report directory
@@ -1880,9 +2100,12 @@ class ModelEva:
             os.makedirs(unc_path(dout))
 
         # Result dataframe for write to file
-        coln_val = ["Sample_ID", "y_true", "y_predicted"]
+        # TODO: coln_val = ["Sample_ID", "y_true", "y_predicted"]
+        coln_val = ["Sample_ID", "Label", "y_true", "y_predicted"]
         df_val = pd.DataFrame(np.zeros((len(y_true), len(coln_val))), columns=coln_val)
         df_val["Sample_ID"] = sid_eva
+        # TODO: new
+        df_val["Label"] = self._sid_to_label(sid_eva)
         df_val["y_true"] = y_true
         df_val["y_predicted"] = y_pred
 
@@ -2362,7 +2585,11 @@ class ModelEva:
 
         # Residuals
         res = y_true - y_pred
-        df_res = pd.DataFrame(res, columns=["Residual"], index=sid)
+        df_res = pd.DataFrame(res, columns=["Residual"], index=list(sid))
+        # TODO: new
+        df_label = pd.DataFrame(self._sid_to_label(list(sid)), columns=["Label"], index=list(sid))
+        # TODO: new
+        df_res = pd.concat([df_label, df_res], axis=1)
         df_res.index.name = "Sample_ID"
 
         # Standardized residuals
@@ -2509,6 +2736,10 @@ class ModelEva:
         # Avg influence
         influence_avg = np.sum(influence_list, axis=0) / (X_train.shape[0] - 1)
         influence_df = pd.DataFrame(influence_avg, columns=["Cooks_distance_like"], index=sid)
+        # TODO: new
+        df_label = pd.DataFrame(self._sid_to_label(sid), columns=["Label"], index=sid)
+        # TODO: new
+        influence_df = pd.concat([df_label, influence_df], axis=1)
         influence_df.index.name = "Sample_ID"
 
         # Report directory
@@ -2836,6 +3067,10 @@ class ModelEva:
         dfr.update(df_y_true_all)
         dfr.update(df_y0)
         dfr.update(df_y1)
+        # TODO: new
+        df_label = pd.DataFrame(self._sid_to_label(list(self._sid)), columns=["Label"], index=self._sid)
+        # TODO: new
+        dfr = pd.concat([df_label, dfr], axis=1)
 
         # Add y_proba data
         if self.is_regression:

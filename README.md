@@ -699,12 +699,21 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
 - Modify targets to numeric, here the numbers approaximate the age of the leaves
     ```python
     targets_reg["Target_value"] = [(5 - int(labl[0])) for labl in targets['Label']]
+    ```
+
+- Specify the ROIs within a same leaf to a validation group to prevent data leakage
+    ```python
+    targets_reg["Validation_group"] = [f"leaf_{labl[0]}" for labl in targets['Label']]
+    ```
+
+- Update target information using the modified target dataframe
+    ```python
     exp_reg.sample_targets_from_df(targets_reg)
     ```
 
-- Check target values
+- Check target values and validation groups
     ```python
-    exp_reg.ls_targets()[["Sample_ID", "Target_value"]]
+    exp_reg.ls_targets()[["Label", "Target_value", "Validation_group"]]
     ```
 
 
