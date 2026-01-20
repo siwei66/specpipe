@@ -72,6 +72,9 @@ from .pipeline_validator import (
     _process_validator,
     _classifier_validator,
     _regressor_validator,
+    _num_image_chains,
+    _estimate_img_output_size,
+    _estimate_report_plot_size,
 )
 from .pipeline_processor import (
     _preprocessing_sample,
@@ -213,7 +216,6 @@ class SpecPipe:
         _spec_exp_validator(spec_exp)
 
         ## Private internal attributes
-        # TODO: self.__sample_targets: list[tuple[str, str, Union[str, bool, int, float], str]] = spec_exp.sample_targets  # noqa: E501
         self.__sample_targets: list[tuple[str, str, Union[str, bool, int, float], str, str]] = spec_exp.sample_targets
         self.__is_target_numeric: bool = self._check_target_numeric(spec_exp)
         self.__band_wavelength: Optional[tuple[Union[int, float], ...]] = None
@@ -341,12 +343,10 @@ class SpecPipe:
 
     ## Read only or immuatable properties
     @property
-    # TODO: def _sample_targets(self) -> list[tuple[str, str, Union[str, bool, int, float], str]]:
     def _sample_targets(self) -> list[tuple[str, str, Union[str, bool, int, float], str, str]]:
         return self.__sample_targets
 
     @_sample_targets.setter
-    # TODO: def _sample_targets(self, value: list[tuple[str, str, Union[str, bool, int, float], str]]) -> None:
     def _sample_targets(self, value: list[tuple[str, str, Union[str, bool, int, float], str, str]]) -> None:
         raise ValueError("_sample_targets cannot be modified in SpecPipe, please update using 'SpecExp' instead")
 
@@ -561,7 +561,6 @@ class SpecPipe:
                 "ID": "test_run",
                 "label": "test_run",
                 "target": None,
-                # TODO: new
                 "validation_group": "test_run",
                 "img_path": img_path,
                 "test_img_path": test_img_path,
@@ -2730,7 +2729,6 @@ class SpecPipe:
                 sdata["ID"] = roit[0]
                 sdata["label"] = [lbt[1] for lbt in self.spec_exp.sample_labels if lbt[0] == roit[0]][0]
                 sdata["target"] = [tg[2] for tg in self.spec_exp.sample_targets if tg[0] == roit[0]][0]
-                # TODO: new
                 sdata["validation_group"] = [tg[4] for tg in self.spec_exp.sample_targets if tg[0] == roit[0]][0]
                 sdata["img_path"] = [
                     imgt[4] for imgt in self.spec_exp.images if ((imgt[1] == roit[1]) & (imgt[2] == roit[2]))
@@ -2748,7 +2746,6 @@ class SpecPipe:
                 sdata["ID"] = st[0]
                 sdata["label"] = [lbt[1] for lbt in self.spec_exp.sample_labels if lbt[0] == st[0]][0]
                 sdata["target"] = [tg[2] for tg in self.spec_exp.sample_targets if tg[0] == st[0]][0]
-                # TODO: new
                 sdata["validation_group"] = [tg[4] for tg in self.spec_exp.sample_targets if tg[0] == roit[0]][0]
                 sdata["spec1d"] = tuple(st[4])
                 sample_data.append(sdata)
@@ -2936,13 +2933,10 @@ class SpecPipe:
                         assert hasattr(model_methodi, 'is_regression')
                         if model_methodi.is_regression:
                             # Regression mock data
-                            # TODO: test_samples: list[tuple[str, Any, Union[float, int, bool, str], np.ndarray]] = [
                             test_samples: list[tuple[str, str, str, Any, Union[float, int, bool, str], np.ndarray]] = [
                                 (
                                     str(i),
-                                    # TODO: new
                                     str(i),
-                                    # TODO: new
                                     str(i),
                                     ts_shape,
                                     float(i),
@@ -2961,9 +2955,7 @@ class SpecPipe:
                             test_samples = [
                                 (
                                     str(i),
-                                    # TODO: new
                                     str(i),
-                                    # TODO: new
                                     str(i),
                                     ts_shape,
                                     str(["a", "b"][int(i % 2)]),
@@ -2980,6 +2972,60 @@ class SpecPipe:
                         )
                     else:
                         raise ValueError(f"Model only accepts data level 'spec1d' as input, but got: {dl_in_name}")
+
+    # Space validator
+    @simple_type_validator
+    def _val_disk_space_preprocessing(self, image: bool = True, plot: bool = True, error_raise: bool = True) -> None:
+        """Output image and plot size estimator"""
+
+        # Estimate output image size
+        # Get number of image processing chains
+        applied_chains = self.ls_chains(print_label=False)
+        n_img_chains = _num_image_chains(applied_chains)
+        # Get image paths
+        img_paths = self.spec_exp.ls_images(print_result=False, return_dataframe=True)["Path"].tolist()
+        # Check image to roispecs process
+        n_roispecs_process = len(
+            self.ls_process(input_data_level=5, output_data_level=6, print_result=False, return_result=True)
+        )
+        has_roispecs = n_roispecs_process > 0
+        # Compute total size
+        output_img_size = _estimate_img_output_size(
+            img_paths=img_paths,
+            n_img_chains=n_img_chains,
+            roispecs=has_roispecs,
+        )
+
+        # Estimate output plot size
+        output_plot_size = _estimate_report_plot_size(len(applied_chains), is_regression=self._is_target_numeric)
+
+        # Output size
+        if image & plot:
+            output_size = output_img_size + output_plot_size
+        elif image & (not plot):
+            output_size = output_img_size
+        elif plot & (not image):
+            output_size = output_plot_size
+        else:
+            output_size = 0
+        # Available space
+        available_space: int = shutil.disk_usage(self.report_directory).free
+        # Validate available space
+        if available_space < output_size:
+            if error_raise:
+                raise OSError(
+                    f"Insufficient disk space: estimated output size is {output_size} bytes, "
+                    f"which may exceed the available disk space ({available_space} bytes)."
+                )
+            else:
+                warnings.warn(
+                    f"Insufficient disk space: estimated output size is {output_size} bytes, "
+                    f"which may exceed the available disk space ({available_space} bytes).",
+                    ResourceWarning,
+                    stacklevel=2,
+                )
+        else:
+            return None
 
     # Run entire pipeline
     # Sample data format - ROI: {ID, label, target, img_path, roi_coords}
@@ -3002,6 +3048,7 @@ class SpecPipe:
         summary: bool = True,
         geo_reference_warning: bool = False,
         skip_test: bool = False,
+        check_space: bool = True,
     ) -> None:
         """
         Run preprocessing steps of all processing chains on the entire dataset and output modeling-ready sample_list data to files.
@@ -3058,6 +3105,12 @@ class SpecPipe:
             Test execution validates every processing chain and serves as a safeguard against runtime errors in long formal execution.
             Default is False.
 
+        check_space : bool, optional
+            Whether to validate available disk space against the estimated output size.
+            If True, an error is raised when the estimate exceeds the available space.
+            If False, a warning is issued instead.
+            Default is True.
+
         Examples
         --------
         For created ``SpecPipe`` instance ``pipe``::
@@ -3068,6 +3121,10 @@ class SpecPipe:
 
             >>> pipe.preprocessing(n_processor=10)
         """  # noqa: E501
+
+        # Validate disk space for output
+        self._val_disk_space_preprocessing(image=True, plot=False, error_raise=check_space)
+
         # Prompt "if __name__ == '__main__':" protection for windows multiprocessing
         if n_processor > 1:
             if os.name == "nt":
@@ -3344,7 +3401,6 @@ class SpecPipe:
                 sample_id = sdata["ID"]
                 sample_label = sdata["label"]
                 sample_y = sdata["target"]
-                # TODO: new
                 sample_vg = sdata["validation_group"]  # sample validation group
                 # Sample data
                 for status_result in status_results:
@@ -3375,13 +3431,11 @@ class SpecPipe:
             # Save results to CSV
             if to_csv:
                 # Results to table (df)
-                # TODO: chain_res_table = [(pres[0], str(pres[1]), pres[2]) + tuple(pres[3]) for pres in pre_results]
                 chain_res_table = [
                     (pres[0], str(pres[1]), str(pres[2]), str(pres[3]), pres[4]) + tuple(pres[5])
                     for pres in pre_results
                 ]
                 arr_chain_res = np.array(chain_res_table)
-                # TODO: coln_chain_res = ["Sample_ID", "X_shape", "y"] + [f"x{i}" for i in range(arr_chain_res.shape[1] - 3)]  # noqa: E501
                 coln_chain_res = ["Sample_ID", "Label", "Validation_group", "X_shape", "y"] + [
                     f"x{i}" for i in range(arr_chain_res.shape[1] - 5)
                 ]
@@ -3453,6 +3507,7 @@ class SpecPipe:
         show_progress: bool = True,
         save_config: bool = True,
         summary: bool = True,
+        check_space: bool = True,
     ) -> None:
         """
         Evaluate added models on processed sample data from all preprocessing chains.
@@ -3490,6 +3545,12 @@ class SpecPipe:
             Marginal performance metrics at each processing step is compared using the Mann–Whitney U test.
             Default is True.
 
+        check_space : bool, optional
+            Whether to validate available disk space against the estimated output size.
+            If True, an error is raised when the estimate exceeds the available space.
+            If False, a warning is issued instead.
+            Default is True.
+
         See Also
         --------
         preprocessing
@@ -3505,6 +3566,9 @@ class SpecPipe:
 
             >>> pipe.model_evaluation(n_processor=10)
         """  # noqa: E501
+
+        # Validate disk space for output
+        self._val_disk_space_preprocessing(image=False, plot=True, error_raise=check_space)
 
         # Prompt "if __name__ == '__main__':" protection for windows multiprocessing
         if n_processor > 1:
@@ -3731,6 +3795,7 @@ class SpecPipe:
         summary: bool = True,
         geo_reference_warning: bool = False,
         skip_test: bool = False,
+        check_space: bool = True,
     ) -> None:
         """
         Run entire pipelines of specified processes of this ``SpecPipe`` instance on provided ``SpecExp`` instance.
@@ -3809,6 +3874,12 @@ class SpecPipe:
             Test execution validates all processing chains and serves as a safeguard against runtime errors during long executions.
             Default is False.
 
+        check_space : bool, optional
+            Whether to validate available disk space against the estimated output size.
+            If True, an error is raised when the estimate exceeds the available space.
+            If False, a warning is issued instead.
+            Default is True.
+
         See Also
         --------
         preprocessing
@@ -3835,6 +3906,9 @@ class SpecPipe:
             >>> if __name__ == '__main__':
             ...     pipe.run(n_processor=-2)
         """  # noqa: E501
+
+        # Validate disk space for output
+        self._val_disk_space_preprocessing(image=True, plot=True, error_raise=check_space)
 
         # Validate processor
         if n_processor < 0:
@@ -3890,6 +3964,7 @@ class SpecPipe:
             summary=summary,
             geo_reference_warning=geo_reference_warning,
             skip_test=skip_test,
+            check_space=check_space,
         )
 
         # Model evaluation
@@ -3907,6 +3982,7 @@ class SpecPipe:
                 show_progress=show_progress,
                 save_config=False,
                 summary=summary,
+                check_space=check_space,
             )
         else:
             print("\nNo model added, pipeline complete with preprocessing results.\n")

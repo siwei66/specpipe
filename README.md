@@ -12,7 +12,7 @@
 ## A Python framework for automated batch implementation and method testing of universal hyperspectral modeling pipelines.
 
 <!-- start-doc -->
-SpecPipe streamlines the batch testing and optimization of hyperspectral analysis workflows. It provides a structured and extensible framework to apply and assess various image processing techniques (calibration, baseline correction, denoising, feature engineering, etc.) in combination with various machine learning models. The pipeline employs a comprehensive full-factorial design to evaluate all method combinations and generates standard reports on performance metrics, comparative statistical tests, residual analysis, influence anlaysis and visualizations.
+SpecPipe streamlines the batch testing and optimization of hyperspectral analysis workflows. It provides a structured and extensible framework to apply and assess various image processing techniques (calibration, baseline correction, denoising, feature engineering, etc.) in combination with various machine learning models. The pipeline employs a comprehensive full-factorial design to evaluate all method combinations on user spectral dataset and generates standard reports on performance metrics, comparative statistical tests, residual analysis, influence anlaysis and visualizations.
 
 ## Core features
 - **Batch processing**: Automate numerous data processing and modeling workflows in a single batch operation.

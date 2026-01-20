@@ -9,10 +9,11 @@ Copyright (c) 2025 Siwei Luo. MIT License.
 import os
 
 # Typing
-from typing import Annotated, Any, Union
+from typing import Annotated, Any, Union, Optional
 
 # Basic data
 import numpy as np
+import pandas as pd
 
 # Raster
 import rasterio
@@ -40,11 +41,9 @@ global ModelEva
 def _target_type_validation_for_serialization(
     # pc_sample_list: list[tuple[str, tuple[int], Any, Annotated[Any, arraylike_validator(ndim=1)]]],
     pc_sample_list: list[tuple[str, str, str, tuple[int], Any, Annotated[Any, arraylike_validator(ndim=1)]]],
-    # TODO: ) -> list[tuple[str, tuple[int], Union[str, int, bool, float], Annotated[Any, arraylike_validator(ndim=1)]]]:  # noqa
 ) -> list[tuple[str, str, str, tuple[int], Union[str, int, bool, float], Annotated[Any, arraylike_validator(ndim=1)]]]:
     """Fix typing for integer after dill serialization."""
     for loaded_i, loaded_sample in enumerate(pc_sample_list):
-        # TODO: loaded_y = loaded_sample[2]
         loaded_y = loaded_sample[4]
         # Behavior check to fix type
         test_value_y = loaded_y
@@ -59,7 +58,6 @@ def _target_type_validation_for_serialization(
         except Exception:
             loaded_y = str(loaded_y)
         # Update target value
-        # TODO: pc_sample_list[loaded_i] = (loaded_sample[0], loaded_sample[1], loaded_y, loaded_sample[3])
         pc_sample_list[loaded_i] = (
             loaded_sample[0],
             loaded_sample[1],
@@ -615,3 +613,83 @@ def _process_validator(  # noqa: C901
             )
 
         return method
+
+
+# %% Helper: Pipeline output size estimation & disk available space validator
+
+
+@simple_type_validator
+def _estimate_output_raster_size(
+    image_path: str,
+    output_dtype: str = "float32",
+    output_shape: Optional[tuple[int, int]] = None,
+    output_nbands: int = -1,
+) -> int:
+    """
+    Estimate output raster size from input raster path. Shape uses (height, width).
+    """
+
+    with rasterio.open(image_path) as src:
+        input_nbands: int = src.count
+        input_shape: tuple[int, int] = (src.height, src.width)
+
+    if output_shape is None:
+        height: int = input_shape[0]
+        width: int = input_shape[1]
+    elif output_shape[0] <= 0 or output_shape[1] <= 0:
+        raise ValueError(f"output_shape dimensions must be positive integers, got: {output_shape}")
+    else:
+        height = output_shape[0]
+        width = output_shape[1]
+
+    if output_nbands == -1:
+        bands: int = input_nbands
+    elif output_nbands <= 0:
+        raise ValueError(f"output_nbands must be a positive integer, got: {output_nbands}")
+    else:
+        bands = output_nbands
+
+    bytes_per_pixel: int = np.dtype(output_dtype).itemsize
+    total_pixels: int = width * height * bands
+    total_bytes: int = total_pixels * bytes_per_pixel
+
+    return total_bytes
+
+
+# Get chains of image preprocessing
+@simple_type_validator
+def _num_image_chains(applied_process_chains: pd.DataFrame) -> int:
+    """Get number of image preprocessing chains, duplicated image chains are not counted."""
+    chains = np.asarray(applied_process_chains)
+    nsteps_img = len([step for step in chains[0] if int(step[0]) < 5])
+    img_chains = chains[:, :nsteps_img]
+    if nsteps_img > 0:
+        unique_img_chains = []
+        for row in img_chains:
+            rowl = list(row)
+            if rowl not in unique_img_chains:
+                unique_img_chains.append(rowl)
+        return len(unique_img_chains)
+    else:
+        return 0
+
+
+# Preprocessing step output image size estimator
+# (n_images * (n_unique_chains of data level 0~4 + 1 (n_ROI_specs, if exists)))
+# self.spec_exp.ls_images(return_dataframe=True)["Path"].tolist()
+# n_roispecs_process = len(self.ls_process(input_data_level=5, output_data_level=6, print_result=False, return_result=True))  # noqa: E501
+# Add 1 if the n_roispecs_process > 0 - (n_img_chains + int(roispecs))
+@simple_type_validator
+def _estimate_img_output_size(img_paths: list[str], n_img_chains: int, roispecs: bool) -> int:
+    size = 0
+    for path in img_paths:
+        size = size + _estimate_output_raster_size(path)
+    size = size * (n_img_chains + int(roispecs))
+    return size
+
+
+# Report chain plot size estimator (each size: 400 * 1024, regression 2 per chain, classification 1 per chain)
+@simple_type_validator
+def _estimate_report_plot_size(nchains: int, is_regression: bool) -> int:
+    size = 400 * 1024 * (1 + int(is_regression)) * nchains
+    return size

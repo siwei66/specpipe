@@ -389,9 +389,7 @@ def _preprocessing_sample(  # noqa: C901
             "ID": sample_data["ID"],
             "label": sample_data_label,  # Dataset label
             "target": sample_data["target"],
-            # TODO: new
             "sample_label": sample_data["label"],
-            # TODO: new
             "validation_group": sample_data["validation_group"],
             "status_results": status_results,
         }
@@ -797,9 +795,7 @@ class _ModelMethod:
         sample_list: list[
             tuple[
                 str,
-                # TODO: new
                 str,
-                # TODO: new
                 str,
                 tuple[int],
                 Union[str, int, bool, float],
@@ -870,9 +866,7 @@ def _model_evaluator(  # noqa: C901
     preprocess_result: list[
         tuple[
             str,
-            # TODO: new
             str,
-            # TODO: new
             str,
             tuple[int],
             Union[str, int, bool, float],

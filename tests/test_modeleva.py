@@ -31,39 +31,31 @@ from specpipe.modeleva import ModelEva
 
 def create_sample_data_regression(
     n_samples: int = 10,
-    # TODO: new
     n_validation_group: int = 0,
-    # TODO: ) -> list[tuple[str, tuple[int], float, np.ndarray]]:
 ) -> list[tuple[str, str, str, tuple[int], float, np.ndarray]]:
     """Create regression sample data."""
     np.random.seed(66)
     X = np.random.rand(n_samples, 5)  # noqa: N806
     y = np.random.rand(n_samples)
-    # TODO: new
     if n_validation_group == 0:
         nvg = n_samples
     else:
         nvg = n_validation_group
-    # TODO: return [(f"sample_{i}", (5,), float(y[i]), X[i]) for i in range(n_samples)]
     return [(f"sample_{i}", f"sample_{i}", f"vg_{i%nvg}", (5,), float(y[i]), X[i]) for i in range(n_samples)]
 
 
 def create_sample_data_classification(
     n_samples: int = 10,
-    # TODO: new
     n_validation_group: int = 0,
-    # TODO: ) -> list[tuple[str, tuple[int], str, np.ndarray]]:
 ) -> list[tuple[str, str, str, tuple[int], str, np.ndarray]]:
     """Create classification sample data."""
     np.random.seed(66)
     X = np.random.rand(n_samples, 5)  # noqa: N806
     y = np.random.choice(["A", "B"], size=n_samples)
-    # TODO: new
     if n_validation_group == 0:
         nvg = n_samples
     else:
         nvg = n_validation_group
-    # TODO: return [(f"sample_{i}", (5,), str(y[i]), X[i]) for i in range(n_samples)]
     return [(f"sample_{i}", f"sample_{i}", f"vg_{i%nvg}", (5,), str(y[i]), X[i]) for i in range(n_samples)]
 
 
@@ -71,11 +63,9 @@ def modeleva_initialization_regression(
     temp_dir: str,
     data_split: str = "5-fold",
     n_samples: int = 10,
-    # TODO: new
     n_validation_group: int = 0,
 ) -> ModelEva:
     """Test regression model initialization."""
-    # TODO: sample_list = create_sample_data_regression(n_samples)
     sample_list = create_sample_data_regression(n_samples, n_validation_group=n_validation_group)
 
     model = LinearRegression()
@@ -101,11 +91,9 @@ def modeleva_initialization_classification(
     temp_dir: str,
     data_split: str = "5-fold",
     n_samples: int = 10,
-    # TODO: new
     n_validation_group: int = 0,
 ) -> ModelEva:
     """Test classification model initialization."""
-    # TODO: sample_list = create_sample_data_classification(n_samples)
     sample_list = create_sample_data_classification(n_samples, n_validation_group=n_validation_group)
 
     model = LogisticRegression()
@@ -364,7 +352,6 @@ class TestModelEva(unittest.TestCase):
         assert len(model_eva.dsp_inds[0][0]) == 6
         assert len(model_eva.dsp_inds[0][1]) == 4
 
-        # TODO: new
         # Group K-fold
         model_eva = modeleva_initialization_classification(
             temp_dir, data_split="5-fold", n_samples=20, n_validation_group=10
@@ -383,7 +370,6 @@ class TestModelEva(unittest.TestCase):
             for i in group_train:
                 assert i not in group_test
 
-        # TODO: new
         # LOGO
         model_eva = modeleva_initialization_classification(temp_dir, data_split="loo", n_validation_group=5)
 
@@ -400,7 +386,6 @@ class TestModelEva(unittest.TestCase):
             for i in group_train:
                 assert i not in group_test
 
-        # TODO: new
         # Train-test-split with validation group awareness
         model_eva = modeleva_initialization_classification(temp_dir, data_split="60-40-split", n_validation_group=5)
 
@@ -509,7 +494,6 @@ class TestModelEva(unittest.TestCase):
             assert True
         except Exception as e:
             raise AssertionError(f"Failed to read CSV file '{residual_filename}': {e}") from e
-        # TODO: assert residual.shape == (20, 15)
         assert residual.shape == (20, 16)
         assert residual.iloc[:, :].isna().sum().sum() == 0
 
@@ -523,12 +507,10 @@ class TestModelEva(unittest.TestCase):
             raise AssertionError(f"Failed to read CSV file '{influence_analysis_filename}': {e}") from e
         assert list(influence.columns) == [
             "Sample_ID",
-            # TODO: new
             "Label",
             "A_probability_Cooks_distance_like",
             "B_probability_Cooks_distance_like",
         ]
-        # TODO: assert influence.shape == (20, 3)
         assert influence.shape == (20, 4)
         assert influence.iloc[:, :].isna().sum().sum() == 0
 
@@ -612,7 +594,6 @@ class TestModelEva(unittest.TestCase):
         assert len(model_eva.dsp_inds[0][0]) == 6
         assert len(model_eva.dsp_inds[0][1]) == 4
 
-        # TODO: new
         # Group K-fold
         model_eva = modeleva_initialization_regression(temp_dir, data_split="5-fold", n_validation_group=5)
 
@@ -629,7 +610,6 @@ class TestModelEva(unittest.TestCase):
             for i in group_train:
                 assert i not in group_test
 
-        # TODO: new
         # LOGO
         model_eva = modeleva_initialization_regression(temp_dir, data_split="loo", n_validation_group=5)
 
@@ -646,7 +626,6 @@ class TestModelEva(unittest.TestCase):
             for i in group_train:
                 assert i not in group_test
 
-        # TODO: new
         # Train-test-split with group awareness
         model_eva = modeleva_initialization_regression(temp_dir, data_split="60-40-split", n_validation_group=5)
 
@@ -757,7 +736,6 @@ class TestModelEva(unittest.TestCase):
             assert True
         except Exception as e:
             raise AssertionError(f"Failed to read CSV file '{residual_filename}': {e}") from e
-        # TODO: assert residual.shape == (10, 5)
         assert residual.shape == (10, 6)
         assert residual.iloc[:, :].isna().sum().sum() == 0
 
@@ -769,9 +747,7 @@ class TestModelEva(unittest.TestCase):
             assert True
         except Exception as e:
             raise AssertionError(f"Failed to read CSV file '{influence_analysis_filename}': {e}") from e
-        # TODO: assert list(influence.columns) == ["Sample_ID", "Cooks_distance_like"]
         assert list(influence.columns) == ["Sample_ID", "Label", "Cooks_distance_like"]
-        # TODO: assert influence.shape == (10, 2)
         assert influence.shape == (10, 3)
         assert influence.iloc[:, :].isna().sum().sum() == 0
 
