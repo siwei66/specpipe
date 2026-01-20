@@ -5,7 +5,7 @@ A Python framework for automated batch implementation and method testing of univ
 """  # noqa: E501
 
 # Package meta
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 __author__ = "Siwei Luo"
 __license__ = "MIT"
 
