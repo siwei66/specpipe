@@ -14,8 +14,7 @@ __license__ = "MIT"
 import warnings
 
 warnings.warn(
-    "SpecPipe has been renamed to 'swectral'. "
-    "Please install and use 'swectral' instead.",
+    "SpecPipe has been renamed to 'swectral'. Please install and use 'swectral' instead.",
     DeprecationWarning,
-    stacklevel=2
+    stacklevel=2,
 )
