@@ -5,5 +5,5 @@ Raster operations
    :toctree: generated/
    :caption: Raster operations
 
-   specpipe.croproi
-   specpipe.pixel_apply
+   swectral.croproi
+   swectral.pixel_apply

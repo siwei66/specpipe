@@ -5,8 +5,8 @@ I/O utilities
    :toctree: generated/
    :caption: I/O utilities
 
-   specpipe.search_file
-   specpipe.envi_roi_coords
-   specpipe.shp_roi_coords
-   specpipe.roi_to_envi
-   specpipe.roi_to_shp
+   swectral.search_file
+   swectral.envi_roi_coords
+   swectral.shp_roi_coords
+   swectral.roi_to_envi
+   swectral.roi_to_shp

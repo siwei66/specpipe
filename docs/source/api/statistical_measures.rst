@@ -5,18 +5,18 @@ Statistical measures
    :toctree: generated/
    :caption: Statistical measures
 
-   specpipe.make_img_func
-   specpipe.make_roi_func
-   specpipe.make_array_func
-   specpipe.roispec
-   specpipe.roi_mean
-   specpipe.roi_std
-   specpipe.roi_median
-   specpipe.Stats2d
-   specpipe.nderiv
-   specpipe.moment2d
-   specpipe.pixcount
-   specpipe.bandquant
-   specpipe.spectral_angle_arr
-   specpipe.spectral_angle
-   specpipe.round_digit
+   swectral.make_img_func
+   swectral.make_roi_func
+   swectral.make_array_func
+   swectral.roispec
+   swectral.roi_mean
+   swectral.roi_std
+   swectral.roi_median
+   swectral.Stats2d
+   swectral.nderiv
+   swectral.moment2d
+   swectral.pixcount
+   swectral.bandquant
+   swectral.spectral_angle_arr
+   swectral.spectral_angle
+   swectral.round_digit

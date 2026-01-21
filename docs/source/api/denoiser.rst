@@ -5,9 +5,9 @@ Denoisers
    :toctree: generated/
    :caption: Denoisers
 
-   specpipe.denoiser.MovingAvg
-   specpipe.denoiser.LocalPolynomial
-   specpipe.denoiser.FourierFilter
-   specpipe.denoiser.WaveletFilter
-   specpipe.denoiser.ArrayOutlier
-   specpipe.denoiser.replace_outlier
+   swectral.denoiser.MovingAvg
+   swectral.denoiser.LocalPolynomial
+   swectral.denoiser.FourierFilter
+   swectral.denoiser.WaveletFilter
+   swectral.denoiser.ArrayOutlier
+   swectral.denoiser.replace_outlier

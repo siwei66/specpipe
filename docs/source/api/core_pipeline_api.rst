@@ -5,9 +5,9 @@ Core pipeline API
    :toctree: generated/
    :caption: Core pipeline API
 
-   specpipe.SpecExp
-   specpipe.SpecPipe
-   specpipe.combine_transformer_classifier
-   specpipe.combine_transformer_regressor
-   specpipe.factorial_transformer_chains
-   specpipe.raster_rgb_preview
+   swectral.SpecExp
+   swectral.SpecPipe
+   swectral.combine_transformer_classifier
+   swectral.combine_transformer_regressor
+   swectral.factorial_transformer_chains
+   swectral.raster_rgb_preview

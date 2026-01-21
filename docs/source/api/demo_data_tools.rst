@@ -5,7 +5,7 @@ Demo data tools
    :toctree: generated/
    :caption: Demo data tools
 
-   specpipe.create_example_raster
-   specpipe.create_example_roi_xml
-   specpipe.create_example_spec_exp
-   specpipe.download_demo_data
+   swectral.create_example_raster
+   swectral.create_example_roi_xml
+   swectral.create_example_spec_exp
+   swectral.download_demo_data
