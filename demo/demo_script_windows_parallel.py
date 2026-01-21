@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-SpecPipe - Demonstration for parallel processing in windows
+Swectral - Demonstration for parallel processing in windows
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
@@ -28,8 +28,8 @@ if __name__ == '__main__':
     os.makedirs(data_dir)
 
     # Download real-world demo raster image and ROI files
-    # Demo data URL: https://github.com/siwei66/specpipe/tree/master/demo/demo_data/
-    from specpipe import download_demo_data
+    # Demo data URL: https://github.com/siwei66/swectral/tree/master/demo/demo_data/
+    from swectral import download_demo_data
 
     download_demo_data(data_dir)
 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     # 2. Configure your experiment data
     # 2.1 Create a spectral experiment
     # Create a SpecExp instance for experiment data
-    from specpipe import SpecExp
+    from swectral import SpecExp
 
     exp = SpecExp(report_dir)
 
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     # 3. Design testing pipeline
 
     # 3.1 Create processing pipeline
-    from specpipe import SpecPipe
+    from swectral import SpecPipe
 
     pipe = SpecPipe(exp)
 
@@ -142,7 +142,7 @@ if __name__ == '__main__':
 
     # 3.3 ROI statistics
     # Import some ROI spectral statistic metrics
-    from specpipe import roi_mean, roi_median
+    from swectral import roi_mean, roi_median
 
     # Add these process to the pipeline
     pipe.add_process(5, 7, 0, roi_mean)

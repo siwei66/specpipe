@@ -23,7 +23,7 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 
 # Functions to test
-from specpipe.modeleva import ModelEva
+from swectral.modeleva import ModelEva
 
 
 # %% Helper functions for ModelEva testing

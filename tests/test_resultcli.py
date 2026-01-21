@@ -25,13 +25,13 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor  # no
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor  # noqa: E402
 
 # Local
-from specpipe.example_data import create_test_spec_exp  # noqa: E402
-from specpipe.roistats import Stats2d, roispec  # noqa: E402
-from specpipe.specio import silent  # noqa: E402
-from specpipe.pipeline import SpecPipe  # noqa: E402
+from swectral.example_data import create_test_spec_exp  # noqa: E402
+from swectral.roistats import Stats2d, roispec  # noqa: E402
+from swectral.specio import silent  # noqa: E402
+from swectral.pipeline import SpecPipe  # noqa: E402
 
 # Test
-from specpipe.resultcli import group_stats_report, core_chain_report  # noqa: E402
+from swectral.resultcli import group_stats_report, core_chain_report  # noqa: E402
 
 
 # %% Test helper functions : create_test_spec_pipe

@@ -8,9 +8,9 @@ import numpy as np
 import pytest
 import sys
 
-from specpipe.denoiser.utils import create_test_array
-from specpipe.denoiser.outlier import ArrayOutlier
-from specpipe.denoiser.local_polynomial import LocalPolynomial
+from swectral.denoiser.utils import create_test_array
+from swectral.denoiser.outlier import ArrayOutlier
+from swectral.denoiser.local_polynomial import LocalPolynomial
 
 
 # %% Test LocalPolynomial

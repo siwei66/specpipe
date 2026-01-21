@@ -11,8 +11,8 @@ from typing import Annotated, Any
 
 import sys
 
-from specpipe.specio import simple_type_validator, arraylike_validator
-from specpipe.denoiser.utils import create_test_array, RollWindow
+from swectral.specio import simple_type_validator, arraylike_validator
+from swectral.denoiser.utils import create_test_array, RollWindow
 
 
 # %% Working function for test

@@ -11,7 +11,7 @@ import pytest
 import sys  # noqa: E402
 
 # Functions to test
-from specpipe.pipeline_processor import _dl_val  # noqa: E402
+from swectral.pipeline_processor import _dl_val  # noqa: E402
 
 
 # %% test functions : SpecPipe

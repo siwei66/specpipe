@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-SpecPipe - Basic usage demonstration from README.md
+Swectral - Basic usage demonstration from README.md
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
@@ -24,8 +24,8 @@ data_dir = demo_dir + "demo_data/"
 os.makedirs(data_dir)
 
 # Download real-world demo raster image and ROI files
-# Demo data URL: https://github.com/siwei66/specpipe/tree/master/demo/demo_data/
-from specpipe import download_demo_data
+# Demo data URL: https://github.com/siwei66/swectral/tree/master/demo/demo_data/
+from swectral import download_demo_data
 
 download_demo_data(data_dir)
 
@@ -39,7 +39,7 @@ os.makedirs(report_dir)
 # 2. Configure your experiment data
 # 2.1 Create a spectral experiment
 # Create a SpecExp instance for experiment data
-from specpipe import SpecExp
+from swectral import SpecExp
 
 exp = SpecExp(report_dir)
 
@@ -124,7 +124,7 @@ exp.ls_targets()[["Label", "Target_value"]]
 # 3. Design testing pipeline
 
 # 3.1 Create processing pipeline
-from specpipe import SpecPipe
+from swectral import SpecPipe
 
 pipe = SpecPipe(exp)
 
@@ -160,7 +160,7 @@ pipe.add_process(2, 2, 0, raw)
 
 # 3.3 ROI statistics
 # Import some ROI spectral statistic metrics
-from specpipe import roi_mean, roi_median
+from swectral import roi_mean, roi_median
 
 # Add these process to the pipeline
 pipe.add_process(
@@ -195,7 +195,7 @@ pipe.rm_process(method='replace_nan')
 # Fittable feature engineering models
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import SelectKBest, f_classif
-from specpipe.modelconnector import IdentityTransformer  # Passthrough transformer for comparison
+from swectral.modelconnector import IdentityTransformer  # Passthrough transformer for comparison
 
 # Test feature selection
 selector1 = SelectKBest(f_classif, k=5)  # Select 5 features
@@ -209,7 +209,7 @@ rf = RandomForestClassifier(n_estimators=10)
 knn = KNeighborsClassifier(n_neighbors=3)
 
 # Compose transformers and estimators to full factorial chains
-from specpipe import factorial_transformer_chains
+from swectral import factorial_transformer_chains
 
 models = factorial_transformer_chains(
     [StandardScaler()],

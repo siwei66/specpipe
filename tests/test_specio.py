@@ -37,7 +37,7 @@ import geopandas as gpd
 from shapely.geometry import MultiPolygon, Polygon
 
 # Functions to test
-from specpipe.specio import (
+from swectral.specio import (
     _pd_dtype_cond,
     arraylike_validator,
     dataframe_validator,
@@ -3686,7 +3686,7 @@ class TestUncPathStatic(unittest.TestCase):
         """Test long paths on Windows with long path support enabled"""
         if sys.platform == 'win32':
             # Mock long path support
-            with patch('specpipe.specio._is_long_path_supported', return_value=True):
+            with patch('swectral.specio._is_long_path_supported', return_value=True):
                 # Test local long path
                 long_local = TestUncPathStatic.create_long_path(r"C:\test")
                 result = unc_path(long_local)
@@ -3709,7 +3709,7 @@ class TestUncPathStatic(unittest.TestCase):
         """Test that long paths raise ValueError without long path support"""
         if sys.platform == 'win32':
             # Mock NO long path support
-            with patch('specpipe.specio._is_long_path_supported', return_value=False):
+            with patch('swectral.specio._is_long_path_supported', return_value=False):
                 long_path = TestUncPathStatic.create_long_path(r"C:\test")
                 with pytest.raises(ValueError, match="Windows does not enable long path"):
                     unc_path(long_path)
@@ -3718,7 +3718,7 @@ class TestUncPathStatic(unittest.TestCase):
     def test_existing_unc_paths() -> None:
         """Test that already UNC-formatted paths are preserved"""
         if sys.platform == 'win32':
-            with patch('specpipe.specio._is_long_path_supported', return_value=True):
+            with patch('swectral.specio._is_long_path_supported', return_value=True):
                 # Test existing UNC local path
                 existing_unc_local = r"\\?\C:\Users\test"
                 result = unc_path(existing_unc_local)
@@ -3750,7 +3750,7 @@ class TestUncPathStatic(unittest.TestCase):
     def test_edge_cases() -> None:
         """Test various edge cases"""
         if sys.platform == 'win32':
-            with patch('specpipe.specio._is_long_path_supported', return_value=True):
+            with patch('swectral.specio._is_long_path_supported', return_value=True):
                 # Test empty string
                 result = unc_path("")
                 assert result == "."
@@ -3772,7 +3772,7 @@ class TestUncPathStatic(unittest.TestCase):
     def test_relative_paths() -> None:
         """Test that relative paths are converted to absolute for UNC"""
         if sys.platform == 'win32':
-            with patch('specpipe.specio._is_long_path_supported', return_value=True):
+            with patch('swectral.specio._is_long_path_supported', return_value=True):
                 test_cases = [
                     (r"relative\path", os.path.normpath(r"relative\path")),
                     (r".\current", os.path.normpath(r".\current")),

@@ -31,10 +31,10 @@ import math
 from rasterio import RasterioIOError
 
 # Local
-from specpipe.example_data import create_test_raster
+from swectral.example_data import create_test_raster
 
 # Functions to test
-from specpipe.roistats import (
+from swectral.roistats import (
     make_img_func,
     make_roi_func,
     make_array_func,

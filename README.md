@@ -1,18 +1,18 @@
 <div align="left">
-  <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/assets/docs/SpecPipeLogo.png" alt="SpecPipeLogo" width="150" height="150">
+  <img src="https://raw.githubusercontent.com/siwei66/swectral/master/assets/docs/SpecPipeLogo.png" alt="SpecPipeLogo" width="150" height="150">
 </div>
 
-# SpecPipe
+# Swectral
 
-[![Tests](https://github.com/siwei66/specpipe/actions/workflows/tests.yml/badge.svg)](https://github.com/siwei66/specpipe/actions/workflows/tests.yml)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/siwei66/specpipe/blob/master/LICENSE)
-[![PyPI version](https://img.shields.io/pypi/v/specpipe.svg)](https://pypi.org/project/specpipe/)
+[![Tests](https://github.com/siwei66/swectral/actions/workflows/tests.yml/badge.svg)](https://github.com/siwei66/swectral/actions/workflows/tests.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/siwei66/swectral/blob/master/LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/swectral.svg)](https://pypi.org/project/swectral/)
 
 
-## A Python framework for automated batch implementation and method testing of universal hyperspectral modeling pipelines.
+## A Python framework for automated batch composition, implementation and method assessment of plant hyperspectral modeling pipelines.
 
 <!-- start-doc -->
-SpecPipe streamlines the batch testing and optimization of hyperspectral analysis workflows. It provides a structured and extensible framework to apply and assess various image processing techniques (calibration, baseline correction, denoising, feature engineering, etc.) in combination with various machine learning models. The pipeline employs a comprehensive full-factorial design to evaluate all method combinations on user spectral dataset and generates standard reports on performance metrics, comparative statistical tests, residual analysis, influence anlaysis and visualizations.
+Swectral streamlines the batch testing and optimization of plant hyperspectral analysis workflows. It provides a structured and extensible framework to apply and assess various image processing techniques (calibration, baseline correction, denoising, feature engineering, etc.) in combination with various machine learning models. The framework employs a comprehensive full-factorial design to evaluate all method combinations on user spectral dataset and generates standard reports on performance metrics, comparative statistical tests, residual analysis, influence anlaysis and visualizations.
 
 ## Core features
 - **Batch processing**: Automate numerous data processing and modeling workflows in a single batch operation.
@@ -38,14 +38,14 @@ Follow these steps to install the project:
 
 2.  **Install from PyPI (Recommended):**
     ```python
-    pip install specpipe
+    pip install swectral
     ```
 
 3.  **Install from source (for development):**
     ```python
     git clone https://github.com/siwei66/SpecPipe.git
     cd SpecPipe
-    pip install -e specpipe
+    pip install -e swectral
     ```
 
 
@@ -64,7 +64,7 @@ Follow these steps to install the project:
     data_dir = demo_dir + "demo_data/"
     os.makedirs(data_dir)
     
-    from specpipe import download_demo_data
+    from swectral import download_demo_data
     download_demo_data(data_dir)
     ```
 
@@ -80,7 +80,7 @@ Follow these steps to install the project:
 
 - Create a SpecExp instance:
     ```python
-    from specpipe import SpecExp
+    from swectral import SpecExp
     exp = SpecExp(report_dir)
     ```
 The instance stores and organizes the data loading configurations of an experiment, which faciliates lazy-loading.
@@ -211,7 +211,7 @@ The instance stores and organizes the data loading configurations of an experime
     ```
     Output:
     <div align="center">
-    <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/demo/demo_results_classification/demo_rast_rgb1.png"
+    <img src="https://raw.githubusercontent.com/siwei66/swectral/master/demo/demo_results_classification/demo_rast_rgb1.png"
          alt="SpecPipe SpecExp RGB preview 1"
          width="400"
          style="max-width: 100%;">
@@ -222,7 +222,7 @@ The instance stores and organizes the data loading configurations of an experime
     ```
     Output:
     <div align="center">
-    <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/demo/demo_results_classification/demo_rast_rgb2.png"
+    <img src="https://raw.githubusercontent.com/siwei66/swectral/master/demo/demo_results_classification/demo_rast_rgb2.png"
          alt="SpecPipe SpecExp RGB preview 2"
          width="400"
          style="max-width: 100%;">
@@ -348,7 +348,7 @@ Parallel processes can be added with identical "data level" and "application seq
 #### 3.1 Create processing pipeline
 - Create processing pipeline from SpecExp instance configured above:
     ```python
-    from specpipe import SpecPipe
+    from swectral import SpecPipe
     pipe = SpecPipe(exp)
     ```
 
@@ -393,7 +393,7 @@ Parallel processes can be added with identical "data level" and "application seq
 
 - Import some ROI spectral statistic metrics:
     ```python
-    from specpipe import roi_mean, roi_median
+    from swectral import roi_mean, roi_median
     ```
 
 - Add these processes to the pipeline:
@@ -664,7 +664,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ```
     Output:
     <div align="center">
-    <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/demo/demo_results_classification/Modeling/Model_evaluation_reports/Data_chain_Preprocessing_%230_Model_StandardScaler_feat_all_KNeighborsClassifier/ROC_curve_StandardScaler_feat_all_KNeighborsClassifier.png"
+    <img src="https://raw.githubusercontent.com/siwei66/swectral/master/demo/demo_results_classification/Modeling/Model_evaluation_reports/Data_chain_Preprocessing_%230_Model_StandardScaler_feat_all_KNeighborsClassifier/ROC_curve_StandardScaler_feat_all_KNeighborsClassifier.png"
          alt="Demo receiver operating characteristic curve"
          width="400"
          style="max-width: 100%;">
@@ -856,7 +856,7 @@ If the implementation is interrupted or forcibly terminated, running the pipelin
     ```
     Output:
     <div align="center">
-    <img src="https://raw.githubusercontent.com/siwei66/specpipe/master/demo/demo_results_regression/Modeling/Model_evaluation_reports/Data_chain_Preprocessing_%230_Model_StandardScaler_feat_all_KNeighborsRegressor/Scatter_plot_StandardScaler_feat_all_KNeighborsRegressor.png"
+    <img src="https://raw.githubusercontent.com/siwei66/swectral/master/demo/demo_results_regression/Modeling/Model_evaluation_reports/Data_chain_Preprocessing_%230_Model_StandardScaler_feat_all_KNeighborsRegressor/Scatter_plot_StandardScaler_feat_all_KNeighborsRegressor.png"
          alt="Demo receiver operating characteristic curve"
          width="400"
          style="max-width: 100%;">
@@ -873,12 +873,12 @@ The SpecPipe module also includes a composer that generates batchwise combined m
     ```python
     from sklearn.preprocessing import StandardScaler
     from sklearn.feature_selection import SelectKBest, f_classif
-    from specpipe.modelconnector import IdentityTransformer  # Passthrough transformer for comparison
+    from swectral.modelconnector import IdentityTransformer  # Passthrough transformer for comparison
 
     selector1 = SelectKBest(f_classif, k=5)  # Select 5 features
     selector2 = IdentityTransformer()  # For passthrough (no selection)
 
-    from specpipe import factorial_transformer_chains
+    from swectral import factorial_transformer_chains
 
     models = factorial_transformer_chains(
         [StandardScaler(), IdentityTransformer()],  # Model step 1: test data scalers
@@ -911,11 +911,11 @@ The SpecPipe module also includes a composer that generates batchwise combined m
 
 This is an initial release of SpecPipe. Your experience applying this toolset in your specialized field is extremely valuable. Any feedback and contributions are highly welcomed!
 
-- **Report bugs**: Found an issue? Please open a [GitHub issue](https://github.com/siwei66/specpipe/issues) with details
-- **Share your domain expertise**: Tell us how SpecPipe works (or doesn't work) in your specific application area in [discussions](https://github.com/siwei66/specpipe/discussions)
-- **Suggest features**: Have ideas for improvements? Use the [GitHub discussions](https://github.com/siwei66/specpipe/discussions) or issues tab
+- **Report bugs**: Found an issue? Please open a [GitHub issue](https://github.com/siwei66/swectral/issues) with details
+- **Share your domain expertise**: Tell us how SpecPipe works (or doesn't work) in your specific application area in [discussions](https://github.com/siwei66/swectral/discussions)
+- **Suggest features**: Have ideas for improvements? Use the [GitHub discussions](https://github.com/siwei66/swectral/discussions) or issues tab
 - **Submit pull requests**: Feel free to fork and submit PRs for bug fixes or small features
-- **Test and provide feedback**: Try it out and let us know about your experience in [discussions](https://github.com/siwei66/specpipe/discussions)
+- **Test and provide feedback**: Try it out and let us know about your experience in [discussions](https://github.com/siwei66/swectral/discussions)
 
 
 ## License <a name="license"></a>

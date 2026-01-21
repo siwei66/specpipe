@@ -28,14 +28,14 @@ from sklearn.neighbors import KNeighborsClassifier  # type: ignore
 from sklearn.neighbors import KNeighborsRegressor  # type: ignore
 
 # Local
-from specpipe.specio import RealNumber, silent
-from specpipe.example_data import create_test_spec_exp
-from specpipe.specexp import SpecExp
-from specpipe.pipeline import SpecPipe
-from specpipe.roistats import roi_mean, roi_median, roi_std
+from swectral.specio import RealNumber, silent
+from swectral.example_data import create_test_spec_exp
+from swectral.specexp import SpecExp
+from swectral.pipeline import SpecPipe
+from swectral.roistats import roi_mean, roi_median, roi_std
 
 # Functions to test
-from specpipe.groupstats import (
+from swectral.groupstats import (
     chain_sample_group_stats,
     sample_group_stats,
     process_id_to_label,

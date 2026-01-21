@@ -8,8 +8,8 @@ import numpy as np
 import pytest
 import sys
 
-from specpipe.denoiser.utils import create_test_array
-from specpipe.denoiser.outlier import ArrayOutlier, replace_outlier
+from swectral.denoiser.utils import create_test_array
+from swectral.denoiser.outlier import ArrayOutlier, replace_outlier
 
 
 # %% TestArrayOutlier

@@ -14,8 +14,8 @@ import tempfile  # noqa: E402
 import pytest  # noqa: E402
 
 # Local
-from specpipe.example_data import create_test_raster, create_test_spec_exp  # noqa: E402
-from specpipe.specexp_vis import raster_rgb_preview  # noqa: E402
+from swectral.example_data import create_test_raster, create_test_spec_exp  # noqa: E402
+from swectral.specexp_vis import raster_rgb_preview  # noqa: E402
 
 
 # %% Test raster visualization

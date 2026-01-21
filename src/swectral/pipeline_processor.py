@@ -1,0 +1,1089 @@
+# -*- coding: utf-8 -*-
+"""
+Swectral - Pipeline iterators, processors and other helpers for spectral image preprocessing and modeling
+
+Copyright (c) 2025 Siwei Luo. MIT License.
+"""
+
+# OS
+import os
+
+# Warning
+import warnings
+
+# Typing
+from typing import Annotated, Any, Callable, Literal, Optional, Union, overload
+from types import ModuleType
+
+# Time
+import time
+from datetime import datetime
+
+# Basic data
+import copy
+import numpy as np
+import torch
+
+# Local
+from .modeleva import ModelEva
+from .rasterop import pixel_apply
+from .specio import (
+    arraylike_validator,
+    dump_vars,
+    load_vars,
+    simple_type_validator,
+    unc_path,
+)
+from .pipeline_validator import (
+    _target_type_validation_for_serialization,
+    _dl_val,
+)
+
+# For multiprocessing
+global ModelEva
+
+
+# %% Static functions for SpecPipe
+
+
+# Preprocessing of single sample using all chains
+@overload
+def _preprocessing_sample(
+    sample_data: dict,
+    process: list[tuple[str, str, str, str, int, Any, int, int]],
+    custom_chains: list,
+    process_chains: list,
+    specpipe_report_directory: str,
+    preprocess_status: dict,
+    *,
+    dump_result: Literal[True] = True,
+    return_result_path: Literal[True] = True,
+    dump_backup: bool = False,
+    return_step_result: Literal[False] = False,
+    final_result_only: bool = True,
+    is_test_run: bool = False,
+    dump_directory: str = "",
+    # Update progress status, use in a processing loop for resume
+    update_progress_log: bool = False,
+    # Explicitly load function for multiprocessing
+    _dl_val: Callable = _dl_val,
+    pixel_apply: Callable = pixel_apply,
+    dump_vars: Callable = dump_vars,
+    unc_path: Callable = unc_path,
+    # Dependencies for multiprocessing
+    copy: ModuleType = copy,
+    os: ModuleType = os,
+    time: ModuleType = time,
+    datetime: type = datetime,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
+) -> str: ...
+
+
+@overload
+def _preprocessing_sample(
+    sample_data: dict,
+    process: list[tuple[str, str, str, str, int, Any, int, int]],
+    custom_chains: list,
+    process_chains: list,
+    specpipe_report_directory: str,
+    preprocess_status: dict,
+    *,
+    dump_result: Literal[True] = True,
+    return_result_path: Literal[True] = True,
+    dump_backup: bool = False,
+    return_step_result: Literal[True] = True,
+    final_result_only: bool = True,
+    is_test_run: bool = False,
+    dump_directory: str = "",
+    # Update progress status, use in a processing loop for resume
+    update_progress_log: bool = False,
+    # Explicitly load function for multiprocessing
+    _dl_val: Callable = _dl_val,
+    pixel_apply: Callable = pixel_apply,
+    dump_vars: Callable = dump_vars,
+    unc_path: Callable = unc_path,
+    # Dependencies for multiprocessing
+    copy: ModuleType = copy,
+    os: ModuleType = os,
+    time: ModuleType = time,
+    datetime: type = datetime,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
+) -> tuple[str, dict]: ...
+
+
+@overload
+def _preprocessing_sample(
+    sample_data: dict,
+    process: list[tuple[str, str, str, str, int, Any, int, int]],
+    custom_chains: list,
+    process_chains: list,
+    specpipe_report_directory: str,
+    preprocess_status: dict,
+    *,
+    dump_result: Literal[True] = True,
+    return_result_path: Literal[False] = False,
+    dump_backup: bool = False,
+    return_step_result: Literal[True] = True,
+    final_result_only: bool = True,
+    is_test_run: bool = False,
+    dump_directory: str = "",
+    # Update progress status, use in a processing loop for resume
+    update_progress_log: bool = False,
+    # Explicitly load function for multiprocessing
+    _dl_val: Callable = _dl_val,
+    pixel_apply: Callable = pixel_apply,
+    dump_vars: Callable = dump_vars,
+    unc_path: Callable = unc_path,
+    # Dependencies for multiprocessing
+    copy: ModuleType = copy,
+    os: ModuleType = os,
+    time: ModuleType = time,
+    datetime: type = datetime,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
+) -> dict: ...
+
+
+@overload
+def _preprocessing_sample(
+    sample_data: dict,
+    process: list[tuple[str, str, str, str, int, Any, int, int]],
+    custom_chains: list,
+    process_chains: list,
+    specpipe_report_directory: str,
+    preprocess_status: dict,
+    *,
+    dump_result: Literal[True] = True,
+    return_result_path: Literal[False] = False,
+    dump_backup: bool = False,
+    return_step_result: Literal[False] = False,
+    final_result_only: bool = True,
+    is_test_run: bool = False,
+    dump_directory: str = "",
+    # Update progress status, use in a processing loop for resume
+    update_progress_log: bool = False,
+    # Explicitly load function for multiprocessing
+    _dl_val: Callable = _dl_val,
+    pixel_apply: Callable = pixel_apply,
+    dump_vars: Callable = dump_vars,
+    unc_path: Callable = unc_path,
+    # Dependencies for multiprocessing
+    copy: ModuleType = copy,
+    os: ModuleType = os,
+    time: ModuleType = time,
+    datetime: type = datetime,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
+) -> None: ...
+
+
+@overload
+def _preprocessing_sample(
+    sample_data: dict,
+    process: list[tuple[str, str, str, str, int, Any, int, int]],
+    custom_chains: list,
+    process_chains: list,
+    specpipe_report_directory: str,
+    preprocess_status: dict,
+    *,
+    dump_result: Literal[False] = False,
+    return_result_path: bool = True,
+    dump_backup: bool = False,
+    return_step_result: bool = False,
+    final_result_only: bool = True,
+    is_test_run: bool = False,
+    dump_directory: str = "",
+    # Update progress status, use in a processing loop for resume
+    update_progress_log: bool = False,
+    # Explicitly load function for multiprocessing
+    _dl_val: Callable = _dl_val,
+    pixel_apply: Callable = pixel_apply,
+    dump_vars: Callable = dump_vars,
+    unc_path: Callable = unc_path,
+    # Dependencies for multiprocessing
+    copy: ModuleType = copy,
+    os: ModuleType = os,
+    time: ModuleType = time,
+    datetime: type = datetime,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
+) -> dict: ...
+
+
+# Preprocessing of single sample using all chains
+# SpecPipe attributes - argumente relation:
+#     sample_data = SpecPipe.sample_data | SpecPipe.pretest_data
+#     process = SpecPipe.process
+#     custom_chains = SpecPipe.custom_chains
+#     process_chains = SpecPipe.process_chains
+#     specpipe_report_directory = SpecPipe.spec_exp.report_directory
+# Sample data format - ROI: {ID, label, target, img_path, roi_coords}
+# Sample data format - standalone spec: {ID, label, target, spec1d: tuple}
+# Sample data format - test: {img_path, test_img_path, roi_coords, test_roi_coords, roitable, spec1d}
+@simple_type_validator
+def _preprocessing_sample(  # noqa: C901
+    sample_data: dict,
+    process: list[tuple[str, str, str, str, int, Any, int, int]],
+    custom_chains: list,
+    process_chains: list,
+    specpipe_report_directory: str,
+    preprocess_status: dict,
+    *,
+    dump_result: bool = True,
+    return_result_path: bool = True,
+    dump_backup: bool = False,
+    return_step_result: bool = False,
+    final_result_only: bool = True,
+    is_test_run: bool = False,
+    dump_directory: str = "",
+    # Update progress status, use in a processing loop for resume
+    update_progress_log: bool = False,
+    # Explicitly load function for multiprocessing
+    _dl_val: Callable = _dl_val,
+    pixel_apply: Callable = pixel_apply,
+    dump_vars: Callable = dump_vars,
+    unc_path: Callable = unc_path,
+    # Dependencies for multiprocessing
+    copy: ModuleType = copy,
+    os: ModuleType = os,
+    time: ModuleType = time,
+    datetime: type = datetime,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
+) -> Union[str, dict, tuple[str, dict], None]:
+    """
+    Preprocessing of single sample using all chains of SpecPipe.
+
+    Parameters
+    ----------
+    sample_data : dict
+        'sample_data' or 'pretest_data' of SpecPipe.
+
+    process : list[tuple[str, str, str, str, int, Callable, int, int]]
+        'process' of SpecPipe.
+
+    custom_chains : list
+        'custom_chains' of SpecPipe.
+
+    process_chains : list
+        'process_chains' of SpecPipe.
+
+    specpipe_report_directory : str
+        'report_directory' of SpecExp specified for SpecPipe.
+
+    dump_result : bool, optional
+        Whether result is dumped to dill file. The default is True.
+
+    return_result_path : bool, optional
+        Whether the result file path is returned. The default is True.
+
+    dump_backup : bool, optional
+        Whether backup for the step result is dumped. The backup file is named with the datetime of dumping.
+
+    return_step_result : bool, optional
+        Whether the step result is returned. The default is False. If both path and step_result are to be returned, (path, step_result) is returned.
+
+    final_result_only : bool, optional
+        Whether only the final result of chains is dumped, if True, only the result from the last preprocessing step is dumped.
+        The default is True.
+
+    is_test_run : bool, optional
+        True if test data is applied for chain testing. The default is False.
+
+    dump_directory : str, optional
+        If '', default directory in specpipe_report_directory will be used as result file directory, or this directory is used for resulting files. The default is ''.
+
+    update_progress_log : bool = False
+        Whether to update progress log files, use to enable resume. The default is False.
+    """  # noqa: E501
+    try:
+        # Resume testing
+        # Resume testing - initial break status
+        env_preprocess_resume_test_num = int(os.getenv("SPECPIPE_PREPROCESS_RESUME_TEST_NUM", "-1"))
+        if env_preprocess_resume_test_num > 0 and not is_test_run:
+            with preprocess_status['lock']:
+                preprocess_resume_test_num = preprocess_status['preprocess_resume_test_num']
+                if env_preprocess_resume_test_num > int(preprocess_resume_test_num.value):
+                    preprocess_resume_test_num.value = env_preprocess_resume_test_num
+                # Resume testing - conditional break
+                if preprocess_resume_test_num.value > 1:
+                    raise ValueError("Preprocessing resume test raise")
+                # Resume testing - status update
+                preprocess_resume_test_num.value = preprocess_resume_test_num.value + 1
+                os.environ["SPECPIPE_PREPROCESS_RESUME_TEST_NUM"] = str(preprocess_resume_test_num.value)
+
+        # Validate sample data label
+        if (sample_data["label"] == "") or (sample_data["label"] == "-"):
+            sample_data_label = sample_data["ID"]
+        else:
+            sample_data_label = sample_data["label"]
+
+        # Get methods
+        methods = np.array(process)
+
+        # Get testing chain
+        if len(custom_chains) > 0:
+            chains = custom_chains
+        elif len(process_chains) > 0:
+            chains = process_chains
+        else:
+            raise ValueError("\nNo process added")
+
+        # Validate chains
+        chain_length = len(process_chains[0])
+        for chain in process_chains:
+            if len(chain) != chain_length:
+                raise ValueError(
+                    f"Inconsistent steps of processing in chain: {chain} \
+                        \nExpected number of steps: {chain_length}, got: {len(chain)}"
+                )
+
+        # Chains
+        # [(process 1 ID of step 1, process 1 ID of step 2,...), (process 2 ID of step 1, process 1 ID of step 2,...), ...]  # noqa: E501
+        # Status vector: Check previous steps,
+        # once identical or previous process completed, avoid computing repeatly but use the previous result.
+        # [[Step1:[preceding processes 1],[preceding processes 2],...],[Step2:...],...]
+        model_ids = [pit[0] for pit in process if pit[3] == "model"]
+        if len(model_ids) > 0:
+            n_model_step = 1
+        else:
+            n_model_step = 0
+        # Number of preprocessing steps
+        preprocess_chain_length = len(chains[0]) - n_model_step
+        if preprocess_chain_length < 1:
+            raise ValueError("No preprocessing process found.")
+        calc_status: list[list] = [[] for _ in range(preprocess_chain_length)]
+        status_results: list[list] = [[] for _ in range(preprocess_chain_length)]
+
+        # Validate preprocessed image dir
+        # Preprocessed image dir for data level 0~4
+        # Formal run
+        if not is_test_run:
+            preprocessed_img_dir = specpipe_report_directory + "Preprocessing/Preprocessed_images/"
+            if not os.path.exists(unc_path(preprocessed_img_dir)):
+                raise ValueError(f"Invalid preprocessed image directory path: {preprocessed_img_dir}")
+        # Test run
+        else:
+            preprocessed_img_dir = specpipe_report_directory + "test_run/Preprocessed_images/"
+            if not os.path.exists(unc_path(preprocessed_img_dir)):
+                os.makedirs(unc_path(preprocessed_img_dir))
+
+        # Implement processing pipeline for every chain of chains
+        status_results = _chain_step_processor(
+            chains,
+            n_model_step,
+            calc_status,
+            methods,
+            sample_data,
+            preprocessed_img_dir,
+            status_results,
+            preprocess_status,
+        )
+
+        # Collect test preprocessing results of current chain (chain i)
+        if final_result_only:
+            status_results = status_results[-1:]
+        status_results_out = {
+            "ID": sample_data["ID"],
+            "label": sample_data_label,  # Dataset label
+            "target": sample_data["target"],
+            "sample_label": sample_data["label"],
+            "validation_group": sample_data["validation_group"],
+            "status_results": status_results,
+        }
+
+        # Dump step results
+        if is_test_run:
+            dir_name = "test_run"
+            file_name = "PreprocessingTestingResult"
+        else:
+            dir_name = "Preprocessing"
+            file_name = f"PreprocessingResult_sample_{sample_data_label}"
+        # Output path
+        if len(dump_directory) > 0:
+            sdir = dump_directory
+        else:
+            sdir = specpipe_report_directory + f"{dir_name}/Step_results/"
+        if not os.path.exists(unc_path(sdir)):
+            os.makedirs(unc_path(sdir))
+        if dump_result:
+            chain_result_path = sdir + f"{file_name}.dill"
+            dump_vars(chain_result_path, status_results_out, backup=dump_backup)
+
+        # Update progress
+        step_dir = specpipe_report_directory + "Preprocessing/Step_results/"
+        log_dir_path = step_dir + "Preprocess_progress_logs/"
+        log_fp = log_dir_path + sample_data["ID"]
+        if update_progress_log:
+            if not os.path.exists(unc_path(log_dir_path)):
+                os.makedirs(unc_path(log_dir_path))
+            if not os.path.exists(unc_path(log_fp)):
+                with open(unc_path(log_fp), "w") as f:
+                    f.write("")
+
+        # Return result file path and step results if required
+        if dump_result:
+            # Return dumped file path and step results
+            if return_result_path & return_step_result:
+                return chain_result_path, status_results_out
+            elif return_result_path & (not return_step_result):
+                return chain_result_path
+            elif (not return_result_path) & return_step_result:
+                return status_results_out
+            else:
+                return None
+        # Return step results only
+        else:
+            return status_results_out
+            if not return_step_result:
+                raise warnings.warn(
+                    "When dump_result is False, \
+                        the result is always returned and the return_step_result argument is ignored.",
+                    UserWarning,
+                    stacklevel=3,
+                )
+
+    # Error handling
+    except Exception as e:
+        # Log directory
+        if is_test_run:
+            dir_name = "test_run"
+        else:
+            dir_name = "Preprocessing"
+        errdir = specpipe_report_directory + f"{dir_name}/Step_results/Error_logs/"
+        if not os.path.exists(unc_path(errdir)):
+            os.makedirs(unc_path(errdir))
+        assert hasattr(datetime, 'now')
+        cts: str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        # PID for multiprocessing
+        pid = os.getpid()
+        error_log_path = errdir + f"error_{cts}_pid_{pid}.log"
+        # Validate sample data label
+        if (sample_data["label"] == "") or (sample_data["label"] == "-"):
+            sample_data_label = sample_data["ID"]
+        else:
+            sample_data_label = sample_data["label"]
+        # Write error log
+        err_msg = f"Failed in the preprocessing of '{sample_data_label}', error message: \n\n{str(e)}"
+        with open(unc_path(error_log_path), "w") as f:
+            f.write(err_msg)
+        raise ValueError(e) from e
+
+
+# Chain step iterating processor
+def _chain_step_processor(
+    chains: list,
+    n_model_step: int,
+    calc_status: list[list],
+    methods: np.ndarray,
+    sample_data: dict,
+    preprocessed_img_dir: str,
+    status_results: list[list],
+    preprocess_status: dict,
+    *,
+    # Dependencies for multiprocessing
+    copy: ModuleType = copy,
+    os: ModuleType = os,
+    time: ModuleType = time,
+    datetime: type = datetime,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
+) -> list[list]:
+    """Iterates the chains and steps to perform corresponding processing."""
+    # Chain and step loop
+    for chain_ind, chain in enumerate(chains):
+        chain_result: list = []
+        step_procs: list = []
+        # For every step exclude modeling step
+        for stepi in range(len(chain) - n_model_step):
+            step = chain[stepi]
+            # Create new step_procs and sample result for the step
+            step_procs = copy.deepcopy(step_procs)
+            chain_result = copy.deepcopy(chain_result)
+            # Note down processes of every step in a chain
+            step_procs.append(step)
+            # Inherit calculated result to avoid repeating calculation
+            if step_procs in calc_status[stepi]:
+                chain_result = [srt[4] for srt in status_results[stepi] if srt[1] == step_procs]
+            # New step calculation
+            else:
+                # Get method and method info
+                # [0 Process_ID, 1 Process_label, 2 Input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
+                method_item = methods[methods[:, 0] == step, :][0]
+                dl_in = _dl_val(method_item[2])[0]
+                dl_out = _dl_val(method_item[3])[0]
+                method_func = method_item[5]
+                # Get input data of the step
+                # Pretest_data: [img_path, test_img_path, roi_coords, test_roi_coords, roitable, spec1d]
+                if len(chain_result) == 0:
+                    if dl_in <= 4:
+                        step_input_data = sample_data["img_path"]
+                    elif dl_in == 5:
+                        step_input_data = sample_data["img_path"]
+                    elif dl_in == 6:
+                        step_input_data = sample_data["roitable"]
+                    elif dl_in == 7:
+                        step_input_data = sample_data["spec1d"]
+                else:
+                    step_input_data = chain_result[-1]
+                roi_coords = sample_data["roi_coords"]
+                # Preprocessing computing
+                try:
+                    status_results, calc_status = _single_process_handler(
+                        dl_in,
+                        chain_result,
+                        method_func,
+                        step_input_data,
+                        roi_coords,
+                        step_procs,
+                        stepi,
+                        dl_out,
+                        preprocessed_img_dir,
+                        status_results,
+                        calc_status,
+                        preprocess_status,
+                    )
+                except Exception as e:
+                    method_item = tuple(method_item)
+                    method_item_out = method_item[1:5] + (method_item[5].__class__.__name__,) + method_item[6:8]
+                    raise ValueError(
+                        f"\nTest failed for chain: \nChain index: {chain_ind}, \nChain: {chain};\
+                            \n\nProcess ID: {step}, \nProcess item: {method_item_out}, \n\nError message: \n{e}"
+                    ) from e
+    return status_results
+
+
+# Single process handler
+def _single_process_handler(
+    dl_in: int,
+    chain_result: list,
+    method_func: Callable,
+    step_input_data: object,
+    roi_coords: list[list[tuple[Union[int, float], Union[int, float]]]],
+    step_procs: list,
+    stepi: int,
+    dl_out: int,
+    preprocessed_img_dir: str,
+    status_results: list[list],
+    calc_status: list[list],
+    preprocess_status: dict,
+    *,
+    # Dependencies for multiprocessing
+    copy: ModuleType = copy,
+    os: ModuleType = os,
+    time: ModuleType = time,
+    datetime: type = datetime,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
+) -> tuple[list[list], list[list]]:
+    """Single process handler to allocate method wrapper according to data levels."""
+    # Apply the step process function
+    # ============ Image processing ============
+    # Create files for image processing computation start and completion status
+    if dl_in <= 4:
+        step_input_data = str(step_input_data)
+        processed_image_path = _image_processing_step(
+            dl_in=dl_in,
+            preprocessed_img_dir=preprocessed_img_dir,
+            input_image_path=step_input_data,
+            method_func=method_func,
+            preprocess_status=preprocess_status,
+        )
+        chain_result.append(processed_image_path)
+    # ============ ROI data extraction ============
+    elif dl_in == 5:
+        # Accepts image path and ROI coords as input
+        chain_result.append(method_func(step_input_data, roi_coords))
+    # ============ Extracted data / Sample data processing ============
+    elif (dl_in >= 6) & (dl_in <= 7):
+        chain_result.append(method_func(step_input_data))
+    # Save calculated step results
+    # Status result: (0 - step_id, 1 step_procs, 2 dl_in, 3 dl_out, 4 sample_result)
+    # Step_id as str of procs id
+    step_id = ""
+    for proc_id in step_procs:
+        step_id = step_id + "proc_" + str(proc_id) + "-"
+    # Store step result and calculation status
+    status_results[stepi].append((step_id, step_procs, dl_in, dl_out, chain_result[-1]))
+    calc_status[stepi].append(step_procs)
+    return status_results, calc_status
+
+
+def _image_processing_step(
+    dl_in: int,
+    preprocessed_img_dir: str,
+    input_image_path: str,
+    method_func: Callable,
+    preprocess_status: dict,
+    *,
+    # Dependencies for multiprocessing
+    copy: ModuleType = copy,
+    os: ModuleType = os,
+    time: ModuleType = time,
+    datetime: type = datetime,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
+    unc_path: Callable = unc_path,
+) -> str:
+    """
+    Multiprocessing compatible image processing step with shared status for operation control on a same file.
+    """
+    # Output dst image path
+    img_path_val = os.path.splitext(str(input_image_path).replace("\\", "/").replace("//", "/"))
+    img_name = img_path_val[0].split("/")[-1]
+    if dl_in == 0:
+        output_image_path = preprocessed_img_dir + img_name + "_processed_by_" + method_func.__name__ + img_path_val[1]
+    else:
+        output_image_path = preprocessed_img_dir + img_name + "_px_app_" + method_func.__name__ + img_path_val[1]
+
+    # Extract shared objects - preprocess_status of pathos.helpers.mp.Manager.list and lock in pipeline.py
+    start_status = preprocess_status['start_status']
+    completion_status = preprocess_status['completion_status']
+    processed_image_init = preprocess_status['processed_image_init']
+    lock = preprocess_status['lock']
+
+    # Avoid race
+    with lock:
+        if output_image_path in start_status:
+            wait = True
+        else:
+            wait = False
+        # Processing of unprocessed image
+        # Write starting status
+        start_status.append(output_image_path)
+        # Initialize output image - remove if exists before run
+        if output_image_path not in processed_image_init:
+            if os.path.exists(unc_path(output_image_path)):
+                os.remove(unc_path(output_image_path))
+            processed_image_init.append(output_image_path)
+
+    # Image processing
+    if wait:
+        _wait_for_completion(output_image_path, preprocess_status)
+        return str(output_image_path)
+    else:
+        output_image_path = _image_processor(
+            input_image_path,
+            dl_in,
+            preprocessed_img_dir,
+            method_func,
+            output_image_path,
+        )
+        # Write completion status and process results
+        with lock:
+            completion_status.append(output_image_path)
+        return str(output_image_path)
+
+
+def _wait_for_completion(
+    output_image_path: str,
+    preprocess_status: dict,
+    *,
+    max_wait_time: int = 10800,
+    # Dependencies for multiprocessing
+    time: ModuleType = time,
+    np: ModuleType = np,
+) -> None:
+    """Wait for the completion of started processing of existed image."""
+    start_time = time.time()
+    # Validate max wait time
+    max_wait_time = max(max_wait_time, 1)
+    lock = preprocess_status['lock']
+    completion_status = preprocess_status['completion_status']
+    while True:
+        with lock:
+            if output_image_path in completion_status:
+                break
+        if time.time() - start_time > max_wait_time:
+            raise TimeoutError(f"Image processing timeout, target image:\n{output_image_path}")
+        time.sleep(np.random.uniform(2, 3))
+    return None
+
+
+def _image_processor(
+    input_image_path: str,
+    dl_in: int,
+    preprocessed_img_dir: str,
+    method_func: Callable,
+    output_image_path: str,
+    *,
+    # Dependencies for multiprocessing
+    copy: ModuleType = copy,
+    os: ModuleType = os,
+    time: ModuleType = time,
+    datetime: type = datetime,
+    np: ModuleType = np,
+    torch: ModuleType = torch,
+) -> str:
+    """Processing images and return to specified path"""
+    # For data level 1~4 implementing pixel application - choose mode
+    if dl_in == 1:
+        pix_app_mode = "spec"
+    elif dl_in == 2:
+        pix_app_mode = "array"
+    elif dl_in == 3:
+        pix_app_mode = "tensor"
+    else:
+        pix_app_mode = "tensor_hyper"
+    # Process image and return path of processed image
+    if dl_in == 0:
+        output_image_path = method_func(input_image_path, output_image_path)
+    else:
+        output_image_path = pixel_apply(
+            input_image_path,
+            method_func,
+            pix_app_mode,
+            output_image_path,
+            progress=False,
+            override=False,
+        )
+    # Return path of processed image
+    return output_image_path
+
+
+# Model method wrapper, sample_list as method input
+class _ModelMethod:
+    """
+    Model method wrapper to specify modeling and model evaluation parameters.
+    """
+
+    def __init__(
+        self,
+        # Model configuration
+        model_label: str,
+        is_regression: Optional[bool],
+        x_shape: Optional[tuple[int]],
+        report_dir: str,
+        method: object,
+        result_backup: bool,
+        # Modeling parameters
+        validation_method: str,
+        unseen_threshold: Optional[float],
+        # Model evaluation reporting parameters
+        data_split_config: Union[str, dict[str, Any]],
+        validation_config: Union[str, dict[str, Any]],
+        metrics_config: Union[str, dict[str, Any], None],
+        roc_plot_config: Union[str, dict, None],
+        scatter_plot_config: Union[str, dict[str, Any], None],
+        residual_config: Union[str, dict[str, Any], None],
+        residual_plot_config: Union[str, dict[str, Any], None],
+        influence_analysis_config: Union[str, dict[str, Any], None],
+    ) -> None:
+        self.__name__ = model_label
+        self.model_label = model_label
+        self.is_regression = is_regression
+        self.input_shape = x_shape
+        self.report_dir = report_dir
+        self.method = method
+        self.result_backup = result_backup
+        self.validation_method = validation_method
+        self.unseen_threshold = unseen_threshold
+        self.data_split_config = data_split_config
+        self.validation_config = validation_config
+        self.metrics_config = metrics_config
+        self.roc_plot_config = roc_plot_config
+        self.scatter_plot_config = scatter_plot_config
+        self.residual_config = residual_config
+        self.residual_plot_config = residual_plot_config
+        self.influence_analysis_config = influence_analysis_config
+
+    @simple_type_validator
+    def evaluation(
+        self,
+        sample_list: list[
+            tuple[
+                str,
+                str,
+                str,
+                tuple[int],
+                Union[str, int, bool, float],
+                Annotated[Any, arraylike_validator(ndim=1)],
+            ]
+        ],
+        data_label: str,
+        report_directory: Optional[str] = None,
+        modeleva: type = ModelEva,
+        silent_all: bool = False,
+    ) -> None:
+        """
+        Evaluation of specified model. Configured at _ModelMethod instance.
+
+        Parameters
+        ----------
+        sample_list : list of (str, tuple of int, str or int or bool or float, 1D array-like)
+            Standard sample data of SpecPipe for modeling.
+        data_label : str
+            Label for the specified dataset.
+        report_directory : Optional[str], optional
+            Report_directory for model evaluation reports. The default is using report_directory of the _ModelMethod instance.
+        """  # noqa: E501
+        if report_directory is None:
+            report_directory = self.report_dir
+        # Model Evaluation
+        model_eva = modeleva(
+            sample_list=sample_list,
+            model=self.method,
+            validation_method=self.validation_method,
+            report_directory=report_directory,
+            model_label=self.model_label,
+            data_label=data_label,
+            is_regression=self.is_regression,
+            unseen_threshold=self.unseen_threshold,
+            result_backup=self.result_backup,
+            silent_all=silent_all,
+        )
+        if self.is_regression:
+            model_eva.regressor_evaluation(
+                data_split_config=self.data_split_config,
+                validation_config=self.validation_config,
+                metrics_config=self.metrics_config,
+                scatter_plot_config=self.scatter_plot_config,
+                residual_config=self.residual_config,
+                residual_plot_config=self.residual_plot_config,
+                influence_analysis_config=self.influence_analysis_config,
+            )
+        else:
+            model_eva.classifier_evaluation(
+                data_split_config=self.data_split_config,
+                validation_config=self.validation_config,
+                metrics_config=self.metrics_config,
+                roc_plot_config=self.roc_plot_config,
+                residual_config=self.residual_config,
+                influence_analysis_config=self.influence_analysis_config,
+            )
+
+    def __call__(self, sample_list: list, data_label: str, report_directory: Optional[str] = None) -> None:
+        self.evaluation(sample_list, data_label, report_directory)
+
+
+# Run modeling on single dataset
+# Notes: different from '_test_model',
+# Sample_list item: (0 - Sample id, 1 - Sample label, 2 - Validation group, 3 - Original shape, 4 - Target value, 5 - Sample predictor value)  # noqa: E501
+@simple_type_validator
+def _model_evaluator(  # noqa: C901
+    preprocess_result: list[
+        tuple[
+            str,
+            str,
+            str,
+            tuple[int],
+            Union[str, int, bool, float],
+            Annotated[Any, arraylike_validator(ndim=1)],
+        ]
+    ],
+    preprocess_chain: tuple,
+    preprocess_chain_label: str,
+    model_processes: list[tuple[str, str, str, str, int, Any, int, int]],
+    specpipe_report_directory: str,
+    result_directory: str = "",
+    # Update progress status, use in a processing loop for resume
+    update_progress_log: bool = False,
+    # Import applied functions and modules
+    _dl_val: Callable = _dl_val,
+    unc_path: Callable = unc_path,
+    load_vars: Callable = load_vars,
+    dump_vars: Callable = dump_vars,
+    _target_type_validation_for_serialization: Callable = _target_type_validation_for_serialization,
+    modeleva: type = ModelEva,
+    silent_all: bool = False,
+) -> None:
+    """
+    Evaluation of added models on a single sample_list dataset.
+    'preprocess_result' must be the standard 'sample_list' output.
+    'preprocess_chain_label' serves as the 'data_label' for modeling data.
+    'preprocess_chain_label' must be unique across all sample lists for modeling.
+    """
+    # Import applied modules
+    import os
+    import time
+    import numpy as np
+
+    # Resume testing - initial break status (EnvVar own copy in a subprocess in multiprocessing)
+    model_resume_test_num = int(os.getenv("SPECPIPE_MODEL_RESUME_TEST_NUM", "-1"))
+    # Resume testing - conditional break
+    if model_resume_test_num > 0:
+        if model_resume_test_num > 1:
+            raise ValueError("Modeling resume test raise")
+    # Resume testing - status update (need lock for multiprocessing)
+    if model_resume_test_num > 0:
+        model_resume_test_num = model_resume_test_num + 1
+        os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"] = str(model_resume_test_num)
+
+    # Name reassignment
+    sample_list = preprocess_result
+    preprocess_chain = tuple(preprocess_chain)
+    sample_list_label = preprocess_chain_label
+
+    # Validate report directory
+    if result_directory == "":
+        result_directory = specpipe_report_directory
+    model_result_dir = result_directory + "Modeling/"
+    if not os.path.exists(unc_path(model_result_dir)):
+        os.makedirs(unc_path(model_result_dir))
+
+    # Validate sample_list_label - Absolutely unique number if label not provided (commonly it should be given)
+    if sample_list_label == "":
+        if update_progress_log:
+            raise ValueError(
+                "Consistent and unique sample_list_label must be provided \
+                    if update_progress_log set True for enabling break resuming."
+            )
+        sample_list_label = str(time.time_ns())[4:-2] + str(os.getpid())
+
+    # Validate model processes
+    for procit in model_processes:
+        if procit[3] != "model":
+            raise ValueError(f"Model process must have output data level of 'model', but got: '{procit[3]}'")
+        if not callable(procit[-3]):
+            raise ValueError(
+                f"Invalid model evaluation method, \
+                    given method is not callable : {procit[-3]}, got type : {type(procit[-3])}"
+            )
+
+    # Save preprocess chain info for the sample_list
+    model_report_dir = model_result_dir + "Model_evaluation_reports/"
+    if not os.path.exists(unc_path(model_report_dir)):
+        os.makedirs(unc_path(model_report_dir))
+    # Chain file name
+    chain_label_file_path = model_report_dir + f"{preprocess_chain_label}.txt"
+    # Save chain process file
+    with open(unc_path(chain_label_file_path), "w") as f:
+        for pci, pproc in enumerate(preprocess_chain):
+            if pci < (len(preprocess_chain) - 1):
+                f.write(f"{pproc}\n")
+            else:
+                f.write(f"{pproc}")
+
+    # Get model processes with input data level index dl_in_ind
+    # Process: [0 Process_ID, 1 Process_label, 2 Input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
+    for modelit in model_processes:
+        # Get test model
+        model_methodi = modelit[5]
+        # Get model input data level
+        dl_in_name = _dl_val(modelit[2])[1]
+        dl_in_ind = _dl_val(modelit[2])[0]
+        # Get model input data shape
+        input_dshape = model_methodi.input_shape
+        # Validate data shape
+        sample_list_shape = (len(sample_list), len(sample_list[0]))
+        if input_dshape is None:
+            input_dshape = sample_list_shape
+        elif np.prod(sample_list_shape) != np.prod(input_dshape):
+            raise ValueError(
+                f"Cannot reshape sample data with shape {sample_list_shape} \
+                    into specified input data shape {input_dshape} of the model.\
+                    \nInput step data ID: {sample_list[0]}\nModel label: {modelit[1]}"
+            )
+        # Modeling
+        # Sample_list item: (0 - Sample id, 1 - Sample label, 2 - Validation group, 3 - Original shape, 4 - Target value, 5 - Sample predictor value)  # noqa: E501
+        if dl_in_ind == 7:
+            # Regression
+            if model_methodi.is_regression:
+                model_methodi.evaluation(
+                    sample_list=sample_list,
+                    data_label="chain_" + sample_list_label,
+                    report_directory=model_result_dir,
+                    modeleva=modeleva,
+                    silent_all=silent_all,
+                )
+            # Classification
+            else:
+                model_methodi.evaluation(
+                    sample_list=sample_list,
+                    data_label="chain_" + sample_list_label,
+                    report_directory=model_result_dir,
+                    modeleva=modeleva,
+                    silent_all=silent_all,
+                )
+        else:
+            raise ValueError(f"Model only accepts data level 'spec1d' as input, but got: {dl_in_name}")
+
+    # Update progress
+    log_path = model_report_dir + "modeling_progress_log.dill"
+    if os.path.exists(unc_path(log_path)):
+        modeling_progress_log = load_vars(log_path)["modeling_progress_log"]
+        if preprocess_chain not in modeling_progress_log:
+            modeling_progress_log.append(preprocess_chain)
+        else:
+            warnings.warn(
+                f"Sample_list_label must be unique, got duplicated label: {sample_list_label}",
+                UserWarning,
+                stacklevel=3,
+            )
+        dump_vars(log_path, {"modeling_progress_log": modeling_progress_log}, backup=False)
+    else:
+        dump_vars(log_path, {"modeling_progress_log": [preprocess_chain]}, backup=False)
+
+
+@simple_type_validator
+def _model_evaluator_mp(
+    cdp: str,
+    pchains: list[tuple],
+    model_processes: list[tuple[str, str, str, str, int, Any, int, int]],
+    specpipe_report_directory: str,
+    result_directory: str = "",
+    # Update progress status, use in a processing loop for resume
+    update_progress_log: bool = False,
+    # Import applied functions and modules
+    _model_evaluator: Callable = _model_evaluator,
+    _dl_val: Callable = _dl_val,
+    unc_path: Callable = unc_path,
+    load_vars: Callable = load_vars,
+    dump_vars: Callable = dump_vars,
+    _target_type_validation_for_serialization: Callable = _target_type_validation_for_serialization,
+    modeleva: type = ModelEva,
+    silent_all: bool = True,
+) -> None:
+    """
+    Evaluation of added models on a single sample_list dataset for multiprocessing.
+    cdp : chain data path
+    pchains : preprocessing chains
+    """
+    try:
+        # Import applied modules
+        import os
+        from datetime import datetime
+
+        # Load chain data
+        pc_it = load_vars(cdp)
+        pc_sample_list = pc_it["chain_res"]
+        pc_sample_list = _target_type_validation_for_serialization(pc_sample_list)
+        pchain = pc_it["chain_procs"]
+        # Use preprocess chain ID as chain label
+        pproc_chain_label = [f"Preprocessing_#{pci}" for pci, pc in enumerate(pchains) if pc == pchain][0]
+        _model_evaluator(
+            preprocess_result=pc_sample_list,
+            preprocess_chain=pchain,
+            preprocess_chain_label=pproc_chain_label,
+            model_processes=model_processes,
+            specpipe_report_directory=specpipe_report_directory,
+            result_directory=result_directory,
+            update_progress_log=update_progress_log,
+            # Import applied functions
+            _dl_val=_dl_val,
+            load_vars=load_vars,
+            dump_vars=dump_vars,
+            modeleva=modeleva,
+            silent_all=silent_all,
+        )
+
+    # Error handling
+    except Exception as e:
+        # Validate report directory
+        if result_directory == "":
+            result_directory = specpipe_report_directory
+        model_result_dir = result_directory + "Modeling/"
+        if not os.path.exists(unc_path(model_result_dir)):
+            os.makedirs(unc_path(model_result_dir))
+        errdir = model_result_dir + "Error_logs/"
+        if not os.path.exists(unc_path(errdir)):
+            os.makedirs(unc_path(errdir))
+        cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        pid = os.getpid()
+        error_log_path = errdir + f"error_{cts}_pid_{pid}.log"
+        err_msg = f"\nFailed in the modeling of preprocessing chain from path '{cdp}', error message: \n\n{str(e)}\n"
+        with open(unc_path(error_log_path), "w") as f:
+            f.write(err_msg)
+        raise ValueError(e) from e

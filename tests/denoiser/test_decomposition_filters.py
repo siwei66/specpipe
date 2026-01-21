@@ -8,8 +8,8 @@ import numpy as np
 import pytest
 import sys
 
-from specpipe.denoiser.utils import create_test_array
-from specpipe.denoiser.decomposition_filters import FourierFilter, WaveletFilter
+from swectral.denoiser.utils import create_test_array
+from swectral.denoiser.decomposition_filters import FourierFilter, WaveletFilter
 
 
 # %% Test de

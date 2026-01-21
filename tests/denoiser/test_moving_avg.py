@@ -10,9 +10,9 @@ import pytest
 
 import sys
 
-from specpipe.denoiser.utils import create_test_array
-from specpipe.denoiser.outlier import ArrayOutlier
-from specpipe.denoiser.moving_avg import MovingAvg
+from swectral.denoiser.utils import create_test_array
+from swectral.denoiser.outlier import ArrayOutlier
+from swectral.denoiser.moving_avg import MovingAvg
 
 
 # %% Test MovingAvg

@@ -24,13 +24,13 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 
-from specpipe.specio import simple_type_validator, silent
-from specpipe.example_data import create_test_spec_exp
-from specpipe.vegeind.demo_data import create_specind_demo_data
-from specpipe.pipeline import SpecPipe
-from specpipe.roistats import roi_mean
+from swectral.specio import simple_type_validator, silent
+from swectral.example_data import create_test_spec_exp
+from swectral.vegeind.demo_data import create_specind_demo_data
+from swectral.pipeline import SpecPipe
+from swectral.roistats import roi_mean
 
-from specpipe.modelconnector import (
+from swectral.modelconnector import (
     combine_transformer_classifier,
     combine_transformer_regressor,
     factorial_transformer_chains,

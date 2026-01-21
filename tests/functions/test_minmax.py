@@ -31,12 +31,12 @@ import torch  # noqa: E402
 import rasterio  # noqa: E402
 
 # Local
-from specpipe.example_data import create_test_raster  # noqa: E402
+from swectral.example_data import create_test_raster  # noqa: E402
 
 # Function to test
-from specpipe.rasterop import pixel_apply  # noqa: E402
-from specpipe.functions.minmax import minmax  # noqa: E402
-from specpipe.functions.minmax_hyper import minmax_hyper  # noqa: E402
+from swectral.rasterop import pixel_apply  # noqa: E402
+from swectral.functions.minmax import minmax  # noqa: E402
+from swectral.functions.minmax_hyper import minmax_hyper  # noqa: E402
 
 # Check if cuda is available
 try:

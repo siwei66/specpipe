@@ -27,10 +27,10 @@ import torch
 import rasterio
 
 # Local
-from specpipe.example_data import create_test_raster
+from swectral.example_data import create_test_raster
 
 # Functions to test
-from specpipe.rasterop import (
+from swectral.rasterop import (
     auto_fp,
     croproi,
     dtype_mapper,

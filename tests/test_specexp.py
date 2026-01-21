@@ -21,10 +21,10 @@ import unittest
 import pandas as pd
 
 # Local
-from specpipe.specio import silent
+from swectral.specio import silent
 
 # Functions to test
-from specpipe.specexp import SpecExp
+from swectral.specexp import SpecExp
 
 
 # %% Helper functions for testing

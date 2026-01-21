@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Basic usage example for SpecPipe - Mock data version, No data downloading needed
+Swectral - Basic usage example for SpecPipe - Mock data version, No data downloading needed
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
@@ -19,7 +19,7 @@ if os.path.exists(data_dir):
 os.makedirs(data_dir)
 
 # Create random mock data
-from specpipe import create_example_raster, create_example_roi_xml
+from swectral import create_example_raster, create_example_roi_xml
 
 create_example_raster(f"{data_dir}/example.tif")
 create_example_roi_xml(f"{data_dir}/example_roi.xml")
@@ -31,7 +31,7 @@ create_example_roi_xml(f"{data_dir}/example_roi.xml")
 report_dir = data_dir
 
 # Create a SpecExp instance for experiment data
-from specpipe import SpecExp
+from swectral import SpecExp
 
 exp = SpecExp(report_dir)
 
@@ -145,7 +145,7 @@ Parallel processes with same data levels and application sequences are arranged 
 """
 
 # 3.1 Create processing pipeline
-from specpipe import SpecPipe
+from swectral import SpecPipe
 
 pipe = SpecPipe(exp)
 
@@ -182,7 +182,7 @@ pipe.add_process(2, 2, 0, raw)
 
 # 3.3 ROI statistics
 # Import some ROI spectral statistic metrics
-from specpipe import roi_mean, roi_median
+from swectral import roi_mean, roi_median
 
 # Add these process to the pipeline
 pipe.add_process(

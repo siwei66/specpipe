@@ -31,12 +31,12 @@ import torch
 import rasterio
 
 # Local
-from specpipe.example_data import create_test_raster
+from swectral.example_data import create_test_raster
 
 # Function to test
-from specpipe.rasterop import pixel_apply
-from specpipe.functions.aucnorm import aucnorm
-from specpipe.functions.aucnorm_hyper import aucnorm_hyper
+from swectral.rasterop import pixel_apply
+from swectral.functions.aucnorm import aucnorm
+from swectral.functions.aucnorm_hyper import aucnorm_hyper
 
 # Check if cuda is available
 try:

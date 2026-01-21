@@ -40,13 +40,13 @@ import matplotlib.pyplot as plt  # noqa: E402
 from pathos.helpers import cpu_count  # noqa: E402
 
 # Local
-from specpipe.example_data import create_test_raster, create_test_roi_xml, create_test_spec_exp  # noqa: E402
-from specpipe.roistats import Stats2d, roi_mean, roispec  # noqa: E402
-from specpipe.specexp import SpecExp  # noqa: E402
-from specpipe.specio import silent, lsdir_robust  # noqa: E402
+from swectral.example_data import create_test_raster, create_test_roi_xml, create_test_spec_exp  # noqa: E402
+from swectral.roistats import Stats2d, roi_mean, roispec  # noqa: E402
+from swectral.specexp import SpecExp  # noqa: E402
+from swectral.specio import silent, lsdir_robust  # noqa: E402
 
 # Functions to test
-from specpipe.pipeline import SpecPipe  # noqa: E402
+from swectral.pipeline import SpecPipe  # noqa: E402
 
 # Confirm proper LOKY_MAX_CPU_COUNT
 loky_max_cpu_count = str(cpu_count())

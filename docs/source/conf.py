@@ -14,10 +14,10 @@ sys.path.insert(0, os.path.abspath('../../src'))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'SpecPipe'
+project = 'Swectral'
 copyright = '2025, Siwei Luo'
 author = 'Siwei Luo'
-release = '0.3.4'
+release = '0.1.0'
 
 # -- Sphinx extensions -------------------------------------------------------
 
