@@ -7,7 +7,7 @@ It is no longer maintained.
 """
 
 # Package meta
-__version__ = "0.3.6"
+__version__ = "0.3.7"
 __author__ = "Siwei Luo"
 __license__ = "MIT"
 

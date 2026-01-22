@@ -8,6 +8,7 @@
 
 ```bash
 pip install swectral
+```
 
 The replacement package is available at:
 
