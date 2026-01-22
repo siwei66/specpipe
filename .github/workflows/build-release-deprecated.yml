@@ -14,8 +14,8 @@ name: Release SpecPipe (Deprecated)
 
 on:
   workflow_dispatch:  # manual trigger
-  release:
-    types: [published]
+  # release:
+    # types: [published]
 
 permissions:
   contents: read
