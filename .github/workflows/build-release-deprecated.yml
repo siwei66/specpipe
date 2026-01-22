@@ -10,7 +10,7 @@
 # Do not change the file name as it is fixed on PyPI.
 # Do not change workflow file name on GitHub, delete and recreate it to rename to rebuild links.
 
-name: Build and Release
+name: Release SpecPipe (Deprecated)
 
 on:
   workflow_dispatch:  # manual trigger
