@@ -1,4 +1,4 @@
-SpecPipe Documentation
+Swectral Documentation
 ======================
 
 .. include:: ../../README.md
