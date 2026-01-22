@@ -6,9 +6,8 @@
 
 ## Install the new package
 
-    ```bash
-    pip install swectral
-    ```
+```bash
+pip install swectral
 
 The replacement package is available at:
 
