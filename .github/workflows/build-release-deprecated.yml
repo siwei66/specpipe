@@ -31,6 +31,12 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Clean previous builds
+        working-directory: specpipe-deprecated
+        run: |
+          echo "Removing old build files..."
+          rm -rf dist *.egg-info
+
       - name: Build release distributions
         working-directory: specpipe-deprecated
         run: |
