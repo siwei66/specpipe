@@ -20,12 +20,14 @@ from swectral.denoiser.utils import create_test_array, RollWindow
 
 @simple_type_validator
 def func_for_apply(arr: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
-    return np.array(np.nanmean(arr, axis=0, keepdims=True))
+    result: np.ndarray = np.array(np.nanmean(arr, axis=0, keepdims=True))
+    return result
 
 
 @simple_type_validator
 def func_for_apply1(arr: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
-    return np.array(np.nanstd(arr, axis=0, keepdims=True))
+    result: np.ndarray = np.array(np.nanstd(arr, axis=0, keepdims=True))
+    return result
 
 
 # %% Test RollWindow

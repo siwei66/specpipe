@@ -236,10 +236,12 @@ class WaveletFilter:
                 thresholded = coeffs_i * np.maximum(0, 1 - threshold / safe_magnitude)
             elif threshold_mode == 'garrote':
                 thresholded = coeffs_i * np.maximum(0, 1 - threshold**2 / safe_magnitude**2)
-            return np.array(thresholded)
+            result: np.ndarray = np.asarray(thresholded)
+            return result
         elif threshold_mode in ['hard', 'greater', 'less']:
             thresholded = pywt.threshold(coeffs_i, threshold, mode=threshold_mode)
-            return np.array(thresholded)
+            result = np.asarray(thresholded)
+            return result
         else:
             raise ValueError(
                 f"threshold_mode must be one of 'soft' / 'hard' / 'garrote' / 'greater' / 'less', \

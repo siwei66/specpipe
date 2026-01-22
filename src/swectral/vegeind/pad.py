@@ -90,10 +90,12 @@ def pad(
     pseudo_absorbance = np.log10(1 / spec_array)
     pad_values = nderiv(pseudo_absorbance, n=order, axis=1, padding=padding)
 
-    if axis == 1:
-        pad_values = pad_values.T
+    result: np.ndarray = np.asarray(pad_values)
 
-    return np.array(pad_values)
+    if axis == 1:
+        result = result.T
+
+    return result
 
 
 @simple_type_validator

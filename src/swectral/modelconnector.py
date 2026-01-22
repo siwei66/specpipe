@@ -544,7 +544,8 @@ class TransClassifier(BaseEstimator, ClassifierMixin):
         for transformer in self.data_transformers:
             assert hasattr(transformer, 'transform')
             X = transformer.transform(X)
-        return np.asarray(X)
+        result: np.ndarray = np.asarray(X)
+        return result
 
     @simple_type_validator
     def predict(self, X: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:  # noqa: N803
@@ -571,8 +572,8 @@ class TransClassifier(BaseEstimator, ClassifierMixin):
         # Predict using classifier
         assert hasattr(self.classifier, 'predict')
         y_pred = self.classifier.predict(X)
-        y_pred = np.asarray(y_pred)
-        return y_pred
+        y_pred_arr: np.ndarray = np.asarray(y_pred)
+        return y_pred_arr
 
     @simple_type_validator
     def predict_proba(self, X: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:  # noqa: N803
@@ -597,8 +598,8 @@ class TransClassifier(BaseEstimator, ClassifierMixin):
             X = transformer.transform(X)
         assert hasattr(self.classifier, 'predict_proba')
         y_pred_proba = self.classifier.predict_proba(X)
-        y_pred_proba = np.asarray(y_pred_proba)
-        return y_pred_proba
+        y_pred_proba_arr: np.ndarray = np.asarray(y_pred_proba)
+        return y_pred_proba_arr
 
     @simple_type_validator
     def score(
@@ -736,7 +737,8 @@ class TransRegressor(BaseEstimator, RegressorMixin):
         for transformer in self.data_transformers:
             assert hasattr(transformer, 'transform')
             X = transformer.transform(X)
-        return np.asarray(X)
+        result: np.ndarray = np.asarray(X)
+        return result
 
     @simple_type_validator
     def predict(self, X: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:  # noqa: N803
@@ -763,8 +765,8 @@ class TransRegressor(BaseEstimator, RegressorMixin):
         # Predict using regressor
         assert hasattr(self.regressor, 'predict')
         y_pred = self.regressor.predict(X)
-        y_pred = np.asarray(y_pred)
-        return y_pred
+        y_pred_arr: np.ndarray = np.asarray(y_pred)
+        return y_pred_arr
 
     @simple_type_validator
     def score(
@@ -819,7 +821,8 @@ class IdentityTransformer(BaseEstimator, TransformerMixin):
 
     @simple_type_validator
     def transform(self, X: Annotated[Any, arraylike_validator()]) -> np.ndarray:  # noqa: N803
-        return np.asarray(X)
+        result: np.ndarray = np.asarray(X)
+        return result
 
     @simple_type_validator
     def fit_transform(
@@ -827,7 +830,8 @@ class IdentityTransformer(BaseEstimator, TransformerMixin):
         X: Annotated[Any, arraylike_validator()],  # noqa: N803
         y: Optional[Annotated[Any, arraylike_validator()]] = None,
     ) -> np.ndarray:  # noqa: N803
-        return np.asarray(X)
+        result: np.ndarray = np.asarray(X)
+        return result
 
 
 # %% Combined model statistics

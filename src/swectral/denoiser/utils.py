@@ -28,9 +28,11 @@ def _to_2d_arr(
     """Standardize 1D and 2D arraylike to 2D array data"""
     data_array = np.asarray(data_array)
     if data_array.ndim == 1:
-        return np.asarray(data_array.reshape(1, -1))
+        result: np.ndarray = np.asarray(data_array.reshape(1, -1))
+        return result
     elif data_array.ndim == 2:
-        return np.asarray(data_array)
+        result = np.asarray(data_array)
+        return result
     else:
         raise ValueError(f"Expected 1D or 2D array, but got shape: {data_array.shape}")
 
@@ -40,9 +42,11 @@ def _back_1d_arr(data_array: Union[Annotated[Any, arraylike_validator(ndim=2)]])
     data_array = np.asarray(data_array)
     if data_array.ndim == 2:
         if data_array.shape[0] == 1 or data_array.shape[1] == 1:
-            return np.asarray(data_array.reshape(-1))
+            result: np.ndarray = np.asarray(data_array.reshape(-1))
+            return result
         else:
-            return np.asarray(data_array)
+            result = np.asarray(data_array)
+            return result
     else:
         raise ValueError(f"Expected 2D array, but got shape: {data_array.shape}")
 
@@ -491,10 +495,11 @@ def create_test_array(random: bool = False, shape: tuple[int, int] = (14, 12)) -
     """Create test 2D array-like data"""
     if random:
         np.random.seed(66)
-        return np.random.random(shape)
+        result: np.ndarray = np.random.random(shape)
+        return result
     else:
         # Fixed array data with edge case
-        arr = np.array(
+        arr: np.ndarray = np.array(
             [
                 [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
                 [10, 8, 20, 16, 100, 17, 10, 12, 14, 15, 10, 11],
@@ -518,6 +523,7 @@ def create_test_array(random: bool = False, shape: tuple[int, int] = (14, 12)) -
             tiles_rows = (shape[0] + core_arr.shape[0] - 1) // core_arr.shape[0]
             tiles_cols = (shape[1] + core_arr.shape[1] - 1) // core_arr.shape[1]
             tiled = np.tile(arr, (tiles_rows, tiles_cols))
-            return tiled[0 : shape[0], 0 : shape[1]]
+            result = tiled[0 : shape[0], 0 : shape[1]]
+            return result
         else:
             return arr

@@ -515,6 +515,7 @@ def _chain_step_processor(
                 dl_in = _dl_val(method_item[2])[0]
                 dl_out = _dl_val(method_item[3])[0]
                 method_func = method_item[5]
+                assert callable(method_func)
                 # Get input data of the step
                 # Pretest_data: [img_path, test_img_path, roi_coords, test_roi_coords, roitable, spec1d]
                 if len(chain_result) == 0:
@@ -546,8 +547,10 @@ def _chain_step_processor(
                         preprocess_status,
                     )
                 except Exception as e:
-                    method_item = tuple(method_item)
-                    method_item_out = method_item[1:5] + (method_item[5].__class__.__name__,) + method_item[6:8]
+                    method_item_tuple = tuple(method_item)
+                    method_item_out = (
+                        method_item_tuple[1:5] + (method_item_tuple[5].__class__.__name__,) + method_item_tuple[6:8]
+                    )
                     raise ValueError(
                         f"\nTest failed for chain: \nChain index: {chain_ind}, \nChain: {chain};\
                             \n\nProcess ID: {step}, \nProcess item: {method_item_out}, \n\nError message: \n{e}"

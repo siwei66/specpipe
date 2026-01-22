@@ -1091,8 +1091,15 @@ class ModelEva:
         df_val = pd.DataFrame(np.zeros((len(y_true), len(coln_val))), columns=coln_val)
         df_val["Sample_ID"] = sid_eva
         df_val["Label"] = self._sid_to_label(sid_eva)
-        df_val["y_true"] = y_true
-        df_val["y_predicted"] = y_pred
+        # Assign y true (sklearn 2D format flatten to 1D to assign for pandas 3.0.0+)
+        y_true_arr = np.array(y_true).ravel()
+        assert len(y_true_arr) == len(y_true)
+        df_val["y_true"] = y_true_arr
+        # Assign y pred (sklearn 2D format flatten to 1D to assign for pandas 3.0.0+)
+        y_pred_arr = np.array(y_pred).ravel()
+        assert len(y_pred_arr) == len(y_pred)
+        df_val["y_predicted"] = y_pred_arr
+        # Assign y pred proba
         df_val.iloc[:, 4:] = y_pred_proba
 
         # Write result to file
@@ -1528,9 +1535,17 @@ class ModelEva:
         # Add true and predicted proba
         df_y_true_proba = pd.DataFrame(y_true_proba, columns=[(str(yn) + "_true") for yn in ynames], index=sid)
         df_y_pred_proba = pd.DataFrame(y_pred_proba, columns=[(str(yn) + "_predicted") for yn in ynames], index=sid)
-        df_res["True_label"] = self.y_true_eva
+        # Add y true
+        assert self.y_true_eva is not None
+        y_true_eva_arr = np.array(self.y_true_eva).ravel()
+        assert len(y_true_eva_arr) == len(self.y_true_eva)
+        df_res["True_label"] = y_true_eva_arr
         df_res = pd.concat([df_res, df_y_true_proba], axis=1)
-        df_res["Predicted_label"] = self.y_pred_eva
+        # Add y pred
+        assert self.y_pred_eva is not None
+        y_pred_eva_arr = np.array(self.y_pred_eva).ravel()
+        assert len(y_pred_eva_arr) == len(self.y_pred_eva)
+        df_res["Predicted_label"] = y_pred_eva_arr
         df_res = pd.concat([df_res, df_y_pred_proba], axis=1)
 
         # Report directory
@@ -2033,8 +2048,14 @@ class ModelEva:
         df_val = pd.DataFrame(np.zeros((len(y_true), len(coln_val))), columns=coln_val)
         df_val["Sample_ID"] = sid_eva
         df_val["Label"] = self._sid_to_label(sid_eva)
-        df_val["y_true"] = y_true
-        df_val["y_predicted"] = y_pred
+        # Assign y true (sklearn 2D format flatten to 1D to assign for pandas 3.0.0+)
+        y_true_arr = np.array(y_true).ravel()
+        assert len(y_true_arr) == len(y_true)
+        df_val["y_true"] = y_true_arr
+        # Assign y pred (sklearn 2D format flatten to 1D to assign for pandas 3.0.0+)
+        y_pred_arr = np.array(y_pred).ravel()
+        assert len(y_pred_arr) == len(y_pred)
+        df_val["y_predicted"] = y_pred_arr
 
         # Write result to file
         task_time = self._model_time
@@ -2522,7 +2543,7 @@ class ModelEva:
         mad = np.nanmedian(np.abs(res - median_res))
         df_res["Standardized_residuals"] = (res - median_res) / (1.4826 * mad)
 
-        # Add true and predicted proba
+        # Add true and predicted target values
         y_true_df = pd.DataFrame(y_true, columns=["True_y"], index=sid)
         y_pred_df = pd.DataFrame(y_pred, columns=["Predicted_y"], index=sid)
         df_res = pd.concat([df_res, y_true_df], axis=1)

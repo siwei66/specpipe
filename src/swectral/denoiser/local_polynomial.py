@@ -268,7 +268,8 @@ class LocalPolynomial(RollWindow):
         else:
             coeffs = self.sg_coeff
         smoothed = np.sum(np.dot(coeffs, window_array), axis=0).reshape(-1, 1).T
-        return np.array(smoothed)
+        result: np.ndarray = np.asarray(smoothed)
+        return result
 
     # Perform SG filter on 2-d array of 1-d series data
     @simple_type_validator
@@ -455,11 +456,13 @@ class LocalPolynomial(RollWindow):
         fdist = sample_distances_to_focal
         data_boundary = max(abs(fdist))
         if data_boundary == 0:  # Return uniform weights for perfectly smooth data
-            return np.full(fdist.shape, 1.0)
+            result: np.ndarray = np.full(fdist.shape, 1.0)
+            return result
         else:
             sample_weights = (1 - (fdist / data_boundary) ** 3) ** 3
             sample_weights[sample_weights < 0] = 0.0
-            return np.array(sample_weights)
+            result = np.array(sample_weights)
+            return result
 
     @staticmethod
     @simple_type_validator
@@ -470,14 +473,16 @@ class LocalPolynomial(RollWindow):
         fdist = sample_distances_to_focal
         data_boundary = float(max(abs(fdist)))
         if data_boundary == 0:  # Return uniform weights for perfectly smooth data
-            return np.full(fdist.shape, 1.0)
+            result: np.ndarray = np.full(fdist.shape, 1.0)
+            return result
         if b == -1:
             b = data_boundary
         if b < data_boundary:
             raise ValueError(f'Kernel parameter b must be at least {data_boundary}')
         sample_weights = 1 - abs(fdist) / b
         sample_weights[sample_weights < 0] = 0.0
-        return np.array(sample_weights)
+        result = np.asarray(sample_weights)
+        return result
 
     @staticmethod
     @simple_type_validator
@@ -488,14 +493,16 @@ class LocalPolynomial(RollWindow):
         fdist = sample_distances_to_focal
         data_boundary = float(max(abs(fdist)))
         if data_boundary == 0:  # Return uniform weights for perfectly smooth data
-            return np.full(fdist.shape, 1.0)
+            result: np.ndarray = np.full(fdist.shape, 1.0)
+            return result
         if s == -1:
             s = data_boundary
         if s < data_boundary:
             raise ValueError(f'Kernel parameter s must be at least {data_boundary}')
         sample_weights = np.cos(np.pi * fdist / 2 / s)
         sample_weights[sample_weights < 0] = 0.0
-        return np.array(sample_weights)
+        result = np.asarray(sample_weights)
+        return result
 
     @staticmethod
     @simple_type_validator
@@ -509,7 +516,8 @@ class LocalPolynomial(RollWindow):
         if sigma <= 0:
             raise ValueError('Kernel parameter sigma must be positive')
         sample_weights = np.exp(-(fdist**2) / (2 * (sigma**2)))
-        return np.array(sample_weights)
+        result: np.ndarray = np.asarray(sample_weights)
+        return result
 
     @staticmethod
     @simple_type_validator
@@ -520,14 +528,16 @@ class LocalPolynomial(RollWindow):
         fdist = sample_distances_to_focal
         data_boundary = float(max(abs(fdist)))
         if data_boundary == 0:  # Return uniform weights for perfectly smooth data
-            return np.full(fdist.shape, 1.0)
+            result: np.ndarray = np.asarray(np.full(fdist.shape, 1.0))
+            return result
         if h == -1:
             h = data_boundary
         if abs(h) < data_boundary:
             raise ValueError(f'Kernel parameter c must be at least {data_boundary}')
         sample_weights = 1 - (fdist / h) ** 2
         sample_weights[sample_weights < 0] = 0.0
-        return np.array(sample_weights)
+        result = np.asarray(sample_weights)
+        return result
 
     @staticmethod
     @simple_type_validator
@@ -539,7 +549,8 @@ class LocalPolynomial(RollWindow):
         if h == -1:
             h = 1
         sample_weights = np.exp(-abs(fdist / h))
-        return np.array(sample_weights)
+        result: np.ndarray = np.asarray(sample_weights)
+        return result
 
     # Polynomial regression on 1-d series data, return estimation of focal point
     @simple_type_validator

@@ -68,4 +68,6 @@ def aucnorm(data: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
     areas = np.sum(np.abs(data), axis=1, keepdims=True)
     auc_normalized = data / (areas + 1e-15)
 
-    return np.asarray(auc_normalized)
+    result: np.ndarray = np.asarray(auc_normalized)
+
+    return result

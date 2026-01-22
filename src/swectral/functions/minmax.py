@@ -70,4 +70,6 @@ def minmax(data: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
     vmax = np.nanmax(data, axis=1, keepdims=True)
     minmax_values = (data - vmin) / (vmax - vmin + 1e-15)
 
-    return np.asarray(minmax_values)
+    result: np.ndarray = np.asarray(minmax_values)
+
+    return result

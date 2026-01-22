@@ -70,4 +70,6 @@ def snv(data: Annotated[Any, arraylike_validator(ndim=2)]) -> np.ndarray:
     vstd = np.nanstd(data, axis=1, keepdims=True)
     snv_values = (data - vmean) / (vstd + 1e-15)
 
-    return np.asarray(snv_values)
+    result: np.ndarray = np.asarray(snv_values)
+
+    return result
