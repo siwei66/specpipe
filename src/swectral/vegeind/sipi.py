@@ -25,7 +25,7 @@ def sipi(
 ) -> pd.DataFrame:
     """
     Compute SIPI (Structure Insensitive Pigment Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Peñuelas,J. and Baret,F. and Filella,I.(1995)
         Semi-empirical indices to assess carotenoids/chlorophyll a ratio from leaf spectral reflectance., (1995)

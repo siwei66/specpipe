@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests for SpecPipe SNV (Standard Normal Variate) functions
+Tests for Swectral SNV (Standard Normal Variate) functions
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """

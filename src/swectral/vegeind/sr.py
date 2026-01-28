@@ -25,7 +25,7 @@ def sr(
 ) -> pd.DataFrame:
     """
     Compute SR (simple ratio, simple ratio of R800 / R675) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Jordan, C. F. (1969).
         Derivation of Leaf-Area Index from Quality of Light on the Forest Floor.

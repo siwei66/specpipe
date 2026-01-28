@@ -25,7 +25,7 @@ def ndre(
 ) -> pd.DataFrame:
     """
     Compute NDRE (Normalized Difference Red Edge Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Narmilan, A.; Gonzalez, F.; Salgadoe, A.S.A.; Kumarasiri, U.W.L.M.; Weerasinghe, H.A.S.; Kulasekara, B.R.
         Predicting Canopy Chlorophyll Content in Sugarcane Crops Using Machine Learning Algorithms and Spectral Vegetation Indices Derived from UAV Multispectral Imagery.

@@ -25,7 +25,7 @@ def dvi(
 ) -> pd.DataFrame:
     """
     Compute DVI (Difference Vegetation Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Richardson, Arthur J., and C. L. Wiegand.
         Distinguishing vegetation from soil background information

@@ -25,7 +25,7 @@ def vog1(
 ) -> pd.DataFrame:
     """
     Compute VOG1 (Vogelmann Red Edge Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         S. Hamzeh, A.A. Naseri, S.K. AlaviPanah, B. Mojaradi, H.M. Bartholomeus, J.G.P.W. Clevers, M. Behzad,
         Estimating salinity stress in sugarcane fields with spaceborne hyperspectral vegetation indices,

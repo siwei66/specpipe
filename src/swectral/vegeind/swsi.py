@@ -25,7 +25,7 @@ def swsi1(
 ) -> pd.DataFrame:
     """
     Compute SWSI1 (Salinity and Water Stress Index 1) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         S. Hamzeh, A.A. Naseri, S.K. AlaviPanah, B. Mojaradi, H.M. Bartholomeus, J.G.P.W. Clevers, M. Behzad,
         Estimating salinity stress in sugarcane fields with spaceborne hyperspectral vegetation indices,
@@ -120,7 +120,7 @@ def swsi2(
 ) -> pd.DataFrame:
     """
     Compute SWSI2 (Salinity and Water Stress Index 2) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         S. Hamzeh, A.A. Naseri, S.K. AlaviPanah, B. Mojaradi, H.M. Bartholomeus, J.G.P.W. Clevers, M. Behzad,
         Estimating salinity stress in sugarcane fields with spaceborne hyperspectral vegetation indices,
@@ -216,7 +216,7 @@ def swsi3(
     """
     Compute SWSI3 (Salinity and Water Stress Index 3) of 2D array-like of 1D spectra data series.
 
-    The calculation is based on:
+    The calculation is based on::
 
         S. Hamzeh, A.A. Naseri, S.K. AlaviPanah, B. Mojaradi, H.M. Bartholomeus, J.G.P.W. Clevers, M. Behzad,
         Estimating salinity stress in sugarcane fields with spaceborne hyperspectral vegetation indices,

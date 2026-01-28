@@ -14,6 +14,7 @@
 <!-- start-doc -->
 Swectral streamlines the batch testing and optimization of plant hyperspectral analysis workflows. It provides a structured and extensible framework to apply and assess various image processing techniques (calibration, baseline correction, denoising, feature engineering, etc.) in combination with various machine learning models. The framework employs a comprehensive full-factorial design to evaluate all method combinations on user spectral dataset and generates standard reports on performance metrics, comparative statistical tests, residual analysis, influence anlaysis and visualizations.
 
+
 ## Core features
 - **Batch processing**: Automate numerous data processing and modeling workflows in a single batch operation.
 - **File-based**: A resumable, file-based processing pipeline with full-scale auditability and break tolerance.
@@ -28,6 +29,13 @@ Swectral streamlines the batch testing and optimization of plant hyperspectral a
 - [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
+
+
+## Documentation
+
+- [User Guide](https://siwei66.github.io/swectral/index.html)
+- [API Reference](https://siwei66.github.io/swectral/api/index.html)
+- [Examples](https://siwei66.github.io/swectral/usage.html#tutorials-demos)
 
 
 ## Installation <a name="installation"></a>

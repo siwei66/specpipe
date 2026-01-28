@@ -25,7 +25,7 @@ def mcari(
 ) -> pd.DataFrame:
     """
     Compute MCARI (Modified Chlorophyll Absorption Reflectance Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Si Gao, Kai Yan, Jinxiu Liu, Jiabin Pu, Dongxiao Zou, Jianbo Qi, Xihan Mu, Guangjian Yan,
         Assessment of remote-sensed vegetation indices for estimating forest chlorophyll concentration,

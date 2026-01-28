@@ -25,7 +25,7 @@ def cri(
 ) -> pd.DataFrame:
     """
     Compute CRI (Carotenoid Reflectance Index) and RNIR/R510 of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Gitelson, A.A.; Zur, Y.; Chivkunova, O.B.; Merzlyak, M.N.
         Assessing Carotenoid Content in Plant Leaves with Reflectance Spectroscopy.
@@ -125,7 +125,7 @@ def rnir_to_r510(
 ) -> pd.DataFrame:
     """
     Compute RNIR / R510 (Simple Ratio RNIR / R510) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Gitelson, A.A.; Zur, Y.; Chivkunova, O.B.; Merzlyak, M.N.
         Assessing Carotenoid Content in Plant Leaves with Reflectance Spectroscopy.
@@ -165,7 +165,7 @@ def cri550(
 ) -> pd.DataFrame:
     """
     Compute CRI550 (Carotenoid Reflectance Index 550) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Gitelson, A.A.; Zur, Y.; Chivkunova, O.B.; Merzlyak, M.N.
         Assessing Carotenoid Content in Plant Leaves with Reflectance Spectroscopy.
@@ -205,7 +205,7 @@ def cri700(
 ) -> pd.DataFrame:
     """
     Compute CRI700 (Carotenoid Reflectance Index 700) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Gitelson, A.A.; Zur, Y.; Chivkunova, O.B.; Merzlyak, M.N.
         Assessing Carotenoid Content in Plant Leaves with Reflectance Spectroscopy.

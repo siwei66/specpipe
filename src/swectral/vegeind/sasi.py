@@ -29,7 +29,7 @@ def _sasi(  # noqa: C901
 ) -> pd.DataFrame:
     """
     Helper to compute arbitrary SASI (Soil Adjusted Salinity Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Zhang, Ting-Ting, et al.
         Using hyperspectral vegetation indices as a proxy to monitor soil salinity.
@@ -126,7 +126,7 @@ def sasi1(
 ) -> pd.DataFrame:
     """
     Compute SASI1 (Soil Adjusted Salinity Index 1) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Zhang, Ting-Ting, et al.
         Using hyperspectral vegetation indices as a proxy to monitor soil salinity.
@@ -175,7 +175,7 @@ def sasi2(
 ) -> pd.DataFrame:
     """
     Compute SASI2 (Soil Adjusted Salinity Index 2) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Zhang, Ting-Ting, et al.
         Using hyperspectral vegetation indices as a proxy to monitor soil salinity.
@@ -224,7 +224,7 @@ def sasi3(
 ) -> pd.DataFrame:
     """
     Compute SASI3 (Soil Adjusted Salinity Index 3) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Zhang, Ting-Ting, et al.
         Using hyperspectral vegetation indices as a proxy to monitor soil salinity.
@@ -273,7 +273,7 @@ def sasi4(
 ) -> pd.DataFrame:
     """
     Compute SASI4 (Soil Adjusted Salinity Index 4) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Zhang, Ting-Ting, et al.
         Using hyperspectral vegetation indices as a proxy to monitor soil salinity.

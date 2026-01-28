@@ -25,7 +25,7 @@ def evi(
 ) -> pd.DataFrame:
     """
     Compute EVI (Enhanced Vegetation Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         A Huete, K Didan, T Miura, E.P Rodriguez, X Gao, L.G Ferreira,
         Overview of the radiometric and biophysical performance of the MODIS vegetation indices,

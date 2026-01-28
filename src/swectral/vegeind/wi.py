@@ -25,7 +25,7 @@ def wi(
 ) -> pd.DataFrame:
     """
     Compute WI (Water Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Penuelas, J., Pinol, J., Ogaya, R., & Filella, I. (1997).
         Estimation of plant water concentration by the reflectance Water Index WI (R900/R970).

@@ -25,7 +25,7 @@ def si(
 ) -> pd.DataFrame:
     """
     Compute SIs (Salinity Indices) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
@@ -154,7 +154,7 @@ def si1(
 ) -> pd.DataFrame:
     """
     Compute SI1 (Salinity Index 1) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
@@ -195,7 +195,7 @@ def si2(
 ) -> pd.DataFrame:
     """
     Compute SI2 (Salinity Index 2) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
@@ -236,7 +236,7 @@ def si3(
 ) -> pd.DataFrame:
     """
     Compute SI3 (Salinity Index 3) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
@@ -277,7 +277,7 @@ def si4(
 ) -> pd.DataFrame:
     """
     Compute SI4 (Salinity Index 4) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
@@ -318,7 +318,7 @@ def si5(
 ) -> pd.DataFrame:
     """
     Compute SI5 (Salinity Index 5) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
@@ -359,7 +359,7 @@ def ndsi(
 ) -> pd.DataFrame:
     """
     Compute NDSI (Normalized Difference Salinity Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.
@@ -400,7 +400,7 @@ def vssi(
 ) -> pd.DataFrame:
     """
     Compute VSSI (Vegetation Soil Salinity Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Nguyen, KA., Liou, YA., Tran, HP. et al.
         Soil salinity assessment by using near-infrared channel and Vegetation Soil Salinity Index derived from Landsat 8 OLI data: a case study in the Tra Vinh Province, Mekong Delta, Vietnam.

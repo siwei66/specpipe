@@ -25,7 +25,7 @@ def pssr(
 ) -> pd.DataFrame:
     """
     Compute PSSR (Pigment-specific Simple Ratio) R810/R676 and R810/R682 of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
@@ -116,7 +116,7 @@ def pssr1(
 ) -> pd.DataFrame:
     """
     Compute PSSR (Pigment-specific Simple Ratio) R810/R676 of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
@@ -160,7 +160,7 @@ def pssr2(
 ) -> pd.DataFrame:
     """
     Compute PSSR (Pigment-specific Simple Ratio) R810/R682 of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,

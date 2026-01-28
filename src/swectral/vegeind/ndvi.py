@@ -25,7 +25,7 @@ def ndvi(
 ) -> pd.DataFrame:
     """
     Compute NDVI (Normalized Difference Vegetation Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Compton J. Tucker,
         Red and photographic infrared linear combinations for monitoring vegetation,

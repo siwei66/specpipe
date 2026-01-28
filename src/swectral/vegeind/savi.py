@@ -26,7 +26,7 @@ def savi(
 ) -> pd.DataFrame:
     """
     Compute SAVI (Soil Adjusted Vegetation Index) of 2D array-like of 1D spectra data series at given L.
-    The calculation is based on:
+    The calculation is based on::
 
         A.R Huete,
         A soil-adjusted vegetation index (SAVI),
@@ -130,7 +130,7 @@ def savis(
     """
     Compute SAVIs (Soil Adjusted Vegetation Indices) of 2D array-like of 1D spectra data series.
     This function applies a series of default L values, includes: 0, 0.25, 0.5, 0.75, 1 and 2.
-    The calculation is based on:
+    The calculation is based on::
 
         A.R Huete,
         A soil-adjusted vegetation index (SAVI),

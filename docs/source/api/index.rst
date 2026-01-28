@@ -10,6 +10,7 @@ API Reference
    statistical_measures
    denoiser
    spectral_indices
+   model_combiners
    raster_operations
    io_utilities
    demo_data_tools

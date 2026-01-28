@@ -25,7 +25,7 @@ def nwi(
 ) -> pd.DataFrame:
     """
     Compute NWI (Normalized Water Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         K.K. Bandyopadhyay, S. Pradhan, R.N. Sahoo, Ravender Singh, V.K. Gupta, D.K. Joshi, A.K. Sutradhar,
         Characterization of water stress and prediction of yield of wheat using spectral indices under varied water and nitrogen management practices,
@@ -137,7 +137,7 @@ def nwi1(
 ) -> pd.DataFrame:
     """
     Compute NWI1 (Normalized Water Index - 1) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         K.K. Bandyopadhyay, S. Pradhan, R.N. Sahoo, Ravender Singh, V.K. Gupta, D.K. Joshi, A.K. Sutradhar,
         Characterization of water stress and prediction of yield of wheat using spectral indices under varied water and nitrogen management practices,
@@ -181,7 +181,7 @@ def nwi2(
 ) -> pd.DataFrame:
     """
     Compute NWI1 (Normalized Water Index - 2) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         K.K. Bandyopadhyay, S. Pradhan, R.N. Sahoo, Ravender Singh, V.K. Gupta, D.K. Joshi, A.K. Sutradhar,
         Characterization of water stress and prediction of yield of wheat using spectral indices under varied water and nitrogen management practices,
@@ -225,7 +225,7 @@ def nwi3(
 ) -> pd.DataFrame:
     """
     Compute NWI1 (Normalized Water Index - 3) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         K.K. Bandyopadhyay, S. Pradhan, R.N. Sahoo, Ravender Singh, V.K. Gupta, D.K. Joshi, A.K. Sutradhar,
         Characterization of water stress and prediction of yield of wheat using spectral indices under varied water and nitrogen management practices,
@@ -269,7 +269,7 @@ def nwi4(
 ) -> pd.DataFrame:
     """
     Compute NWI1 (Normalized Water Index - 4) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         K.K. Bandyopadhyay, S. Pradhan, R.N. Sahoo, Ravender Singh, V.K. Gupta, D.K. Joshi, A.K. Sutradhar,
         Characterization of water stress and prediction of yield of wheat using spectral indices under varied water and nitrogen management practices,

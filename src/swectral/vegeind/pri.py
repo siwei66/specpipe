@@ -25,7 +25,7 @@ def pri(
 ) -> pd.DataFrame:
     """
     Compute PRI (Photochemical Reflectance Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         J.A. Gamon, J. Peñuelas, C.B. Field,
         A narrow-waveband spectral index that tracks diurnal changes in photosynthetic efficiency,

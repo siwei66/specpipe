@@ -28,7 +28,7 @@ def pad(
 ) -> np.ndarray:
     """
     Compute PAD (Derivative Pseudo-Absorption) of a 2D array-like collection of 1D spectral data series.
-    The calculation is based on:
+    The calculation is based on::
 
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
@@ -106,7 +106,7 @@ def padvi(
 ) -> pd.DataFrame:
     """
     Compute PAD vegetation indices (Derivative Pseudo-Absorption Vegetation Indices) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
@@ -209,7 +209,7 @@ def pad1_r729(
 ) -> pd.DataFrame:
     """
     Compute PAD1 R729 (First derivative pseudo-absorption R729) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
@@ -253,7 +253,7 @@ def pad1_r732(
 ) -> pd.DataFrame:
     """
     Compute PAD1 R732 (First derivative pseudo-absorption R732) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,
@@ -297,7 +297,7 @@ def pad2_r664(
 ) -> pd.DataFrame:
     """
     Compute PAD2 R664 (Second derivative pseudo-absorption R664) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         George Alan Blackburn,
         Quantifying Chlorophylls and Caroteniods at Leaf and Canopy Scales: An Evaluation of Some Hyperspectral Approaches,

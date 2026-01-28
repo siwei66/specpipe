@@ -25,7 +25,7 @@ def cci(
 ) -> pd.DataFrame:
     """
     Compute CCI (Chlorophyll/Carotenoid Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         J.A. Gamon, K.F. Huemmrich, C.Y.S. Wong, I. Ensminger, S. Garrity, D.Y. Hollinger, A. Noormets, & J. Peñuelas,
         A remotely sensed pigment index reveals photosynthetic phenology in evergreen conifers,

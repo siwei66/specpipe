@@ -25,7 +25,7 @@ def sr_salinity(
 ) -> pd.DataFrame:
     """
     Compute salinity-sensitive SR R750/R705 (Simple Ratio R750/R705) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         S. Hamzeh, A.A. Naseri, S.K. AlaviPanah, B. Mojaradi, H.M. Bartholomeus, J.G.P.W. Clevers, M. Behzad,
         Estimating salinity stress in sugarcane fields with spaceborne hyperspectral vegetation indices,

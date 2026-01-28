@@ -81,7 +81,7 @@ def create_model_test_data(
     return X_train, y_train, X_test, y_test
 
 
-# %% Test combine_transformer_classifier
+# %% test functions: combine_transformer_classifier
 
 
 class TestCombineTransformerClassifier:
@@ -269,7 +269,7 @@ class TestCombineTransformerClassifier:
         assert combined_model._classifier_label == est_label
 
 
-# %% Test combine_transformer_regressor
+# %% test functions: combine_transformer_regressor
 
 
 class TestCombineTransformerRegressor:
@@ -438,7 +438,7 @@ class TestCombineTransformerRegressor:
         assert combined_model._regressor_label == est_label
 
 
-# %% Test factorial_transformer_chains
+# %% test functions: factorial_transformer_chains
 
 
 class TestFactorialTransformerChains:
@@ -601,7 +601,7 @@ class TestFactorialTransformerChains:
             )
 
 
-# %% Test combined_model_marginal_stats
+# %% test functions: combined_model_marginal_stats
 
 
 class TestCombinedModelMarginalStats:
@@ -681,7 +681,7 @@ class TestCombinedModelMarginalStats:
             shutil.rmtree(test_dir)
 
 
-# %% Test IdentityTransformer for passthrough
+# %% test functions: IdentityTransformer for passthrough
 
 
 def test_identity_transformer() -> None:

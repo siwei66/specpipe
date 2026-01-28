@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests for SpecPipe MinMax (MinMax Normalization) functions
+Tests for Swectral MinMax (MinMax Normalization) functions
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """

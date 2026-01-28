@@ -26,7 +26,7 @@ def gndvi(
 ) -> pd.DataFrame:
     """
     Compute GDNVI (Green Normalized Difference Vegetation Index) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         Anatoly A. Gitelson, Yoram J. Kaufman, Mark N. Merzlyak,
         Use of a green channel in remote sensing of global vegetation from EOS-MODIS,

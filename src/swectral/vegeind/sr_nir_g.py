@@ -25,7 +25,7 @@ def sr_nir_g(
 ) -> pd.DataFrame:
     """
     Compute SR NIR/Green (Simple Ratio NIR/Green) of 2D array-like of 1D spectra data series.
-    The calculation is based on:
+    The calculation is based on::
 
         C.S.T Daughtry, C.L Walthall, M.S Kim, E.Brown de Colstoun, J.E McMurtrey,
         Estimating Corn Leaf Chlorophyll Concentration from Leaf and Canopy Reflectance,

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests for SpecPipe AUC (Area Under Curve) normalization functions
+Tests for Swectral AUC (Area Under Curve) normalization functions
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
