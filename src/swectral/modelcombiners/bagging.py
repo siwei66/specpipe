@@ -12,12 +12,12 @@ import numpy as np
 
 # Modeling
 from sklearn.utils import resample
-from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 from sklearn.base import clone
 from scipy.stats import mode
 
 # Local
 from ..specio import simple_type_validator, arraylike_validator
+
 
 # %% Bagging ensembler
 
@@ -221,7 +221,11 @@ class BaggingEnsembler:
         self : BaggingEnsembler
             Fitted ensemble.
         """
-        X, y = check_X_y(X, y, multi_output=True)  # noqa: N806
+        # Validate X and y
+        X = np.asarray(X)  # noqa: N806
+        y = np.asarray(y)
+        if X.shape[0] != y.shape[0]:
+            raise ValueError(f"Number of samples in X ({X.shape[0]}) and y ({y.shape[0]}) do not match.")
 
         rand_state = np.random.RandomState(self.random_state)
         seeds = rand_state.randint(0, 100000000, size=self.n_estimators)
@@ -248,8 +252,13 @@ class BaggingEnsembler:
         y_pred : ndarray
             Predicted values or class labels.
         """
-        check_is_fitted(self, "estimators_")
-        X = check_array(X)  # noqa: N806
+        # Validate model is fitted
+        if not hasattr(self, "estimators_"):
+            raise AttributeError("This ensemble model is not fitted yet. Please fit the model first.")
+        # Validate X
+        X = np.asarray(X)  # noqa: N806
+        if X.ndim != 2:
+            raise ValueError(f"Expected 2D array, got {X.ndim}D array instead.")
         preds = np.array([est.predict(X) for est in self.estimators_])
 
         if self._is_classifier:
@@ -312,8 +321,13 @@ class BaggingEnsembler:
         AttributeError
             If the base estimator does not support ``predict_proba``.
         """
-        check_is_fitted(self, "estimators_")
-        X = check_array(X)  # noqa: N806
+        # Validate model is fitted
+        if not hasattr(self, "estimators_"):
+            raise AttributeError("This ensemble model is not fitted yet. Please fit the model first.")
+        # Validate X
+        X = np.asarray(X)  # noqa: N806
+        if X.ndim != 2:
+            raise ValueError(f"Expected 2D array, got {X.ndim}D array instead.")
 
         if not hasattr(self.base_estimator, "predict_proba"):
             raise AttributeError("Given base estimator does not support 'predict_proba'.")
