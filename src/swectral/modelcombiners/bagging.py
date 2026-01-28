@@ -263,24 +263,34 @@ class BaggingEnsembler:
 
         if self._is_classifier:
             proba = self.predict_proba(X)
-            return np.asarray(self.classes_[np.argmax(proba, axis=1)])
+            result = np.asarray(self.classes_[np.argmax(proba, axis=1)])
+            assert isinstance(result, np.ndarray)
+            return result
 
         # For classifier
         if self._is_classifier:
             # Soft voting
             if hasattr(self.estimators_[0], "predict_proba"):
                 proba = self.predict_proba(X)
-                return np.asarray(self.classes_[np.argmax(proba, axis=1)])
+                result = np.asarray(self.classes_[np.argmax(proba, axis=1)])
+                assert isinstance(result, np.ndarray)
+                return result
             else:
                 # Hard voting
-                return mode(preds, axis=0).mode.ravel()
+                result = mode(preds, axis=0).mode.ravel()
+                assert isinstance(result, np.ndarray)
+                return result
 
         # For regressor
         if isinstance(self.regressor_aggregate, str):
             if self.regressor_aggregate.lower() == "median":
-                return np.asarray(np.nanmedian(preds, axis=0))
+                result = np.asarray(np.nanmedian(preds, axis=0))
+                assert isinstance(result, np.ndarray)
+                return result
             else:
-                return np.asarray(np.nanmean(preds, axis=0))
+                result = np.asarray(np.nanmean(preds, axis=0))
+                assert isinstance(result, np.ndarray)
+                return result
         else:
             lower, upper = self.regressor_aggregate
             q_low = np.quantile(preds, lower, axis=0)
@@ -299,7 +309,9 @@ class BaggingEnsembler:
                     # Choose prediction closest to either bound
                     closest_idx = np.argmin(np.minimum(diffs_low, diffs_high))
                     trimmed_preds[closest_idx, i] = preds[closest_idx, i]
-            return np.asarray(np.nanmean(trimmed_preds, axis=0))
+            result = np.asarray(np.nanmean(trimmed_preds, axis=0))
+            assert isinstance(result, np.ndarray)
+            return result
 
     @simple_type_validator
     def predict_proba(self, X: Annotated[Any, arraylike_validator()]) -> np.ndarray:  # noqa: N803
@@ -339,4 +351,6 @@ class BaggingEnsembler:
             min_val, max_val = self.limit_proba
             avg_proba = np.clip(avg_proba, min_val, max_val)
 
-        return np.asarray(avg_proba)
+        result = np.asarray(avg_proba)
+        assert isinstance(result, np.ndarray)
+        return result

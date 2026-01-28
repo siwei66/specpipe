@@ -31,7 +31,9 @@ class ConstantRegressor(BaseEstimator, RegressorMixin):
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:  # noqa: N803
-        return np.full(X.shape[0], self.value)
+        result = np.asarray(np.full(X.shape[0], self.value))
+        assert isinstance(result, np.ndarray)
+        return result
 
 
 # %% test functions: BaggingEnsembler
