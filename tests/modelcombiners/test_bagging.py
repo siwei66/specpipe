@@ -15,7 +15,7 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.datasets import make_regression, make_classification
 from sklearn.base import BaseEstimator, RegressorMixin
 
-from swectral.modelcombiners import BaggingEnsembler
+from swectral.modelcombiners import BaggingEnsembler, create_bagging_model
 
 
 # %% Helper: ConstantRegressor
@@ -98,18 +98,20 @@ class TestBaggingEnsembler:
         """Tests fallback situation for trimmed mean aggregation of regressors."""
         X = np.zeros((3, 2))  # noqa: N806
 
-        estimators = [
-            ConstantRegressor(0.0),
-            ConstantRegressor(10.0),
-        ]
-
         model = BaggingEnsembler(
             base_estimator=ConstantRegressor(0.0),
             n_estimators=2,
             regressor_aggregate=(0.49, 0.51),
         )
 
+        model._seeds = np.array([0, 1])
+        model._feature_idx = {model._seeds[0]: np.array([0, 1]), model._seeds[1]: np.array([0, 1])}
+        estimators: dict[np.integer, object] = {
+            model._seeds[0]: ConstantRegressor(0.0),
+            model._seeds[1]: ConstantRegressor(10.0),
+        }
         model.estimators_ = estimators
+
         model._is_classifier = False
 
         y_pred = model.predict(X)
@@ -222,6 +224,81 @@ class TestBaggingEnsembler:
 
         assert np.allclose(y_pred1, y_pred2)
 
+    @staticmethod
+    def test_feature_resampling() -> None:
+        """Tests feature resampling strategies."""
+        X, y = make_regression(n_samples=100, n_features=20, noise=0.1, random_state=0)  # noqa: N806
+
+        model = BaggingEnsembler(
+            base_estimator=LinearRegression(),
+            n_estimators=10,
+            regressor_aggregate="mean",
+            random_state=42,
+            feature_subset="sqrt",
+        )
+        model.fit(X, y)
+        y_pred = model.predict(X)
+
+        assert y_pred.shape == (X.shape[0],)
+        assert np.isfinite(y_pred).all()
+
+        model = BaggingEnsembler(
+            base_estimator=LinearRegression(),
+            n_estimators=10,
+            regressor_aggregate="mean",
+            random_state=42,
+            feature_subset="log",
+        )
+        model.fit(X, y)
+        y_pred = model.predict(X)
+
+        assert y_pred.shape == (X.shape[0],)
+        assert np.isfinite(y_pred).all()
+
+        model = BaggingEnsembler(
+            base_estimator=LinearRegression(),
+            n_estimators=10,
+            regressor_aggregate="mean",
+            random_state=42,
+            feature_subset=0.8,
+        )
+        model.fit(X, y)
+        y_pred = model.predict(X)
+
+        assert y_pred.shape == (X.shape[0],)
+        assert np.isfinite(y_pred).all()
+
+        model = BaggingEnsembler(
+            base_estimator=LinearRegression(),
+            n_estimators=10,
+            regressor_aggregate="mean",
+            random_state=42,
+            feature_subset=12,
+        )
+        model.fit(X, y)
+        y_pred = model.predict(X)
+
+        assert y_pred.shape == (X.shape[0],)
+        assert np.isfinite(y_pred).all()
+
+    @staticmethod
+    def test_bagging_model_creator() -> None:
+        """Tests create_bagging_model basic functionality."""
+        X, y = make_regression(n_samples=100, n_features=5, noise=0.1, random_state=0)  # noqa: N806
+
+        model = create_bagging_model(
+            base_estimator=LinearRegression(),
+            n_estimators=10,
+            regressor_aggregate="mean",
+            random_state=42,
+        )
+        model.fit(X, y)
+        y_pred = model.predict(X)
+
+        assert y_pred.shape == (X.shape[0],)
+        assert np.isfinite(y_pred).all()
+        assert model.__class__.__name__ == "BaggingLinearRegression"
+
 
 # %% Test: BaggingEnsembler
 
@@ -234,10 +311,11 @@ class TestBaggingEnsembler:
 # TestBaggingEnsembler.test_regression_trimmed_mean()
 # TestBaggingEnsembler.test_regression_trimmed_mean_fallback()
 # TestBaggingEnsembler.test_reproducibility_with_random_state()
+# TestBaggingEnsembler.test_feature_resampling()
+# TestBaggingEnsembler.test_bagging_model_creator()
 
 
 # %% Test main
-
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__]))

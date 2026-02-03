@@ -4,9 +4,12 @@ Swectral - Model combiners
 """
 
 # Basic voting and bagging
-from swectral.modelcombiners.bagging import BaggingEnsembler
+from swectral.modelcombiners.bagging import BaggingEnsembler, create_bagging_model
 
-__all__ = ["BaggingEnsembler"]
+__all__ = [
+    "BaggingEnsembler",
+    "create_bagging_model",
+]
 
 # TODO: Boosting
 # TODO: Stacking
