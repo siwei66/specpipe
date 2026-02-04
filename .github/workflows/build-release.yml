@@ -30,6 +30,11 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Clean previous builds
+        run: |
+          echo "Removing old build files..."
+          rm -rf dist *.egg-info
+
       - name: Build release distributions
         run: |
           # NOTE: put your own distribution build steps here.
