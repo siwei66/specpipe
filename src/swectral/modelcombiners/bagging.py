@@ -33,9 +33,10 @@ def create_bagging_model(
     random_state: Optional[int] = None,
     regressor_aggregate: Union[str, tuple[float, float]] = "mean",
     limit_proba: Optional[tuple[float, float]] = None,
+    name: Optional[str] = None,
 ) -> object:
     """
-    Create a bagging model with class name 'Bagging' + base estimator class name.
+    Create a bagging model instance from specified base_estimator.
 
     Parameters
     ----------
@@ -92,10 +93,14 @@ def create_bagging_model(
         If None, no limit of probability is applied.
         Default is ``None``.
 
+    name : str or None, optional
+        Name of the created model class.
+        If None, the class name is ``'Bagging<BaseEstimatorClassName>'``. Default is None.
+
     Returns
     -------
     object
-        An bagging model instance with class name 'Ensemble' + base estimator class name.
+        An bagging model instance with a sklearn-style model interface.
 
     See Also
     --------
@@ -117,7 +122,10 @@ def create_bagging_model(
     """  # noqa: E501
 
     base_name = base_estimator.__class__.__name__
-    class_name = f"Bagging{base_name}"
+    if name is None:
+        class_name = f"Bagging{base_name}"
+    else:
+        class_name = name
 
     # Dynamically create a subclass of BaggingEnsembler
     EnsemblerClass = type(class_name, (BaggingEnsembler,), {})  # noqa: N806

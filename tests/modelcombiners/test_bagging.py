@@ -300,7 +300,7 @@ class TestBaggingEnsembler:
         assert model.__class__.__name__ == "BaggingLinearRegression"
 
 
-# %% Test: BaggingEnsembler
+# %% Local test: BaggingEnsembler
 
 # TestBaggingEnsembler.test_classifier_classes_attribute()
 # TestBaggingEnsembler.test_classifier_predict_and_predict_proba()
