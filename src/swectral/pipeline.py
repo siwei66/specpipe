@@ -464,8 +464,9 @@ class SpecPipe:
             self.__is_target_numeric = self._check_target_numeric(spec_exp)
             self._report_directory = spec_exp._report_directory
             self._pretest_data_init()
-            if len(self.process_chains) > 0:
-                self.test_run(dump_result=False)
+            n_chains = len(self.process_chains)
+            if n_chains > 0:
+                self.test_run(dump_result=False, model_test_coverage=(min(100, n_chains) / n_chains))
         except Exception as e:
             # Roll back when fail in test
             self._spec_exp = spec_exp_old
@@ -539,7 +540,7 @@ class SpecPipe:
             test_img_path = sdir + "test_images." + img_path.split(".")[-1]
             with open(unc_path(sdir + "pre_execution_data.json"), "w") as f:
                 # Save test image
-                croproi(img_path, bdmin, test_img_path)
+                croproi(raster_path=img_path, roi_coordinates=bdmin, output_path=test_img_path)
                 # Convert np.float32 to native float for json dump
                 # Save test spectra
                 td1 = {
@@ -879,8 +880,8 @@ class SpecPipe:
     @simple_type_validator
     def add_model(
         self,
-        model_method: object,
-        model_label: Optional[str] = None,
+        model_method: Union[object, list[object], tuple[object]],
+        model_label: Union[str, list[str], tuple[str]] = "",
         # Process parameters
         test_error_raise: bool = True,
         # Modeling parameters
@@ -916,7 +917,7 @@ class SpecPipe:
         model_label : str, optional
             Custom label for the added model.
 
-            If None, a label is automatically generated.
+            If empty string, a label is automatically generated.
 
         test_error_raise : bool, optional
             Whether to raise error when the model fails in validation using simplified mock data before added to the pipeline.
@@ -1183,11 +1184,10 @@ class SpecPipe:
             application_sequence = max(app_seqs) + 1
         else:
             application_sequence = 0
+        process_label = model_label
         method = model_method
-        process_label = ""
-        # No use for model data level, model_label is applied for model data level in add_process istead
 
-        # Add model process
+        # Add model processes
         self.add_process(
             input_data_level=input_data_level,
             output_data_level=output_data_level,
@@ -1198,7 +1198,6 @@ class SpecPipe:
             # Modeling parameters
             is_regression=is_regression,
             validation_method=validation_method,
-            model_label=model_label,
             unseen_threshold=unseen_threshold,
             x_shape=x_shape,
             result_backup=result_backup,
@@ -1389,7 +1388,7 @@ class SpecPipe:
             exact_match=exact_match,
         )
 
-    # Add process
+    # Add processes
     # Format of associated attribute:
     # [0 Process_ID, 1 Process_label, 2 input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
     @simple_type_validator
@@ -1399,14 +1398,13 @@ class SpecPipe:
         input_data_level: Union[str, int],
         output_data_level: Union[str, int],
         application_sequence: int,
-        method: Union[Callable, object],
-        process_label: str = "",
+        method: Union[Callable, object, list[Callable], tuple[Callable], list[object], tuple[object]],
+        process_label: Union[str, list[str], tuple[str]] = "",
         *,
         test_error_raise: bool = True,
         # Modeling parameters
         is_regression: Optional[bool] = None,
         validation_method: str = "2-fold",
-        model_label: Optional[str] = None,
         unseen_threshold: Optional[float] = 0.0,
         x_shape: Optional[tuple[int]] = None,
         result_backup: bool = False,
@@ -1481,11 +1479,24 @@ class SpecPipe:
         application_sequence : int
             Sequence number of the method within the same input data level. Lower numbers execute first.
 
-        method : callable or object
-            Method function or sklearn-style model object. Input/output must match data levels. For modeling, accepts sklearn-style objects with 'fit', 'predict', and 'predict_proba'.
+        method : callable or object or list of (callable or object)
+            Processing method, a processing function or sklearn-style estimator.
 
-        process_label : str, optional
-            Custom label for the process. Default is empty string.
+            The callable or estimator must accept inputs and produce outputs that conform to the configured data levels.
+
+            If an estimator is provided, it must follow the sklearn estimator interface, implementing `fit` and `predict`, and `predict_proba` for classifiers.
+
+            A list of methods may be provided to specify multiple methods that share the same configuration.
+
+        process_label : str or list of str, optional
+            Custom label(s) for the process.
+
+            If provided:
+
+                - If a single method is provided, must be a single str of label.
+                - If multiple methods are provided, must be a list of str with a length equal to the number of methods.
+
+            Default is an empty string, which automatically generates label(s) using the Callable name(s) or the estimator class name(s).
 
         test_error_raise : bool, optional
             Whether to raise error when the process fails in validation using simplified mock data before added to the pipeline.
@@ -1590,6 +1601,102 @@ class SpecPipe:
             >>> pipe.add_process(7, 7, 0, LocalPolynomial(5, polynomial_order=2).savitzky_golay_filter)
         """  # noqa: E501
 
+        # Validate processes and process_label
+        if isinstance(method, (list, tuple)):
+            methods = method
+            if isinstance(process_label, (list, tuple)):
+                if len(process_label) == len(methods):
+                    process_labels = process_label
+                else:
+                    raise ValueError(
+                        f"The number of provided process labels ({len(process_label)}) do not match "
+                        f"the number of process ({len(methods)})."
+                    )
+            elif process_label == "":
+                process_labels = [""] * len(methods)
+            elif len(methods) == 1:
+                process_labels = [process_label]
+            else:
+                raise TypeError(
+                    "If multiple methods are provided,"
+                    "process_label must be a list of str with a length equal to the number of methods, "
+                    f"but got: {process_label}, type: {type(process_label)}"
+                )
+        elif (hasattr(method, "fit") and hasattr(method, "predict")) or callable(method):
+            methods = [method]
+            if not isinstance(process_label, str):
+                if len(process_label) != 1:
+                    raise ValueError(
+                        f"'process_label' must be str or list with one str for single method, got: {process_label}"
+                    )
+                else:
+                    process_labels = process_label
+            else:
+                process_labels = [process_label]
+        else:
+            raise TypeError(f"'method' must be a model or Callable or list of them, got: {type(method)}")
+
+        # Add processes
+        for method_i, process_label_i in zip(methods, process_labels):
+            if not ((hasattr(method_i, "fit") and hasattr(method_i, "predict")) or callable(method_i)):
+                raise TypeError(f"'method' must be a model or Callable or list of them, got: {type(method_i)}")
+            self._add_process(
+                input_data_level=input_data_level,
+                output_data_level=output_data_level,
+                application_sequence=application_sequence,
+                method=method_i,  # method
+                process_label=process_label_i,  # process label
+                test_error_raise=test_error_raise,
+                is_regression=is_regression,
+                validation_method=validation_method,
+                model_label=process_label_i,  # model_label
+                unseen_threshold=unseen_threshold,
+                x_shape=x_shape,
+                result_backup=result_backup,
+                data_split_config=data_split_config,
+                validation_config=validation_config,
+                metrics_config=metrics_config,
+                roc_plot_config=roc_plot_config,
+                scatter_plot_config=scatter_plot_config,
+                residual_config=residual_config,
+                residual_plot_config=residual_plot_config,
+                influence_analysis_config=influence_analysis_config,
+            )
+
+    # Add process
+    # Format of associated attribute:
+    # [0 Process_ID, 1 Process_label, 2 input_data_level, 3 Output_data_level, 4 Application_sequence, 5 Method_callable, 6 _Full_app_seq, 7 _Alternative_number]  # noqa: E501
+    @simple_type_validator
+    def _add_process(  # noqa: C901
+        self,
+        # Process general parameters
+        input_data_level: Union[str, int],
+        output_data_level: Union[str, int],
+        application_sequence: int,
+        method: Union[Callable, object],
+        process_label: str = "",
+        *,
+        test_error_raise: bool = True,
+        # Modeling parameters
+        is_regression: Optional[bool] = None,
+        validation_method: str = "2-fold",
+        model_label: str = "",
+        unseen_threshold: Optional[float] = 0.0,
+        x_shape: Optional[tuple[int]] = None,
+        result_backup: bool = False,
+        # Model evaluation parameters
+        data_split_config: Union[str, dict[str, Any]] = "default",
+        validation_config: Union[str, dict[str, Any]] = "default",
+        metrics_config: Union[str, dict[str, Any], None] = "default",
+        roc_plot_config: Union[str, dict, None] = "default",
+        scatter_plot_config: Union[str, dict[str, Any], None] = "default",
+        residual_config: Union[str, dict[str, Any], None] = "default",
+        residual_plot_config: Union[str, dict[str, Any], None] = "default",
+        influence_analysis_config: Union[str, dict[str, Any], None] = "default",
+    ) -> None:
+        """
+        Add a single processing method with defined input/output data levels and application sequence to the pipeline.
+        """
         # Validate Data_level
         dl_in = _dl_val(input_data_level)
         dl_in_name = dl_in[1]
@@ -1615,17 +1722,35 @@ class SpecPipe:
         existed_proc_num = [0]
         if len(self.process) > 0:
             for pr in self.process:
-                # Get existed process number (repeat number) / dl 0~4 share same application_sequence series
+                # Get existed process number (repeat number) for dl>4 sharing same dl_in, dl_out and app_seq
                 if dl_in_ind > 4:
-                    if (pr[2] == dl_in_name) & (pr[4] == application_sequence):
+                    if (pr[2] == dl_in_name) & (pr[3] == dl_out_name) & (pr[4] == application_sequence):
                         existed_proc_num.append(pr[7])
+                # Get existed process number (repeat number) for dl 0~4 sharing same app_seq
                 else:
                     if (_dl_val(pr[2])[0] <= 4) & (pr[4] == application_sequence):
                         existed_proc_num.append(pr[7])
         proc_num_new = max(existed_proc_num) + 1
 
+        # Auto bump application sequence if fapp_seq higher than others of same dl_in
+        existed_appseq = [0]
+        existed_fappseq = [0]
+        appseq_for_id = -1
+        if len(self.process) > 0:
+            for pr in self.process:
+                # If identical positioned process existed
+                if (pr[2] == dl_in_name) & (pr[3] == dl_out_name) & (pr[4] == application_sequence):
+                    appseq_for_id = int(str(pr[0]).split("_")[1])
+                if pr[2] == dl_in_name:
+                    existed_appseq.append(pr[4])
+                    existed_fappseq.append(pr[6])
+        if (fapp_seq > max(existed_fappseq)) & (application_sequence < max(existed_appseq)):
+            appseq_for_id = max(existed_appseq) + 1
+        elif appseq_for_id == -1:
+            appseq_for_id = application_sequence
+
         # Build process ID
-        proc_id = str(dl_in_ind) + "_" + str(application_sequence) + "_%#" + str(proc_num_new)
+        proc_id = str(dl_in_ind) + "_" + str(appseq_for_id) + "_%#" + str(proc_num_new)
 
         # Add preprocess - validate preprocess method
         if dl_out_ind < 8:
@@ -1655,7 +1780,7 @@ class SpecPipe:
             existed_model_labels = [proc[1] for proc in self.process if proc[3] == 'model' and proc[1] != ''] + [
                 proc[5].model_label for proc in self.process if proc[3] == 'model' and hasattr(proc[5], 'model_label')
             ]
-            if model_label is None:
+            if model_label == "":
                 # Validate for duplication
                 model_name = method.__class__.__name__
                 name_k = 0
@@ -2303,6 +2428,117 @@ class SpecPipe:
                     This indicates corrupted process data."
             )
 
+    # Build pipelines directly from structure
+    @simple_type_validator
+    def build_pipeline(
+        self,
+        step_methods: list[
+            Union[
+                tuple[
+                    tuple[Union[str, int], Union[str, int]],
+                    Union[Callable, object, list[Union[Callable, object]], dict[str, Union[Callable, object]]],
+                ],
+                tuple[
+                    tuple[Union[str, int], Union[str, int]],
+                    Union[Callable, object, list[Union[Callable, object]], dict[str, Union[Callable, object]]],
+                    dict[str, Any],
+                ],
+            ]
+        ],
+    ) -> None:
+        """
+        Build pipelines by given structure and methods of each step.
+
+        This method constructs one or more processing pipelines directly from an explicit structural description.
+        Each pipeline step is defined by its input/output data levels with one or more alternative callable(s) or objects responsible for processing at that step.
+
+        Parameters
+        ----------
+        step_methods : list of ((str or int, str or int), callable or object or list of (callable or object) or dict of str to (callable or object), None or dict of str to Any)
+            A list describing the pipeline structure and the processing logic for each step.
+            Each element of the list has the form::
+
+                ((input_data_level, output_data_level), methods, params)
+
+            where:
+
+                ``input_data_level`` : int or str
+                    Input data level in number or name. See ``add_process`` for details.
+                ``output_data_level`` : int or str
+                    Input data level in number or name. See ``add_process`` for details.
+                ``methods`` : callable or object or list or dict
+                    A single callable or object defining one processing method.
+                    A list of callables or objects representing alternative methods for the step.
+                    A dictionary mapping method names to callables or objects, allowing multiple named methods.
+                ``params`` : dict, optional
+                    Optional dictionary of additional parameters applied to the methods at the step.
+
+        See Also
+        --------
+        add_process
+        add_model
+
+        Examples
+        --------
+        For an initialized SpecPipe instance ``pipe``::
+
+            >>> from swectral import roi_mean
+            >>> from swectral.functions import snv, minmax, aucnorm
+
+            >>> pipe.build_pipeline(
+            ...     [
+            ...         ((2, 2), [snv, minmax, aucnorm]),
+            ...         ((5, 7), roi_mean),
+            ...         ((7, 8), {'RF': RandomForestRegressor(n_estimators=6), 'KNN': KNeighborsRegressor(n_neighbors=3)}, {'validation_method': '5-fold'})
+            ...     ]
+            ... )
+        """  # noqa: E501
+
+        dl_in_p, dl_out_p, appseq = 0, 0, 0
+        for step in step_methods:
+            input_data_level = _dl_val(step[0][0])[0]
+            output_data_level = _dl_val(step[0][1])[0]
+            if not (
+                (input_data_level == dl_in_p and output_data_level == dl_out_p) or (_dl_val(input_data_level)[0] <= 4)
+            ):
+                dl_in_p = input_data_level
+                dl_out_p = output_data_level
+                appseq = 0
+            application_sequence = appseq
+            # Validate additional params
+            if len(step) == 3:
+                params = step[2]
+                for key in ["input_data_level", "output_data_level", "application_sequence", "method", "process_label"]:
+                    _ = params.pop(key, None)
+            else:
+                params = {}
+            # Add processes
+            if isinstance(step[1], dict):
+                process_label = list(step[1].keys())
+                method: Union[Callable, object, list[Callable], tuple[Callable], list[object], tuple[object]] = list(
+                    step[1].values()
+                )
+                self.add_process(
+                    input_data_level=input_data_level,
+                    output_data_level=output_data_level,
+                    application_sequence=application_sequence,
+                    method=method,
+                    process_label=process_label,
+                    **params,
+                )
+            else:
+                method = step[1]
+                self.add_process(
+                    input_data_level=input_data_level,
+                    output_data_level=output_data_level,
+                    application_sequence=application_sequence,
+                    method=method,
+                    **params,
+                )
+            # Update dl
+            if (input_data_level == dl_in_p and output_data_level == dl_out_p) or (_dl_val(input_data_level)[0] <= 4):
+                appseq = appseq + 1
+
     # List process chains
     @simple_type_validator
     def ls_process_chains(
@@ -2771,6 +3007,7 @@ class SpecPipe:
         self,
         test_modeling: bool = True,
         return_result: bool = False,
+        model_test_coverage: float = 1.0,
         dump_result: bool = True,
         dump_backup: bool = False,
         save_preprocessed_images: bool = False,
@@ -2788,6 +3025,15 @@ class SpecPipe:
         return_result : bool, optional
             Whether results of the processes are returned.
             If True, results of all tested steps are returned in a list. The default is False.
+
+        model_test_coverage : float, optional
+            Fraction of modeling pipelines to test.
+            Set to a value < 1.0 to reduce test runtime by randomly sampling preprocessing results without replacement.
+
+                - If 1.0, all pipelines will be tested.
+                - If < 1.0, only the specified fraction of pipelines will be tested.
+
+            Default is 1.0.
 
         dump_result : bool, optional
             Whether test results are stored in the chains. The default is True.
@@ -2850,7 +3096,11 @@ class SpecPipe:
         # Modeling test
         if test_modeling:
             if len(self.ls_model(print_result=False, return_result=True)) > 0:
-                self._test_model(status_results, self.spec_exp.report_directory)
+                self._test_model(
+                    status_results=status_results,
+                    specpipe_report_directory=self.spec_exp.report_directory,
+                    test_coverage=model_test_coverage,
+                )
             # Change process test status
             self.__tested = True
 
@@ -2860,7 +3110,12 @@ class SpecPipe:
             return None
 
     # Test modeling
-    def _test_model(self, status_results: dict, specpipe_report_directory: str) -> None:  # noqa: C901
+    def _test_model(  # noqa: C901
+        self,
+        status_results: dict,
+        specpipe_report_directory: str,
+        test_coverage: float = 1.0,
+    ) -> None:
         """
         Test models added on a simulated testing targets based on the given preprocessing results.
         """
@@ -2895,8 +3150,18 @@ class SpecPipe:
             ts_shape = model_methodi.input_shape
 
             ## Construct test samples list and implement model testing
+            # Sampled tesing - fast testing
+            preprocessing_results = status_results["status_results"][-1]
+            if not (0 < test_coverage <= 1.0):
+                raise ValueError(f"test_coverage must be in (0, 1], got: {test_coverage}")
+            if test_coverage < 1.0:
+                total_npchain = len(preprocessing_results)
+                sample_npchain = max(1, int(round(total_npchain * test_coverage)))
+                sample_indices = np.random.choice(total_npchain, size=sample_npchain, replace=False)
+                preprocessing_results = [preprocessing_results[i] for i in sample_indices]
+            # Model testing
             # Status result: (0 - step_id, 1 step_procs, 2 dl_in, 3 dl_out, 4 sample_result)
-            for pci, status_result in enumerate(status_results["status_results"][-1]):
+            for pci, status_result in enumerate(preprocessing_results):
                 # Get sample data of the model input data level
                 if status_result[3] == dl_in_ind:
                     # Get test sample data
@@ -3039,8 +3304,7 @@ class SpecPipe:
         result_directory: str = "",
         n_processor: int = 1,
         dump_backup: bool = False,
-        final_result_only: bool = True,
-        keep_chain_results: bool = True,
+        step_result: bool = True,
         resume: bool = False,
         to_csv: bool = True,
         show_progress: bool = True,
@@ -3071,12 +3335,11 @@ class SpecPipe:
         dump_backup : bool, optional
             Create backup files of results with timestamp. Default is False.
 
-        keep_chain_results : bool, optional
-            Whether step results of the chains are kept.
-            If False, step results are removed after preprocessing. Default is True.
+        step_result : bool, optional
+            Whether to retain intermediate step results for each processing chain.
 
-        final_result_only : bool, optional
-            If True, only results of final steps are saved for the chain results. Default is True.
+            If False, intermediate results are removed after preprocessing.
+            Default is True.
 
         resume : bool
             If True, computation resumes from preprocessing progress logs.
@@ -3163,6 +3426,7 @@ class SpecPipe:
             os.makedirs(unc_path(preprocessed_img_dir))
 
         # Preprocessing
+        final_result_only = not step_result
         self._preprocessor(
             result_directory=result_directory,
             n_processor=n_processor,
@@ -3176,7 +3440,7 @@ class SpecPipe:
         self._sample_list_constructor(result_directory=result_directory, to_csv=to_csv, show_progress=show_progress)
 
         # Clear step result data after sample list construction after finishing sample_list construction
-        if not keep_chain_results:
+        if not step_result:
             self._cl_step_result(result_directory=result_directory)
 
         # Print result dir
@@ -3784,16 +4048,16 @@ class SpecPipe:
         result_directory: str = "",
         n_processor: int = -1,
         test_model: bool = True,
-        pipe_parallel_for_modeling: bool = False,
+        model_parallel: bool = True,
         dump_backup: bool = False,
         step_result: bool = True,
-        keep_chain_results: bool = True,
         resume: bool = False,
         sample_data_to_csv: bool = True,
         show_progress: bool = True,
         save_config: bool = True,
         summary: bool = True,
         geo_reference_warning: bool = False,
+        model_test_coverage: float = 1.0,
         skip_test: bool = False,
         check_space: bool = True,
     ) -> None:
@@ -3825,11 +4089,11 @@ class SpecPipe:
             Tests use minimal sample sizes, which may cause errors for some models.
             Default is True.
 
-        pipe_parallel_for_modeling : bool, optional
-            Whether to disable pipeline-level parallelism during modeling.
+        model_parallel : bool, optional
+            Whether to enable pipeline-level parallelism during modeling.
 
-            Set to True when the modeling method already uses multiprocessing or GPU acceleration to avoid nested parallel execution.
-            Default is False.
+            Set to False when the modeling method already uses multiprocessing or GPU acceleration to avoid nested parallel execution.
+            Default is True.
 
         dump_backup : bool, optional
             Whether to create timestamped backup files of results.
@@ -3946,17 +4210,15 @@ class SpecPipe:
         # Test process
         if not skip_test:
             print("\n========= Test added chains =========\n")
-            self.test_run(test_modeling=test_model)
+            self.test_run(test_modeling=test_model, model_test_coverage=model_test_coverage)
 
         # Preprocessing
         print("\n========= Preprocessing samples =========\n")
-        final_result_only = not step_result
         self.preprocessing(
             result_directory=result_directory,
             n_processor=n_processor,
             dump_backup=dump_backup,
-            final_result_only=final_result_only,
-            keep_chain_results=keep_chain_results,
+            step_result=step_result,
             resume=resume,
             to_csv=sample_data_to_csv,
             show_progress=show_progress,
@@ -3970,7 +4232,7 @@ class SpecPipe:
         # Model evaluation
         model_procs = [proc[0] for proc in self.process if proc[3] == "model"]
         if len(model_procs) > 0:
-            if pipe_parallel_for_modeling:
+            if model_parallel:
                 ncpu_model = n_processor
             else:
                 ncpu_model = 1

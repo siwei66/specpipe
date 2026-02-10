@@ -4,15 +4,16 @@ Swectral - model combiners - Bagging tool
 
 Copyright (c) 2025 Siwei Luo. MIT License.
 """
+
 # Typing
 from typing import Optional, Union, Annotated, Any
 
 # Basic computation
 import numpy as np
+from copy import deepcopy
 
 # Modeling
 from sklearn.utils import resample
-from sklearn.base import clone
 from scipy.stats import mode
 
 # Local
@@ -28,11 +29,13 @@ def create_bagging_model(
     n_estimators: int = 50,
     max_samples: float = 1.0,
     replace_sample: bool = True,
+    oversampling: bool = False,
     feature_subset: Union[str, float, int, None] = None,
     replace_feature: bool = False,
     random_state: Optional[int] = None,
     regressor_aggregate: Union[str, tuple[float, float]] = "mean",
     limit_proba: Optional[tuple[float, float]] = None,
+    is_classifier: Optional[bool] = None,
     name: Optional[str] = None,
 ) -> object:
     """
@@ -57,6 +60,14 @@ def create_bagging_model(
         Whether sampling is performed with replacement.
         If ``False``, sampling is performed without replacement.
         Default is True.
+
+    oversampling : bool, optional
+        Whether to apply oversampling for rare cases in the training data.
+
+            - For categorical targets, rare classes are upsampled to reduce class imbalance.
+            - For continuous targets, underrepresented target regions are upsampled. The target space is divided into adaptive bins, with a maximum of 10 bins.
+
+        Default is False.
 
     feature_subset : str, float, int, or None
         Strategy for selecting a subset of features for each base estimator. Options are:
@@ -92,6 +103,12 @@ def create_bagging_model(
         Limit probability in ensemble. Any probability from base models will be restricted to this range.
         If None, no limit of probability is applied.
         Default is ``None``.
+
+    is_classifier : bool or None, optional
+        Whether the base estimator should be treated as a classifier.
+
+        If ``None``, the ensemble will automatically detect the type by inspecting the base estimator for attributes ``_estimator_type`` or ``classes_``, or method ``predict_proba``.
+        Default is None.
 
     name : str or None, optional
         Name of the created model class.
@@ -136,11 +153,13 @@ def create_bagging_model(
         n_estimators=n_estimators,
         max_samples=max_samples,
         replace_sample=replace_sample,
+        oversampling=oversampling,
         feature_subset=feature_subset,
         replace_feature=replace_feature,
         random_state=random_state,
         regressor_aggregate=regressor_aggregate,
         limit_proba=limit_proba,
+        is_classifier=is_classifier,
     )
     return model
 
@@ -150,11 +169,15 @@ def create_bagging_model(
 
 class BaggingEnsembler:
     """
-    Bagging ensemble or basic voting for regression and classification models with options of feature resampling.
+    Bagging ensemble for regression and classification models with options of feature resampling.
 
-    This class creates a bagging (bootstrap aggregating) model ensemble from any scikit-learn compatible base estimator.
-    The ensemble supports both regression and classification.
+    Unlike ``sklearn.ensemble.BaggingClassifier`` and ``sklearn.ensemble.BaggingRegressor``, this implementation is designed for flexibile custom models and robustness on small dataset.
+    Stratified resampling with optional replacement is applied for classifiers, and optional oversampling can boost rare classes or underrepresented target regions.
+
+    This class creates a bagging (bootstrap aggregating) model ensemble from base estimators implementing ``fit`` and ``predict``.
+    It supports both regression and classification.
     If the base estimator exposes a ``predict_proba`` method, the ensemble is treated as a classifier and probability averaging is used for prediction.
+    Classifier must supports ``classes_`` and ``predict_proba``.
 
     Attributes
     ----------
@@ -175,6 +198,14 @@ class BaggingEnsembler:
         Whether sampling is performed with replacement.
         If ``False``, sampling is performed without replacement.
         Default is True.
+
+    oversampling : bool, optional
+        Whether to apply oversampling for rare cases in the training data.
+
+            - For categorical targets, rare classes are upsampled to reduce class imbalance.
+            - For continuous targets, underrepresented target regions are upsampled. The target space is divided into adaptive bins, with a maximum of 10 bins.
+
+        Default is False.
 
     feature_subset : str, float, int, or None
         Strategy for selecting a subset of features for each base estimator. Options are:
@@ -211,6 +242,12 @@ class BaggingEnsembler:
         If None, no limit of probability is applied.
         Default is ``None``.
 
+    is_classifier : bool or None, optional
+        Whether the base estimator should be treated as a classifier.
+
+        If ``None``, the ensemble will automatically detect the type by inspecting the base estimator for attributes ``_estimator_type`` or ``classes_``, or method ``predict_proba``.
+        Default is None.
+
     nfeature : int
         Number of features actually used for each base estimator. Derived from ``feature_subset``.
 
@@ -218,8 +255,7 @@ class BaggingEnsembler:
         The collection of fitted base estimators.
 
     classes_ : numpy.ndarray of shape (n_classes,), optional
-        Class labels known to the classifier. Only present if the base
-        estimator supports ``predict_proba``.
+        Class labels known to the classifier. Only present if the base estimator supports ``predict_proba``.
 
     Methods
     -------
@@ -231,6 +267,11 @@ class BaggingEnsembler:
 
     predict_proba(X)
         Predict class probabilities for ``X``. Only available if the base estimator supports ``predict_proba``.
+
+    See Also
+    --------
+    sklearn.ensemble.BaggingClassifier
+    sklearn.ensemble.BaggingRegressor
 
     Examples
     --------
@@ -275,6 +316,14 @@ class BaggingEnsembler:
             n_estimators=100,
             replace_sample=False
         )
+
+    With oversampling::
+
+        model = BaggingEnsembler(
+            base_estimator=PLSRegression(n_components=5),
+            n_estimators=100,
+            oversampling=True
+        )
     """  # noqa: E501
 
     @simple_type_validator
@@ -284,11 +333,13 @@ class BaggingEnsembler:
         n_estimators: int = 50,
         max_samples: float = 1.0,
         replace_sample: bool = True,
+        oversampling: bool = False,
         feature_subset: Union[str, float, int, None] = None,
         replace_feature: bool = False,
         random_state: Optional[int] = None,
         regressor_aggregate: Union[str, tuple[float, float]] = "mean",
         limit_proba: Optional[tuple[float, float]] = None,
+        is_classifier: Optional[bool] = None,
     ) -> None:
         # Validate base_estimator
         valid: bool = True
@@ -304,6 +355,7 @@ class BaggingEnsembler:
         self.n_estimators = n_estimators
         self.max_samples = max_samples
         self.replace_sample = replace_sample
+        self.oversampling = oversampling
         # Validate feature_subset
         if isinstance(feature_subset, str):
             if feature_subset.lower() not in ["sqrt", "log"]:
@@ -345,7 +397,10 @@ class BaggingEnsembler:
                 raise ValueError(f"Invalid probability range: {limit_proba}")
         self.limit_proba = limit_proba
         # Validate whether classifier
-        self._is_classifier = self._detect_classifier(base_estimator)
+        if is_classifier is None:
+            self.is_classifier = self._detect_classifier(base_estimator)
+        else:
+            self.is_classifier = is_classifier
 
     @simple_type_validator
     def _generate_feature_number(self, X: np.ndarray) -> None:  # noqa: N803
@@ -395,13 +450,55 @@ class BaggingEnsembler:
     @simple_type_validator
     def _fit_single(self, X: np.ndarray, y: np.ndarray, seed: np.integer) -> object:  # noqa: N803
         """Fit single estimator."""
+        rng = np.random.default_rng(seed)
+
         # Subset X features
         X = X[:, self._feature_idx[seed]]  # noqa: N806
-        X_res, y_res = resample(  # noqa: N806
-            X, y, replace=self.replace_sample, n_samples=int(self.max_samples * X.shape[0]), random_state=seed
-        )
-        est = clone(self.base_estimator)
+        # Number of samples in resampling of samples
+        n_samples_resample = int(self.max_samples * X.shape[0])
+
+        # Oversampling
+        if self.oversampling:
+            # Categorical targets
+            if self.is_classifier:
+                X, y = _oversample_classification(X, y, rng=rng)  # noqa: N806
+            # Continous targets
+            else:
+                X, y = _oversample_regression(X, y, rng=rng)  # noqa: N806
+
+        # Bagging resampling
+        if self.is_classifier:
+            # Check stratify feasibility
+            classes, class_counts = np.unique(y, return_counts=True)
+            min_count = class_counts.min()
+            if min_count < 2:
+                raise ValueError(
+                    "Too few samples for stratification with categorical target values.\n"
+                    f"Classes found: {classes}\nClass counts: {class_counts}\n"
+                    "Each class must have at least 2 samples."
+                )
+            if n_samples_resample < len(classes):
+                raise ValueError(
+                    "Too few samples for stratification with categorical target values.\n"
+                    f"{self.max_samples * 100:.2f}% of training samples gives {n_samples_resample} samples,\n"
+                    f"but there are {len(classes)} classes."
+                )
+            X_res, y_res = resample(  # noqa: N806
+                X, y, replace=self.replace_sample, n_samples=n_samples_resample, stratify=y, random_state=seed
+            )
+        else:
+            X_res, y_res = resample(  # noqa: N806
+                X, y, replace=self.replace_sample, n_samples=n_samples_resample, random_state=seed
+            )
+        est = deepcopy(self.base_estimator)
+        assert hasattr(est, "fit")
         est.fit(X_res, y_res)
+        # Validate base classifier 'classes_'
+        if self.is_classifier and (not hasattr(est, "classes_")):
+            raise AttributeError(
+                f"Estimator '{est.__class__.__name__}' does not have attribute 'classes_' after fitting. "
+                "Base classifier must implements 'classes_'."
+            )
         return est
 
     @simple_type_validator
@@ -442,7 +539,7 @@ class BaggingEnsembler:
             self._feature_idx[seed] = self._compute_feature_ids(X, seed)
             self.estimators_[seed] = self._fit_single(X, y, seed)
 
-        if self._is_classifier:
+        if self.is_classifier:
             estimator0 = self.estimators_[seeds[0]]
             assert hasattr(estimator0, "classes_")
             self.classes_ = estimator0.classes_
@@ -479,14 +576,14 @@ class BaggingEnsembler:
             pred_list.append(pred)
         preds = np.array(pred_list)
 
-        if self._is_classifier:
+        if self.is_classifier:
             proba = self.predict_proba(X)
             result = np.asarray(self.classes_[np.argmax(proba, axis=1)])
             assert isinstance(result, np.ndarray)
             return result
 
         # For classifier
-        if self._is_classifier:
+        if self.is_classifier:
             # Soft voting
             if hasattr(self.estimators_[self._seeds[0]], "predict_proba"):
                 proba = self.predict_proba(X)
@@ -578,3 +675,98 @@ class BaggingEnsembler:
         result = np.asarray(avg_proba)
         assert isinstance(result, np.ndarray)
         return result
+
+
+# %% Oversampling tools
+
+
+@simple_type_validator
+def _adaptive_bins(
+    y: np.ndarray,
+    max_bins: int = 10,
+    min_samples_per_bin: int = 2,
+) -> np.ndarray:
+    """Determine adaptive bin edges for regression oversampling based on y distribution."""
+    n_samples = len(y)
+    n_bins = min(max_bins, max(1, n_samples // min_samples_per_bin))
+
+    if max_bins > 1:
+        # Create equal-population bins
+        quantiles = np.linspace(0, 1, n_bins + 1)
+        edges = np.quantile(y, quantiles)
+        # Ensure unique edges
+        edges = np.unique(edges)
+        # At least two edges
+        if len(edges) < 2:
+            edges = np.array([y.min(), y.max()])
+        edges = np.asarray(edges)
+        assert isinstance(edges, np.ndarray)
+        return edges
+    else:
+        edges = np.array([y.min(), y.max()])
+        assert isinstance(edges, np.ndarray)
+        return edges
+
+
+@simple_type_validator
+def _oversample_regression(
+    X: np.ndarray,  # noqa: N803
+    y: np.ndarray,
+    max_bins: int = 10,
+    min_samples_per_bin: int = 2,
+    rng: Optional[np.random.Generator] = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Oversample underrepresented target regions using adaptive cluster-based bins."""
+    if rng is None:
+        rng = np.random.default_rng()
+
+    bin_edges = _adaptive_bins(y, max_bins=max_bins, min_samples_per_bin=min_samples_per_bin)
+
+    # Assign samples to bins
+    y_bins = np.digitize(y, bin_edges)
+    counts = np.bincount(y_bins, minlength=len(bin_edges) + 1)
+    oversample_count = counts.max()
+    X_extra, y_extra = [], []  # noqa: N806
+
+    for b in range(1, len(bin_edges)):
+        idx_bin = np.where(y_bins == b)[0]
+        n_to_sample = oversample_count - len(idx_bin)
+        if n_to_sample > 0 and len(idx_bin) > 0:
+            sampled_idx = rng.choice(idx_bin, size=n_to_sample, replace=True)
+            X_extra.append(X[sampled_idx])
+            y_extra.append(y[idx_bin][rng.choice(len(idx_bin), size=n_to_sample, replace=True)])
+
+    if X_extra:
+        X = np.vstack([X] + X_extra)  # noqa: N806
+        y = np.hstack([y] + y_extra)
+
+    return X, y
+
+
+@simple_type_validator
+def _oversample_classification(
+    X: np.ndarray,  # noqa: N803
+    y: np.ndarray,
+    rng: Optional[np.random.Generator] = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Oversample rare classes to match the majority class."""
+    if rng is None:
+        rng = np.random.default_rng()
+
+    classes, counts = np.unique(y, return_counts=True)
+    oversample_count = counts.max()
+    X_extra, y_extra = [], []  # noqa: N806
+
+    for cls, count in zip(classes, counts):
+        n_to_sample = oversample_count - count
+        if n_to_sample > 0:
+            idx_cls = np.where(y == cls)[0]
+            sampled_idx = rng.choice(idx_cls, size=n_to_sample, replace=True)
+            X_extra.append(X[sampled_idx])
+            y_extra.append(y[sampled_idx])
+
+    if X_extra:
+        X = np.vstack([X] + X_extra)  # noqa: N806
+        y = np.hstack([y] + y_extra)
+
+    return X, y

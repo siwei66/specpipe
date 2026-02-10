@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 project = 'Swectral'
 copyright = '2025, Siwei Luo'
 author = 'Siwei Luo'
-release = '0.5.2'
+release = '0.5.3'
 
 # -- Sphinx extensions -------------------------------------------------------
 
@@ -118,6 +118,7 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "pandas": ("https://pandas.pydata.org/docs/", None),
+    "sklearn": ("https://scikit-learn.org/stable/", None),
     "torch": ("https://pytorch.org/docs/stable/", None),
     "PyWavelets": ("https://pywavelets.readthedocs.io/en/latest/", None),
 }

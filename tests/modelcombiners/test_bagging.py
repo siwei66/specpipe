@@ -112,7 +112,7 @@ class TestBaggingEnsembler:
         }
         model.estimators_ = estimators
 
-        model._is_classifier = False
+        model.is_classifier = False
 
         y_pred = model.predict(X)
 
@@ -225,6 +225,47 @@ class TestBaggingEnsembler:
         assert np.allclose(y_pred1, y_pred2)
 
     @staticmethod
+    def test_sample_oversampling() -> None:
+        """Tests feature resampling strategies."""
+        # Regression
+        X, y = make_regression(n_samples=100, n_features=20, noise=0.1, random_state=0)  # noqa: N806
+
+        model = BaggingEnsembler(
+            base_estimator=LinearRegression(),
+            n_estimators=10,
+            oversampling=True,
+            random_state=42,
+        )
+        model.fit(X, y)
+        y_pred = model.predict(X)
+
+        assert y_pred.shape == (X.shape[0],)
+        assert np.isfinite(y_pred).all()
+
+        # Classification
+        X, y = make_classification(  # noqa: N806
+            n_samples=200,
+            n_features=6,
+            n_classes=2,
+            random_state=0,
+        )
+
+        model = BaggingEnsembler(
+            base_estimator=LogisticRegression(max_iter=1000),
+            n_estimators=10,
+            oversampling=True,
+            random_state=42,
+        )
+        model.fit(X, y)
+
+        y_pred = model.predict(X)
+        y_proba = model.predict_proba(X)
+
+        assert y_pred.shape == (X.shape[0],)
+        assert y_proba.shape == (X.shape[0], len(model.classes_))
+        assert np.allclose(y_proba.sum(axis=1), 1.0)
+
+    @staticmethod
     def test_feature_resampling() -> None:
         """Tests feature resampling strategies."""
         X, y = make_regression(n_samples=100, n_features=20, noise=0.1, random_state=0)  # noqa: N806
@@ -311,6 +352,7 @@ class TestBaggingEnsembler:
 # TestBaggingEnsembler.test_regression_trimmed_mean()
 # TestBaggingEnsembler.test_regression_trimmed_mean_fallback()
 # TestBaggingEnsembler.test_reproducibility_with_random_state()
+# TestBaggingEnsembler.test_sample_oversampling()
 # TestBaggingEnsembler.test_feature_resampling()
 # TestBaggingEnsembler.test_bagging_model_creator()
 

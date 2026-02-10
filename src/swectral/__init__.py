@@ -5,7 +5,7 @@ A Python framework for automated batch composition, implementation and method as
 """  # noqa: E501
 
 # Package meta
-__version__ = "0.5.2"
+__version__ = "0.5.3"
 __author__ = "Siwei Luo"
 __license__ = "MIT"
 
@@ -20,6 +20,7 @@ __all__ = [
     "combine_transformer_classifier",
     "combine_transformer_regressor",
     "factorial_transformer_chains",
+    "IdentityTransformer",
     ### SpecIO functions
     "search_file",
     "envi_roi_coords",
@@ -63,7 +64,12 @@ __all__ = [
 from .example_data import create_example_raster, create_example_roi_xml, create_example_spec_exp, download_demo_data
 
 ## Model combiners
-from .modelconnector import factorial_transformer_chains, combine_transformer_classifier, combine_transformer_regressor
+from .modelconnector import (
+    factorial_transformer_chains,
+    combine_transformer_classifier,
+    combine_transformer_regressor,
+    IdentityTransformer,
+)
 
 ## Raster operation
 from .rasterop import croproi, pixel_apply

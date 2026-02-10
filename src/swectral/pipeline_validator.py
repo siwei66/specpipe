@@ -95,10 +95,10 @@ def _dl_val(data_level: Union[str, int]) -> tuple[int, str]:
     ]
     data_level_n = [0, 1, 2, 3, 4, 5, 6, 7, 8]
     if type(data_level) is str:
-        if data_level not in data_levels:
+        if data_level.lower() not in data_levels:
             raise ValueError(f"data_level must be one of {data_levels}, but got: {data_level}")
         else:
-            dlind = data_levels.index(data_level)
+            dlind = data_levels.index(data_level.lower())
     elif type(data_level) is int:
         if data_level not in data_level_n:
             raise ValueError(f"data_level number must be one of {data_level_n}, but got: {data_level}")

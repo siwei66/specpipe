@@ -440,13 +440,13 @@ def combine_transformer_regressor(  # noqa: C901
 class TransClassifier(BaseEstimator, ClassifierMixin):
     """
     Combine a chain of data transformation models with a classifier into a unified estimator.
-    This wrapper functions similarly to scikit-learn's Pipeline but compatible with any transformer and classifier that follows scikit-learn's method conventions.
+    This wrapper functions similarly to scikit-learn's Pipeline but only requires transformers and classifier to follow scikit-learn's method conventions.
 
     Attributes
     ----------
-    data_transformers : list
+    data_transformers : list of object
         List of data transformation models, any data transformation or feature selection model.
-    classifier
+    classifier : object
         Classification model.
 
     Methods
@@ -809,7 +809,11 @@ class TransRegressor(BaseEstimator, RegressorMixin):
 
 
 class IdentityTransformer(BaseEstimator, TransformerMixin):
-    """A transformer for passthrough."""
+    """
+    A passthrough transformer that returns the input data unchanged.
+
+    This transformer is useful as a placeholder in pipelines or for enforcing a consistent transformer interface without modifying data.
+    """  # noqa: E501
 
     @simple_type_validator
     def fit(
@@ -817,10 +821,40 @@ class IdentityTransformer(BaseEstimator, TransformerMixin):
         X: Annotated[Any, arraylike_validator()],  # noqa: N803
         y: Optional[Annotated[Any, arraylike_validator()]] = None,
     ) -> 'IdentityTransformer':
+        """
+        Fit the transformer.
+
+        This method performs no computation and exists to satisfy the scikit-learn estimator interface.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input data.
+        y : array-like of shape (n_samples,), optional
+            Target values. Ignored.
+
+        Returns
+        -------
+        IdentityTransformer
+            The fitted transformer.
+        """
         return self
 
     @simple_type_validator
     def transform(self, X: Annotated[Any, arraylike_validator()]) -> np.ndarray:  # noqa: N803
+        """
+        Return the input data unchanged.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input data.
+
+        Returns
+        -------
+        numpy.ndarray
+            The input data converted to a NumPy array.
+        """
         result: np.ndarray = np.asarray(X)
         return result
 
@@ -830,6 +864,21 @@ class IdentityTransformer(BaseEstimator, TransformerMixin):
         X: Annotated[Any, arraylike_validator()],  # noqa: N803
         y: Optional[Annotated[Any, arraylike_validator()]] = None,
     ) -> np.ndarray:  # noqa: N803
+        """
+        Fit the transformer and return the input data unchanged.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input data.
+        y : array-like of shape (n_samples,), optional
+            Target values. Ignored.
+
+        Returns
+        -------
+        numpy.ndarray
+            The input data converted to a NumPy array.
+        """
         result: np.ndarray = np.asarray(X)
         return result
 
