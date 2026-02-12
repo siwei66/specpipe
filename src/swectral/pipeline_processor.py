@@ -12,7 +12,16 @@ import os
 import warnings
 
 # Typing
-from typing import Annotated, Any, Callable, Literal, Optional, Union, overload
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    Literal,
+    Optional,
+    Union,
+    ContextManager,
+    overload,
+)
 from types import ModuleType
 
 # Time
@@ -372,14 +381,14 @@ def _preprocessing_sample(  # noqa: C901
 
         # Implement processing pipeline for every chain of chains
         status_results = _chain_step_processor(
-            chains,
-            n_model_step,
-            calc_status,
-            methods,
-            sample_data,
-            preprocessed_img_dir,
-            status_results,
-            preprocess_status,
+            chains=chains,
+            n_model_step=n_model_step,
+            calc_status=calc_status,
+            methods=methods,
+            sample_data=sample_data,
+            preprocessed_img_dir=preprocessed_img_dir,
+            status_results=status_results,
+            preprocess_status=preprocess_status,
         )
 
         # Collect test preprocessing results of current chain (chain i)
@@ -494,19 +503,23 @@ def _chain_step_processor(
     """Iterates the chains and steps to perform corresponding processing."""
     # Chain and step loop
     for chain_ind, chain in enumerate(chains):
+        # Use list to incrementally build the step result efficiently
         chain_result: list = []
         step_procs: list = []
         # For every step exclude modeling step
         for stepi in range(len(chain) - n_model_step):
             step = chain[stepi]
             # Create new step_procs and sample result for the step
-            step_procs = copy.deepcopy(step_procs)
-            chain_result = copy.deepcopy(chain_result)
+            # Shallow copy to continue local append safely
+            step_procs_local = step_procs.copy()
             # Note down processes of every step in a chain
-            step_procs.append(step)
+            step_procs_local.append(step)
+            # Convert to tuple for immutability & hashability and avoid repeated deepcopy for memory efficiency
+            step_procs_key = tuple(step_procs_local)
+
             # Inherit calculated result to avoid repeating calculation
-            if step_procs in calc_status[stepi]:
-                chain_result = [srt[4] for srt in status_results[stepi] if srt[1] == step_procs]
+            if step_procs_key in calc_status[stepi]:
+                chain_result = [srt[4] for srt in status_results[stepi] if srt[1] == step_procs_key]
             # New step calculation
             else:
                 # Get method and method info
@@ -533,18 +546,18 @@ def _chain_step_processor(
                 # Preprocessing computing
                 try:
                     status_results, calc_status = _single_process_handler(
-                        dl_in,
-                        chain_result,
-                        method_func,
-                        step_input_data,
-                        roi_coords,
-                        step_procs,
-                        stepi,
-                        dl_out,
-                        preprocessed_img_dir,
-                        status_results,
-                        calc_status,
-                        preprocess_status,
+                        dl_in=dl_in,
+                        chain_result=chain_result,
+                        method_func=method_func,
+                        step_input_data=step_input_data,
+                        roi_coords=roi_coords,
+                        step_procs_key=step_procs_key,
+                        stepi=stepi,
+                        dl_out=dl_out,
+                        preprocessed_img_dir=preprocessed_img_dir,
+                        status_results=status_results,
+                        calc_status=calc_status,
+                        preprocess_status=preprocess_status,
                     )
                 except Exception as e:
                     method_item_tuple = tuple(method_item)
@@ -555,6 +568,8 @@ def _chain_step_processor(
                         f"\nTest failed for chain: \nChain index: {chain_ind}, \nChain: {chain};\
                             \n\nProcess ID: {step}, \nProcess item: {method_item_out}, \n\nError message: \n{e}"
                     ) from e
+            # Update step_procs reference for next iteration
+            step_procs = step_procs_local
     return status_results
 
 
@@ -565,7 +580,7 @@ def _single_process_handler(
     method_func: Callable,
     step_input_data: object,
     roi_coords: list[list[tuple[Union[int, float], Union[int, float]]]],
-    step_procs: list,
+    step_procs_key: tuple,
     stepi: int,
     dl_out: int,
     preprocessed_img_dir: str,
@@ -606,11 +621,11 @@ def _single_process_handler(
     # Status result: (0 - step_id, 1 step_procs, 2 dl_in, 3 dl_out, 4 sample_result)
     # Step_id as str of procs id
     step_id = ""
-    for proc_id in step_procs:
+    for proc_id in step_procs_key:
         step_id = step_id + "proc_" + str(proc_id) + "-"
     # Store step result and calculation status
-    status_results[stepi].append((step_id, step_procs, dl_in, dl_out, chain_result[-1]))
-    calc_status[stepi].append(step_procs)
+    status_results[stepi].append((step_id, step_procs_key, dl_in, dl_out, chain_result[-1]))
+    calc_status[stepi].append(step_procs_key)
     return status_results, calc_status
 
 
@@ -1090,3 +1105,36 @@ def _model_evaluator_mp(
         with open(unc_path(error_log_path), "w") as f:
             f.write(err_msg)
         raise ValueError(e) from e
+
+
+# %% DummyManager to replace multiproccessing manager of pathos for single processing
+
+
+class _DummyLock(ContextManager[None]):
+    """Lock for _DummyManager."""
+
+    def __enter__(self) -> None:
+        return None
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> Literal[False]:
+        return False  # do nothing
+
+
+class _DummyManager:
+    """Pass-through manager that mimics pathos.helpers.Manager() for single processing."""
+
+    @staticmethod
+    def Lock() -> ContextManager[None]:  # noqa: N802
+        """Return lock."""
+        return _DummyLock()
+
+    class Value:
+        """Simple value holder to mimic Manager().Value."""
+
+        def __init__(self, typecode: str, value: Any) -> None:
+            self.value: Any = value
+
+    @staticmethod
+    def list() -> list[Any]:
+        """Simple list to mimic Manager().list()."""
+        return []

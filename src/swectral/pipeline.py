@@ -45,6 +45,13 @@ import matplotlib.pyplot as plt
 # Multiprocessing
 import dill
 from pathos.helpers import mp
+
+# Enforce Linux spawn for Pathos
+try:
+    mp.set_start_method("spawn", force=True)
+except RuntimeError:
+    pass
+
 from pathos.multiprocessing import ProcessingPool, cpu_count
 
 # Local
@@ -81,6 +88,7 @@ from .pipeline_processor import (
     _ModelMethod,
     _model_evaluator,
     _model_evaluator_mp,
+    _DummyManager,
 )
 from .modelconnector import (
     combined_model_marginal_stats,
@@ -3079,7 +3087,7 @@ class SpecPipe:
             custom_chains=self.custom_chains,
             process_chains=self.process_chains,
             specpipe_report_directory=self.spec_exp.report_directory,
-            preprocess_status=self._init_preprocessing_status(),
+            preprocess_status=self._init_preprocessing_status(n_processor=1),
             dump_result=dump_result,
             return_result_path=False,
             dump_backup=dump_backup,
@@ -3522,7 +3530,7 @@ class SpecPipe:
                 rest_sample_data = self._sample_data
 
         # Initialize preprocessing status for image operation
-        preprocess_status = self._init_preprocessing_status()
+        preprocess_status = self._init_preprocessing_status(n_processor=n_processor)
 
         # Preprocessing of all data and generate sample_list data of all chains
         if show_progress:
@@ -3748,9 +3756,12 @@ class SpecPipe:
 
     # Preprocessing image processing status
     @staticmethod
-    def _init_preprocessing_status() -> dict:
+    def _init_preprocessing_status(n_processor: int) -> dict:
         """Initialize shared image processing status for preprocessing."""
-        manager = mp.Manager()
+        if n_processor > 1:
+            manager = mp.Manager()
+        else:
+            manager = _DummyManager()
         preprocess_status: dict = {
             'start_status': manager.list(),
             'completion_status': manager.list(),
