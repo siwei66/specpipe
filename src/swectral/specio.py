@@ -997,6 +997,7 @@ def dump_vars(target_file_path: str, var_dict: dict[str, Any], backup: bool = Tr
     temp_path = target_file_path1 + ".tmp"
     with open(unc_path(temp_path), "wb") as f:
         dill.dump(var_dict, f)
+    os.makedirs(os.path.dirname(target_file_path1), exist_ok=True)
     os.replace(temp_path, target_file_path1)
 
     # Dump backup file
