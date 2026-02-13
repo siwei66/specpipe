@@ -233,8 +233,7 @@ pipe.ls_chains()
 
 
 # %% One-shot run barrier for Windows
-if os.name == "nt":
-    raise RuntimeError("SpecPipe.run must be executed separately on Windows.")
+
 # Run pipeline
 pipe.run()
 
@@ -261,8 +260,6 @@ chain_results[0]['ROC_curve']
 
 
 # %% One-shot run barrier for Windows
-if os.name == "nt":
-    raise RuntimeError("SpecPipe update must be executed separately on Windows.")
 
 # 6 Regression Case
 
@@ -342,8 +339,7 @@ pipe_reg.ls_model()
 pipe_reg.ls_chains()
 
 # %% One-shot run barrier for Windows
-if os.name == "nt":
-    raise RuntimeError("SpecPipe.run must be executed separately on Windows.")
+
 # Run regression pipeline
 pipe_reg.run()
 

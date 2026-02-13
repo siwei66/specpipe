@@ -379,16 +379,36 @@ def _preprocessing_sample(  # noqa: C901
             if not os.path.exists(unc_path(preprocessed_img_dir)):
                 os.makedirs(unc_path(preprocessed_img_dir))
 
+        # Validate step result data dir
+        if is_test_run:
+            dir_name = "test_run"
+        else:
+            dir_name = "Preprocessing"
+        # Step_results dir path
+        if len(dump_directory) > 0:
+            sdir = dump_directory
+        else:
+            sdir = specpipe_report_directory + f"{dir_name}/Step_results/"
+        if not os.path.exists(unc_path(sdir)):
+            os.makedirs(unc_path(sdir))
+        # Intermediate step_results dir path
+        inter_sdir = sdir + "Intermediate_step_results/"
+        if not os.path.exists(unc_path(inter_sdir)):
+            os.makedirs(unc_path(inter_sdir))
+
         # Implement processing pipeline for every chain of chains
         status_results = _chain_step_processor(
+            sample_data_label=sample_data_label,
             chains=chains,
             n_model_step=n_model_step,
             calc_status=calc_status,
             methods=methods,
             sample_data=sample_data,
             preprocessed_img_dir=preprocessed_img_dir,
+            inter_sdir=inter_sdir,
             status_results=status_results,
             preprocess_status=preprocess_status,
+            final_result_only=final_result_only,
         )
 
         # Collect test preprocessing results of current chain (chain i)
@@ -403,20 +423,11 @@ def _preprocessing_sample(  # noqa: C901
             "status_results": status_results,
         }
 
-        # Dump step results
+        # Dump step final results
         if is_test_run:
-            dir_name = "test_run"
             file_name = "PreprocessingTestingResult"
         else:
-            dir_name = "Preprocessing"
             file_name = f"PreprocessingResult_sample_{sample_data_label}"
-        # Output path
-        if len(dump_directory) > 0:
-            sdir = dump_directory
-        else:
-            sdir = specpipe_report_directory + f"{dir_name}/Step_results/"
-        if not os.path.exists(unc_path(sdir)):
-            os.makedirs(unc_path(sdir))
         if dump_result:
             chain_result_path = sdir + f"{file_name}.dill"
             dump_vars(chain_result_path, status_results_out, backup=dump_backup)
@@ -482,15 +493,18 @@ def _preprocessing_sample(  # noqa: C901
 
 
 # Chain step iterating processor
-def _chain_step_processor(
+def _chain_step_processor(  # noqa: C901
+    sample_data_label: str,
     chains: list,
     n_model_step: int,
-    calc_status: list[list],
+    calc_status: list[list],  # empty data container
     methods: np.ndarray,
     sample_data: dict,
     preprocessed_img_dir: str,
-    status_results: list[list],
+    inter_sdir: str,
+    status_results: list[list],  # empty data container
     preprocess_status: dict,
+    final_result_only: bool,
     *,
     # Dependencies for multiprocessing
     copy: ModuleType = copy,
@@ -501,14 +515,26 @@ def _chain_step_processor(
     torch: ModuleType = torch,
 ) -> list[list]:
     """Iterates the chains and steps to perform corresponding processing."""
-    # Chain and step loop
-    for chain_ind, chain in enumerate(chains):
-        # Use list to incrementally build the step result efficiently
-        chain_result: list = []
-        step_procs: list = []
-        # For every step exclude modeling step
-        for stepi in range(len(chain) - n_model_step):
+    n_chains = len(chains)
+    n_step = len(chains[0]) - n_model_step
+
+    # Chain-step results and its processes as result IDs
+    chain_results_per_chain: list[list] = [[] for _ in range(n_chains)]
+    step_procs_per_chain: list[list] = [[] for _ in range(n_chains)]
+
+    # For every step exclude modeling step
+    for stepi in range(n_step):
+
+        # Chain and step loop
+        for chain_ind, chain in enumerate(chains):
+
+            # Step process ID
             step = chain[stepi]
+
+            # Load existed result and process
+            chain_result = chain_results_per_chain[chain_ind]
+            step_procs = step_procs_per_chain[chain_ind]
+
             # Create new step_procs and sample result for the step
             # Shallow copy to continue local append safely
             step_procs_local = step_procs.copy()
@@ -517,7 +543,7 @@ def _chain_step_processor(
             # Convert to tuple for immutability & hashability and avoid repeated deepcopy for memory efficiency
             step_procs_key = tuple(step_procs_local)
 
-            # Inherit calculated result to avoid repeating calculation
+            # Reuse computed result to avoid repeating calculation
             if step_procs_key in calc_status[stepi]:
                 chain_result = [srt[4] for srt in status_results[stepi] if srt[1] == step_procs_key]
             # New step calculation
@@ -529,6 +555,7 @@ def _chain_step_processor(
                 dl_out = _dl_val(method_item[3])[0]
                 method_func = method_item[5]
                 assert callable(method_func)
+
                 # Get input data of the step
                 # Pretest_data: [img_path, test_img_path, roi_coords, test_roi_coords, roitable, spec1d]
                 if len(chain_result) == 0:
@@ -543,9 +570,11 @@ def _chain_step_processor(
                 else:
                     step_input_data = chain_result[-1]
                 roi_coords = sample_data["roi_coords"]
+
                 # Preprocessing computing
                 try:
                     status_results, calc_status = _single_process_handler(
+                        sample_data_label=sample_data_label,
                         dl_in=dl_in,
                         chain_result=chain_result,
                         method_func=method_func,
@@ -553,8 +582,10 @@ def _chain_step_processor(
                         roi_coords=roi_coords,
                         step_procs_key=step_procs_key,
                         stepi=stepi,
+                        chain_ind=chain_ind,
                         dl_out=dl_out,
                         preprocessed_img_dir=preprocessed_img_dir,
+                        inter_sdir=inter_sdir,
                         status_results=status_results,
                         calc_status=calc_status,
                         preprocess_status=preprocess_status,
@@ -568,13 +599,74 @@ def _chain_step_processor(
                         f"\nTest failed for chain: \nChain index: {chain_ind}, \nChain: {chain};\
                             \n\nProcess ID: {step}, \nProcess item: {method_item_out}, \n\nError message: \n{e}"
                     ) from e
+
             # Update step_procs reference for next iteration
             step_procs = step_procs_local
+
+            # Update result list and key list
+            chain_results_per_chain[chain_ind] = chain_result
+            step_procs_per_chain[chain_ind] = step_procs
+
+            # Prune results if final_result_only
+            if final_result_only and stepi >= 2:
+
+                # Number of steps to prune
+                step_to_prune = stepi - 1
+
+                for idx, (step_id, step_procs_key, dl_in, dl_out, sample_result) in enumerate(
+                    status_results[step_to_prune]
+                ):
+                    if sample_result is not None:
+                        # Remove the intermediate results
+                        if isinstance(sample_result, dict) and sample_result.get("__disk_backed__"):
+                            sample_result_path = sample_result["path"]
+                            if os.path.exists(sample_result_path):
+                                os.remove(sample_result_path)
+                        # Remove the intermediate result handle
+                        status_results[step_to_prune][idx] = (step_id, step_procs_key, dl_in, dl_out, None)
+
     return status_results
+
+
+def _dump_disk_backed_data(num_result: object, data_path: str) -> dict:
+    """Dump disk backed data according to given path and return the handle. data_path must have no extension."""
+    data_path = os.path.splitext(data_path)[0]
+    # Dump to npy if array-like
+    try:
+        num_result = arraylike_validator()(num_result)
+        data_path_ext = unc_path(data_path + ".npy")
+        loader_type = "numpy"
+        assert isinstance(num_result, np.ndarray)
+        np.save(data_path_ext, num_result)
+    # Else to dill
+    except Exception:
+        data_path_ext = unc_path(data_path + ".dill")
+        loader_type = "dill"
+        # Dill dump
+        dump_vars(data_path_ext, {"data": num_result}, backup=False)
+    # Return handle
+    return {"__disk_backed__": True, "path": data_path_ext, "loader": loader_type}
+
+
+def _load_disk_backed_data(handle_obj: object) -> object:
+    """Load disk backed data using defined handle object."""
+    if isinstance(handle_obj, dict) and handle_obj.get("__disk_backed__"):
+        if "loader" in handle_obj.keys():
+            loader_type = handle_obj.get("loader")
+            if loader_type == "numpy":
+                return np.load(handle_obj["path"], allow_pickle=False)
+            elif loader_type == "dill":
+                return load_vars(handle_obj["path"])["data"]
+            else:
+                raise ValueError(f"handle loader type must be 'numpy' or 'dill', got: {loader_type}")
+        else:
+            raise ValueError("handle 'loader' is undefined, cannot load data.")
+    return handle_obj
 
 
 # Single process handler
 def _single_process_handler(
+    sample_data_label: str,
     dl_in: int,
     chain_result: list,
     method_func: Callable,
@@ -582,8 +674,10 @@ def _single_process_handler(
     roi_coords: list[list[tuple[Union[int, float], Union[int, float]]]],
     step_procs_key: tuple,
     stepi: int,
+    chain_ind: int,
     dl_out: int,
     preprocessed_img_dir: str,
+    inter_sdir: str,
     status_results: list[list],
     calc_status: list[list],
     preprocess_status: dict,
@@ -597,11 +691,17 @@ def _single_process_handler(
     torch: ModuleType = torch,
 ) -> tuple[list[list], list[list]]:
     """Single process handler to allocate method wrapper according to data levels."""
+    # Status_result: (0 - step_id, 1 step_procs, 2 dl_in, 3 dl_out, 4 sample_result)
+    # Step_id as str of procs id
+    step_id = ""
+    for proc_id in step_procs_key:
+        step_id = step_id + "p_" + str(proc_id) + "-"
     # Apply the step process function
     # ============ Image processing ============
     # Create files for image processing computation start and completion status
     if dl_in <= 4:
         step_input_data = str(step_input_data)
+        # Image processing
         processed_image_path = _image_processing_step(
             dl_in=dl_in,
             preprocessed_img_dir=preprocessed_img_dir,
@@ -612,17 +712,25 @@ def _single_process_handler(
         chain_result.append(processed_image_path)
     # ============ ROI data extraction ============
     elif dl_in == 5:
-        # Accepts image path and ROI coords as input
-        chain_result.append(method_func(step_input_data, roi_coords))
+        # Compute - accepts image path and ROI coords as input
+        num_result = method_func(step_input_data, roi_coords)
+        # Dump result
+        data_path = f"{inter_sdir}Sample_{sample_data_label}_step_{stepi}_chain_{chain_ind}"
+        result_data_handle = _dump_disk_backed_data(num_result=num_result, data_path=data_path)
+        # Store handle
+        chain_result.append(result_data_handle)
     # ============ Extracted data / Sample data processing ============
     elif (dl_in >= 6) & (dl_in <= 7):
-        chain_result.append(method_func(step_input_data))
+        # Load step_input_data
+        step_input_data_loaded = _load_disk_backed_data(step_input_data)
+        # Compute
+        num_result = method_func(step_input_data_loaded)
+        # Dump result
+        data_path = f"{inter_sdir}Sample_{sample_data_label}_step_{stepi}_chain_{chain_ind}"
+        result_data_handle = _dump_disk_backed_data(num_result=num_result, data_path=data_path)
+        # Store handle
+        chain_result.append(result_data_handle)
     # Save calculated step results
-    # Status result: (0 - step_id, 1 step_procs, 2 dl_in, 3 dl_out, 4 sample_result)
-    # Step_id as str of procs id
-    step_id = ""
-    for proc_id in step_procs_key:
-        step_id = step_id + "proc_" + str(proc_id) + "-"
     # Store step result and calculation status
     status_results[stepi].append((step_id, step_procs_key, dl_in, dl_out, chain_result[-1]))
     calc_status[stepi].append(step_procs_key)

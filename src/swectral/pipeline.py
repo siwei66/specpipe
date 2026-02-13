@@ -19,6 +19,7 @@ import warnings
 # Typing
 from typing import Annotated, Any, Callable, Literal, Optional, Union, overload
 from types import ModuleType
+from collections.abc import Iterable
 
 # Time
 import time
@@ -89,6 +90,7 @@ from .pipeline_processor import (
     _model_evaluator,
     _model_evaluator_mp,
     _DummyManager,
+    _load_disk_backed_data,
 )
 from .modelconnector import (
     combined_model_marginal_stats,
@@ -1450,9 +1452,9 @@ class SpecPipe:
                     If the process callable is applied to a region of interest (ROI) within a raster image.
                     The callable must receive the raster path and ROI coordinates provided by provided ``SpecExp`` instance.
                 ``6`` or ``"roi_specs"``
-                    If the process callable is applied to 2D array of ROI spectra, each row is a pixel.
+                    If the process callable is applied to 2D ``numpy.ndarray`` of ROI spectra, each row is a pixel.
                 ``7`` or ``"spec1d"``
-                    If the process callable is applied to 1D sample spectra or flattened data, such as ROI spectral statistics.
+                    If the process callable is applied to 1D array-like sample spectra or flattened data, such as ROI spectral statistics.
 
             Note:
 
@@ -1478,7 +1480,7 @@ class SpecPipe:
                 ``5`` or ``"image_roi"``
                     Currently unavailable.
                 ``6`` or ``"roi_specs"``
-                    Returns 2D array of ROI spectra.
+                    Returns 2D ``numpy.ndarray`` of ROI spectra.
                 ``7`` or ``"spec1d"``
                     Returns 1D array-like spectral data.
                 ``8`` or ``"model"``
@@ -3173,7 +3175,7 @@ class SpecPipe:
                 # Get sample data of the model input data level
                 if status_result[3] == dl_in_ind:
                     # Get test sample data
-                    tsample = np.array(status_result[4])
+                    tsample = np.array(_load_disk_backed_data(status_result[4]))
 
                     # Validate data shape
                     if ts_shape is None:
@@ -3678,7 +3680,7 @@ class SpecPipe:
                 for status_result in status_results:
                     if tuple(status_result[1]) == tuple(pchain):
                         # Construct sample_list item
-                        step_data = status_result[4]
+                        step_data = _load_disk_backed_data(status_result[4])
                         step_data_shape = np.array(step_data).shape
                         # Validate step output data level
                         step_dl_out = status_result[3]
@@ -3703,11 +3705,18 @@ class SpecPipe:
             # Save results to CSV
             if to_csv:
                 # Results to table (df)
-                chain_res_table = [
-                    (pres[0], str(pres[1]), str(pres[2]), str(pres[3]), pres[4]) + tuple(pres[5])
-                    for pres in pre_results
-                ]
+                chain_res_table = []
+                for pres in pre_results:
+                    pres_data = pres[5]
+                    if isinstance(pres_data, Iterable):
+                        pres_data_tuple: tuple = tuple(pres_data)
+                    else:
+                        pres_data_tuple = (pres_data,)
+                    chain_res_table.append(
+                        (pres[0], str(pres[1]), str(pres[2]), str(pres[3]), pres[4]) + pres_data_tuple
+                    )
                 arr_chain_res = np.array(chain_res_table)
+
                 coln_chain_res = ["Sample_ID", "Label", "Validation_group", "X_shape", "y"] + [
                     f"x{i}" for i in range(arr_chain_res.shape[1] - 5)
                 ]
