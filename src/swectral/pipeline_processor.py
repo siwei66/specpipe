@@ -52,6 +52,39 @@ from .pipeline_validator import (
 global ModelEva
 
 
+# %% DummyManager to replace multiproccessing manager of pathos for single processing
+
+
+class _DummyLock(ContextManager[None]):
+    """Lock for _DummyManager."""
+
+    def __enter__(self) -> None:
+        return None
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> Literal[False]:
+        return False  # do nothing
+
+
+class _DummyManager:
+    """Pass-through manager that mimics pathos.helpers.Manager() for single processing."""
+
+    @staticmethod
+    def Lock() -> ContextManager[None]:  # noqa: N802
+        """Return lock."""
+        return _DummyLock()
+
+    class Value:
+        """Simple value holder to mimic Manager().Value."""
+
+        def __init__(self, typecode: str, value: Any) -> None:
+            self.value: Any = value
+
+    @staticmethod
+    def list() -> list[Any]:
+        """Simple list to mimic Manager().list()."""
+        return []
+
+
 # %% Static functions for SpecPipe
 
 
@@ -607,23 +640,23 @@ def _chain_step_processor(  # noqa: C901
             chain_results_per_chain[chain_ind] = chain_result
             step_procs_per_chain[chain_ind] = step_procs
 
-            # Prune results if final_result_only
-            if final_result_only and stepi >= 2:
+        # Prune results if final_result_only
+        if final_result_only and stepi >= 1:
 
-                # Number of steps to prune
-                step_to_prune = stepi - 1
+            # Step ID to prune
+            step_to_prune = stepi - 1
 
-                for idx, (step_id, step_procs_key, dl_in, dl_out, sample_result) in enumerate(
-                    status_results[step_to_prune]
-                ):
-                    if sample_result is not None:
-                        # Remove the intermediate results
-                        if isinstance(sample_result, dict) and sample_result.get("__disk_backed__"):
-                            sample_result_path = sample_result["path"]
-                            if os.path.exists(sample_result_path):
-                                os.remove(sample_result_path)
-                        # Remove the intermediate result handle
-                        status_results[step_to_prune][idx] = (step_id, step_procs_key, dl_in, dl_out, None)
+            for idx, (step_id, step_procs_key, dl_in, dl_out, sample_result) in enumerate(
+                status_results[step_to_prune]
+            ):
+                if sample_result is not None:
+                    # Remove the intermediate results
+                    if isinstance(sample_result, dict) and sample_result.get("__disk_backed__"):
+                        sample_result_path = sample_result["path"]
+                        if os.path.exists(sample_result_path):
+                            os.remove(sample_result_path)
+                    # Remove the intermediate result handle
+                    status_results[step_to_prune][idx] = (step_id, step_procs_key, dl_in, dl_out, None)
 
     return status_results
 
@@ -1004,6 +1037,7 @@ def _model_evaluator(  # noqa: C901
     model_processes: list[tuple[str, str, str, str, int, Any, int, int]],
     specpipe_report_directory: str,
     result_directory: str = "",
+    lock: object = _DummyLock(),
     # Update progress status, use in a processing loop for resume
     update_progress_log: bool = False,
     # Import applied functions and modules
@@ -1126,21 +1160,23 @@ def _model_evaluator(  # noqa: C901
         else:
             raise ValueError(f"Model only accepts data level 'spec1d' as input, but got: {dl_in_name}")
 
-    # Update progress
+    # TODO: Update progress
     log_path = model_report_dir + "modeling_progress_log.dill"
-    if os.path.exists(unc_path(log_path)):
-        modeling_progress_log = load_vars(log_path)["modeling_progress_log"]
-        if preprocess_chain not in modeling_progress_log:
-            modeling_progress_log.append(preprocess_chain)
+    assert hasattr(lock, "__enter__") and hasattr(lock, "__exit__")
+    with lock:
+        if os.path.exists(unc_path(log_path)):
+            modeling_progress_log = load_vars(log_path)["modeling_progress_log"]
+            if preprocess_chain not in modeling_progress_log:
+                modeling_progress_log.append(preprocess_chain)
+            else:
+                warnings.warn(
+                    f"Sample_list_label must be unique, got duplicated label: {sample_list_label}",
+                    UserWarning,
+                    stacklevel=3,
+                )
+            dump_vars(log_path, {"modeling_progress_log": modeling_progress_log}, backup=False)
         else:
-            warnings.warn(
-                f"Sample_list_label must be unique, got duplicated label: {sample_list_label}",
-                UserWarning,
-                stacklevel=3,
-            )
-        dump_vars(log_path, {"modeling_progress_log": modeling_progress_log}, backup=False)
-    else:
-        dump_vars(log_path, {"modeling_progress_log": [preprocess_chain]}, backup=False)
+            dump_vars(log_path, {"modeling_progress_log": [preprocess_chain]}, backup=False)
 
 
 @simple_type_validator
@@ -1150,6 +1186,7 @@ def _model_evaluator_mp(
     model_processes: list[tuple[str, str, str, str, int, Any, int, int]],
     specpipe_report_directory: str,
     result_directory: str = "",
+    lock: object = _DummyLock(),
     # Update progress status, use in a processing loop for resume
     update_progress_log: bool = False,
     # Import applied functions and modules
@@ -1186,6 +1223,7 @@ def _model_evaluator_mp(
             model_processes=model_processes,
             specpipe_report_directory=specpipe_report_directory,
             result_directory=result_directory,
+            lock=lock,
             update_progress_log=update_progress_log,
             # Import applied functions
             _dl_val=_dl_val,
@@ -1213,36 +1251,3 @@ def _model_evaluator_mp(
         with open(unc_path(error_log_path), "w") as f:
             f.write(err_msg)
         raise ValueError(e) from e
-
-
-# %% DummyManager to replace multiproccessing manager of pathos for single processing
-
-
-class _DummyLock(ContextManager[None]):
-    """Lock for _DummyManager."""
-
-    def __enter__(self) -> None:
-        return None
-
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> Literal[False]:
-        return False  # do nothing
-
-
-class _DummyManager:
-    """Pass-through manager that mimics pathos.helpers.Manager() for single processing."""
-
-    @staticmethod
-    def Lock() -> ContextManager[None]:  # noqa: N802
-        """Return lock."""
-        return _DummyLock()
-
-    class Value:
-        """Simple value holder to mimic Manager().Value."""
-
-        def __init__(self, typecode: str, value: Any) -> None:
-            self.value: Any = value
-
-    @staticmethod
-    def list() -> list[Any]:
-        """Simple list to mimic Manager().list()."""
-        return []

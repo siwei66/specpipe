@@ -991,10 +991,11 @@ def dump_vars(target_file_path: str, var_dict: dict[str, Any], backup: bool = Tr
 
     """
     # Validate extension
-    target_file_path1 = os.path.splitext(target_file_path)[0] + ".dill"
+    target_file_path_base = os.path.splitext(target_file_path)[0]
+    target_file_path1 = target_file_path_base + ".dill"
 
     # Dill dump
-    temp_path = target_file_path1 + ".tmp"
+    temp_path = target_file_path_base + "_" + str(time.time_ns())[7:-2] + ".dill.tmp"
     with open(unc_path(temp_path), "wb") as f:
         dill.dump(var_dict, f)
     os.makedirs(os.path.dirname(target_file_path1), exist_ok=True)

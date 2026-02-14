@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
     # Review the processing chains and run pipelines
     pipe.ls_chains()
-    pipe.run()
+    pipe.run(model_test_coverage=0.1)
 
     # Retrieve results to console
     report_summaries = pipe.report_summary()  # Summaries

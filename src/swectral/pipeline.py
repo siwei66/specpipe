@@ -46,14 +46,8 @@ import matplotlib.pyplot as plt
 # Multiprocessing
 import dill
 from pathos.helpers import mp
-
-# Enforce Linux spawn for Pathos
-try:
-    mp.set_start_method("spawn", force=True)
-except RuntimeError:
-    pass
-
 from pathos.multiprocessing import ProcessingPool, cpu_count
+import multiprocessing as nmp
 
 # Local
 from .groupstats import sample_group_stats, performance_marginal_stats
@@ -89,15 +83,46 @@ from .pipeline_processor import (
     _ModelMethod,
     _model_evaluator,
     _model_evaluator_mp,
+    _DummyLock,
     _DummyManager,
     _load_disk_backed_data,
 )
+from .pipeline_tqdm import PipelineFileTqdm, DirProgressObserver
 from .modelconnector import (
     combined_model_marginal_stats,
 )
 
 # For multiprocessing
 global ModelEva
+
+
+# %% Initialize multiprocessing
+
+
+_INITIALIZED: bool = False
+
+
+def _mp_init() -> None:
+    """Initialize multiprocessing"""
+    # Run once only
+    global _INITIALIZED
+    if _INITIALIZED:
+        return
+
+    # Use dill serialization multiprocessing
+    try:
+        nmp.reduction.ForkingPickler = dill.Pickler  # type: ignore[misc]
+    except AttributeError:
+        pass
+
+    # Enforce Linux spawn for multiprocessing
+    try:
+        mp.set_start_method("spawn", force=True)
+        nmp.set_start_method("spawn", force=True)
+    except RuntimeError:
+        pass
+
+    _INITIALIZED = True
 
 
 # %% Spectral Modeling Pipeline Class - SpecPipe
@@ -3395,6 +3420,19 @@ class SpecPipe:
             >>> pipe.preprocessing(n_processor=10)
         """  # noqa: E501
 
+        # Setup multiprocessing
+        if n_processor > 1:
+            _mp_init()
+
+        # Validate computation status
+        finish_status_path = self._report_directory + "SpecPipe_configuration/.__preprocessing_complete.s"
+        if os.path.exists(finish_status_path):
+            if resume:
+                print("Preprocessing is completed. Set resume=False to recompute.")
+                return None
+            else:
+                os.remove(finish_status_path)
+
         # Validate disk space for output
         self._val_disk_space_preprocessing(image=True, plot=False, error_raise=check_space)
 
@@ -3435,6 +3473,27 @@ class SpecPipe:
         if not os.path.exists(unc_path(preprocessed_img_dir)):
             os.makedirs(unc_path(preprocessed_img_dir))
 
+        # Start preprocessing
+        if show_progress:
+            print("\nPreprocess samples ...")
+
+        # Pipeline progress observation for multiprocessing
+        step_file_root = unc_path(self.report_directory + "Preprocessing/Step_results/Intermediate_step_results/")
+        if n_processor > 1:
+            # Pipeline and resulting file configuration
+            n_pre_step = len(self.ls_process_chains(print_label=False).iloc[0, :].tolist()) - 1
+            step_file_patterns = [f"_step_{i}" for i in range(n_pre_step)]
+            df_pchains = self.ls_chains(print_label=False)
+            step_branches = [len(df_pchains.iloc[:, i].unique()) for i in range(n_pre_step)]
+            # Progress observing process by preprocessing intermediate data files
+            observer = PipelineFileTqdm(
+                root=step_file_root,
+                patterns=step_file_patterns,
+                nbranches=step_branches,
+                nsample=len(self._sample_targets),
+            )
+            observer.start()
+
         # Preprocessing
         final_result_only = not step_result
         self._preprocessor(
@@ -3446,7 +3505,13 @@ class SpecPipe:
             show_progress=show_progress,
         )
 
+        # Complete preprocessing progress monitoring
+        open(step_file_root + ".__finished.s", "w").close()
+        if n_processor > 1:
+            observer.join()
+
         # Construct sample_list
+        print("\n\nConstructing sample list...")
         self._sample_list_constructor(result_directory=result_directory, to_csv=to_csv, show_progress=show_progress)
 
         # Clear step result data after sample list construction after finishing sample_list construction
@@ -3467,6 +3532,9 @@ class SpecPipe:
 
         # Recover NotGeoreferencedWarning
         warnings.simplefilter("default", NotGeoreferencedWarning)
+
+        # Store computation status
+        open(finish_status_path, "w").close()
 
     @simple_type_validator
     def _preprocessor(  # noqa: C901
@@ -3514,6 +3582,9 @@ class SpecPipe:
         # Check running log and subset sample data
         if not resume:
             rest_sample_data = self._sample_data
+            # Clear log before start new preprocessing
+            if os.path.exists(unc_path(log_dir_path)):
+                shutil.rmtree(unc_path(log_dir_path))
         else:
             if not os.path.exists(unc_path(log_dir_path)):
                 os.makedirs(unc_path(log_dir_path))
@@ -3528,6 +3599,9 @@ class SpecPipe:
                 finished_samples = [sdid for sdid in finished_samples if sdid in existed_samples]
             if len(finished_samples) > 0:
                 rest_sample_data = [sd for sd in self._sample_data if sd["ID"] not in finished_samples]
+                # Quit if all finished
+                if len(rest_sample_data) == 0:
+                    return
             else:
                 rest_sample_data = self._sample_data
 
@@ -3535,8 +3609,6 @@ class SpecPipe:
         preprocess_status = self._init_preprocessing_status(n_processor=n_processor)
 
         # Preprocessing of all data and generate sample_list data of all chains
-        if show_progress:
-            print("\nPreprocess samples ...")
         self.__preprocess_result_path = []
 
         # Sequential compute
@@ -3599,13 +3671,7 @@ class SpecPipe:
             )
             # Processing - multiprocessing for loop
             with ProcessingPool(nodes=ncpu) as pool:
-                preprocess_result_paths = list(
-                    tqdm(
-                        pool.imap(preprocessing_sample_it, rest_sample_data),
-                        total=len(rest_sample_data),
-                        disable=(not show_progress),
-                    )
-                )
+                preprocess_result_paths = list(pool.imap(preprocessing_sample_it, rest_sample_data))
             # Collect and print errors if exist
             if os.path.exists(unc_path(errorlog_path)):
                 raise ValueError(
@@ -3624,10 +3690,6 @@ class SpecPipe:
                     raise ValueError(f"\nGot invalid path: {pti}")
             # Update preprocess result file paths
             self.__preprocess_result_path = preprocess_result_paths
-
-        # Clear log after finishing whole preprocessing
-        if os.path.exists(unc_path(log_dir_path)):
-            shutil.rmtree(unc_path(log_dir_path))
 
     # Step results to modeling-ready sample_list data
     @simple_type_validator
@@ -3851,6 +3913,19 @@ class SpecPipe:
             >>> pipe.model_evaluation(n_processor=10)
         """  # noqa: E501
 
+        # Setup multiprocessing
+        if n_processor > 1:
+            _mp_init()
+
+        # Validate computation status
+        finish_status_path = self._report_directory + "SpecPipe_configuration/.__modeling_complete.s"
+        if os.path.exists(finish_status_path):
+            if resume:
+                print("Model evaluation is completed. Set resume=False to recompute.")
+                return None
+            else:
+                os.remove(finish_status_path)
+
         # Validate disk space for output
         self._val_disk_space_preprocessing(image=False, plot=True, error_raise=check_space)
 
@@ -3928,6 +4003,7 @@ class SpecPipe:
             rest_cd_paths = cd_paths
             # Clear log
             self._clear_model_log(log_path)
+            modeling_finished = False
         else:
             if not os.path.exists(unc_path(log_path)):
                 rest_cd_paths = cd_paths
@@ -3939,93 +4015,114 @@ class SpecPipe:
                     if cprocs not in modeling_progress_log:
                         rest_cd_paths.append(cdp)
             if len(rest_cd_paths) == 0:
-                rest_cd_paths = cd_paths
+                modeling_finished = True
+            else:
+                modeling_finished = False
+
+        # Pipeline progress observation for multiprocessing
+        model_subdir_root = unc_path(self.report_directory + "Modeling/Model_evaluation_reports/")
+        if n_processor > 1:
+            # Pipeline and resulting file configuration
+            n_chains = len(self.ls_chains(print_label=False))
+            model_subdir_pattern = "Data_chain_Preprocessing_#"
+            # Progress observing process by model subdirs
+            observer = DirProgressObserver(
+                root=model_subdir_root,
+                total=n_chains,
+                pattern=model_subdir_pattern,
+                progress_prefix="Model evaluation",
+            )
+            observer.start()
 
         # Modeling by chain sample_list
-        # Sequential processing modeling
-        if n_processor <= 1:
-            for pci, cdp in enumerate(rest_cd_paths):
-                try:
-                    # Progress
-                    if show_progress:
-                        print(f"\nModeling preprocessing result {pci + 1}/{len(rest_cd_paths)} :")
-                    pc_it = load_vars(unc_path(cdp))
-                    pc_sample_list = pc_it["chain_res"]
-                    pc_sample_list = _target_type_validation_for_serialization(pc_sample_list)
-                    pchain = pc_it["chain_procs"]
-                    # Use preprocess chain ID as chain label
-                    pproc_chain_label = [f"Preprocessing_#{pci}" for pci, pc in enumerate(pchains) if pc == pchain][0]
-                    _model_evaluator(
-                        preprocess_result=pc_sample_list,
-                        preprocess_chain=pchain,
-                        preprocess_chain_label=pproc_chain_label,
-                        model_processes=model_procs,
-                        specpipe_report_directory=self.report_directory,
-                        result_directory=result_directory,
-                        update_progress_log=True,
+        if not modeling_finished:
+            # Sequential processing modeling
+            if n_processor <= 1:
+                lock = _DummyLock()
+                for pci, cdp in enumerate(rest_cd_paths):
+                    try:
+                        # Progress
+                        if show_progress:
+                            print(f"\nModeling preprocessing result {pci + 1}/{len(rest_cd_paths)} :")
+                        pc_it = load_vars(unc_path(cdp))
+                        pc_sample_list = pc_it["chain_res"]
+                        pc_sample_list = _target_type_validation_for_serialization(pc_sample_list)
+                        pchain = pc_it["chain_procs"]
+                        # Use preprocess chain ID as chain label
+                        pproc_chain_label = [f"Preprocessing_#{pci}" for pci, pc in enumerate(pchains) if pc == pchain][
+                            0
+                        ]
+                        _model_evaluator(
+                            preprocess_result=pc_sample_list,
+                            preprocess_chain=pchain,
+                            preprocess_chain_label=pproc_chain_label,
+                            model_processes=model_procs,
+                            specpipe_report_directory=self.report_directory,
+                            result_directory=result_directory,
+                            lock=lock,
+                            update_progress_log=True,
+                        )
+
+                    # Error handling
+                    except Exception as e:
+                        # Validate report directory
+                        model_result_dir = result_directory + "Modeling/"
+                        if not os.path.exists(unc_path(model_result_dir)):
+                            os.makedirs(unc_path(model_result_dir))
+                        errdir = model_result_dir + "Error_logs/"
+                        if not os.path.exists(unc_path(errdir)):
+                            os.makedirs(unc_path(errdir))
+                        cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                        pid = os.getpid()
+                        error_log_path = errdir + f"error_{cts}_pid_{pid}.log"
+                        err_msg = f"\nFailed in the modeling of preprocessing chain from path '{cdp}', \
+                                    error message: \n\n{str(e)}\n"
+                        with open(unc_path(error_log_path), "w") as f:
+                            f.write(err_msg)
+                        raise ValueError(e) from e
+            # Multiprocessing modeling
+            else:
+                lock = mp.Manager().Lock()
+                # Initialize errorlogs dir for err handling in parallel computing
+                errorlog_path = model_result_dir + "Error_logs/"
+                if os.path.exists(unc_path(errorlog_path)):
+                    shutil.rmtree(unc_path(errorlog_path))
+                # Validate number of processors to use
+                ncpu_max = max(cpu_count() - 1, 1)
+                ncpu = min(n_processor, ncpu_max)
+                # Bind constant arguments for _model_evaluator_it
+                _model_evaluator_it = partial(
+                    _model_evaluator_mp,
+                    pchains=pchains,
+                    model_processes=model_procs,
+                    specpipe_report_directory=self.report_directory,
+                    result_directory=result_directory,
+                    lock=lock,
+                    update_progress_log=True,
+                    # Assign applied functions
+                    _model_evaluator=_model_evaluator,
+                    _dl_val=_dl_val,
+                    unc_path=unc_path,
+                    load_vars=load_vars,
+                    dump_vars=dump_vars,
+                    _target_type_validation_for_serialization=_target_type_validation_for_serialization,
+                    modeleva=ModelEva,
+                    silent_all=True,
+                )
+                # Processing - multiprocessing for loop
+                with ProcessingPool(nodes=ncpu) as pool:
+                    for _ in pool.imap(_model_evaluator_it, rest_cd_paths):
+                        pass
+                # Collect and print errors if exist
+                if os.path.exists(unc_path(errorlog_path)):
+                    raise ValueError(
+                        f"\nPreprocessing errors, please check error logs in the following path:\n{errorlog_path}"
                     )
 
-                # Error handling
-                except Exception as e:
-                    # Validate report directory
-                    model_result_dir = result_directory + "Modeling/"
-                    if not os.path.exists(unc_path(model_result_dir)):
-                        os.makedirs(unc_path(model_result_dir))
-                    errdir = model_result_dir + "Error_logs/"
-                    if not os.path.exists(unc_path(errdir)):
-                        os.makedirs(unc_path(errdir))
-                    cts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                    pid = os.getpid()
-                    error_log_path = errdir + f"error_{cts}_pid_{pid}.log"
-                    err_msg = f"\nFailed in the modeling of preprocessing chain from path '{cdp}', \
-                                error message: \n\n{str(e)}\n"
-                    with open(unc_path(error_log_path), "w") as f:
-                        f.write(err_msg)
-                    raise ValueError(e) from e
-
-        # Multiprocessing modeling
-        else:
-            # Initialize errorlogs dir for err handling in parallel computing
-            errorlog_path = model_result_dir + "Error_logs/"
-            if os.path.exists(unc_path(errorlog_path)):
-                shutil.rmtree(unc_path(errorlog_path))
-            # Validate number of processors to use
-            ncpu_max = max(cpu_count() - 1, 1)
-            ncpu = min(n_processor, ncpu_max)
-            # Bind constant arguments for _model_evaluator_it
-            _model_evaluator_it = partial(
-                _model_evaluator_mp,
-                pchains=pchains,
-                model_processes=model_procs,
-                specpipe_report_directory=self.report_directory,
-                result_directory=result_directory,
-                update_progress_log=True,
-                # Assign applied functions
-                _model_evaluator=_model_evaluator,
-                _dl_val=_dl_val,
-                unc_path=unc_path,
-                load_vars=load_vars,
-                dump_vars=dump_vars,
-                _target_type_validation_for_serialization=_target_type_validation_for_serialization,
-                modeleva=ModelEva,
-                silent_all=True,
-            )
-            # Processing - multiprocessing for loop
-            with ProcessingPool(nodes=ncpu) as pool:
-                for _ in tqdm(
-                    pool.imap(_model_evaluator_it, rest_cd_paths),
-                    total=len(rest_cd_paths),
-                    disable=(not show_progress),
-                ):
-                    pass
-            # Collect and print errors if exist
-            if os.path.exists(unc_path(errorlog_path)):
-                raise ValueError(
-                    f"\nPreprocessing errors, please check error logs in the following path:\n{errorlog_path}"
-                )
-
-        # Clear log
-        self._clear_model_log(log_path)
+        # Complete modeling progress monitoring
+        open(model_subdir_root + ".__finished.s", "w").close()
+        if n_processor > 1:
+            observer.join()
 
         # Print result dir and save corresponding targets
         if len(result_directory) > 0:
@@ -4039,6 +4136,9 @@ class SpecPipe:
         if summary:
             _ = performance_marginal_stats(self.report_directory)
             _ = combined_model_marginal_stats(self.report_directory)
+
+        # Store computation status
+        open(finish_status_path, "w").close()
 
     @staticmethod
     def _clear_model_log(log_path: str) -> None:

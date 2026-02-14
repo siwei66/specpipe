@@ -1100,6 +1100,9 @@ class TestSpecPipe(unittest.TestCase):
         test_dir = pipe.report_directory
         assert os.path.exists(test_dir)
 
+        # Finished status
+        assert os.path.exists(f"{test_dir}/SpecPipe_configuration/.__preprocessing_complete.s")
+
         # Assert results
         assert len(pipe._sample_data) == len(pipe.spec_exp.rois)
 
@@ -1167,6 +1170,9 @@ class TestSpecPipe(unittest.TestCase):
         """Test criteria for regression model reports"""
         test_dir = pipe.report_directory
         assert os.path.exists(test_dir)
+
+        # Finished status
+        assert os.path.exists(f"{test_dir}/SpecPipe_configuration/.__modeling_complete.s")
 
         # Assert reports
         model_report_dir = f"{test_dir}/Modeling/Model_evaluation_reports/"
@@ -1273,6 +1279,9 @@ class TestSpecPipe(unittest.TestCase):
         """Test criteria for classification model reports"""
         test_dir = pipe.report_directory
         assert os.path.exists(test_dir)
+
+        # Finished status
+        assert os.path.exists(f"{test_dir}/SpecPipe_configuration/.__modeling_complete.s")
 
         # Assert reports
         model_report_dir = f"{test_dir}/Modeling/Model_evaluation_reports/"
@@ -1504,6 +1513,60 @@ class TestSpecPipe(unittest.TestCase):
 
     @staticmethod
     @silent
+    def test_run_pipe_no_inter_results() -> None:
+        """test run preprocessing and modeling functionality using SpecPipe.run() with step_result=False."""
+
+        if os.getenv("SPECPIPE_PREPROCESS_RESUME_TEST_NUM") is not None:
+            del os.environ["SPECPIPE_PREPROCESS_RESUME_TEST_NUM"]
+        if os.getenv("SPECPIPE_MODEL_RESUME_TEST_NUM") is not None:
+            del os.environ["SPECPIPE_MODEL_RESUME_TEST_NUM"]
+
+        plt.close("all")
+
+        # Regression
+        # Initialize test_dir
+        TestSpecPipe._init_test_dir()
+        test_dir = TestSpecPipe.test_dir
+
+        pipe = create_test_spec_pipe(test_dir, is_regression=True)
+
+        pipe.run(n_processor=1, step_result=False)
+        time.sleep(0.1)
+
+        finished_1 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        finished_2 = TestSpecPipe.criteria_regression_model_report(pipe)
+        finished_3 = "not_started"
+        finished_4 = "not_started"
+
+        # Clear test report dir
+        crit_1 = finished_1 == "finished" and finished_2 == "finished"
+        crit_2 = finished_3 == "not_started" and finished_4 == "not_started"
+        if os.path.exists(test_dir) and crit_1 and crit_2:
+            shutil.rmtree(test_dir)
+            run_1_cleared: bool = True
+
+        plt.close("all")
+
+        # Classification
+        assert crit_1
+        assert run_1_cleared
+
+        pipe = create_test_spec_pipe(test_dir, is_regression=False)
+
+        pipe.run(n_processor=1, step_result=False)
+        time.sleep(0.1)
+
+        finished_3 = TestSpecPipe.criteria_preprocessing_result(pipe)
+        finished_4 = TestSpecPipe.criteria_classification_model_report(pipe)
+
+        plt.close("all")
+
+        # Clear test report dir
+        if os.path.exists(test_dir) and finished_3 == "finished" and finished_4 == "finished" and crit_1:
+            shutil.rmtree(test_dir)
+
+    @staticmethod
+    @silent
     def test_run_pipe_edge_cases() -> None:
         """test edge cases in running preprocessing and modeling functionality using SpecPipe.run()"""
 
@@ -1681,7 +1744,7 @@ class TestSpecPipe(unittest.TestCase):
         TestSpecPipe.criteria_preprocessing_result(pipe)
         step_dir_content = lsdir_robust(f"{result_dir}/Step_results/")
         assert "Error_logs" in step_dir_content
-        assert "Preprocess_progress_logs" not in step_dir_content
+        assert "Preprocess_progress_logs" in step_dir_content
 
         # Assert no secondary creation of results
         result_ctime1 = os.stat(f"{result_dir}/Step_results/{result_fn}").st_ctime_ns
